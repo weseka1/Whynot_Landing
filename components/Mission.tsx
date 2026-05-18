@@ -1,0 +1,206 @@
+"use client";
+
+/* ============================================================================
+   MISSION — 4 pilares con texto alternando lado, ESTRELLA DE 4 CAJAS 3D
+   en lugar de la zapatilla.
+
+   Layout:
+     - Título arriba (eyebrow + "Our Mission")
+     - 4 pilares stack vertical, cada uno 100vh:
+         · .001 Source   → texto IZQ, cajas DER
+         · .002 Build    → texto DER, cajas IZQ
+         · .003 Release  → texto IZQ, cajas DER
+         · .004 Archive  → texto DER, cajas IZQ
+     - Estrella de cajas: sticky overlay, motion-driven X/scale/opacity.
+       Rotación interna (Y axis del grupo + ejes propios de cada caja) la
+       maneja MissionBoxes leyendo el smoothProgress.
+
+   Fase 1 — POC: SIN drop-off (4 cajas siempre, formando estrella).
+   ============================================================================ */
+
+import { useRef } from "react";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { site } from "@/data/site";
+import XDecoration from "./XDecoration";
+import MissionBoxesClient from "./MissionBoxesClient";
+
+export default function Mission() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
+  });
+
+  // Suavizamos el scroll-progress con spring → animaciones interpolan frames
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 80,
+    damping: 22,
+    mass: 0.9,
+    restDelta: 0.0005,
+  });
+
+  /* 4 pilares ⇒ 4 zonas de "pilar activo" + 3 transiciones entre ellos.
+     Keyframes empíricos:
+       0.32, 0.50, 0.68 = centros de cada transición (boundaries entre pilares) */
+
+  // X: 100% = mitad derecha, 0% = mitad izquierda. Alterna cada transición.
+  const modelX = useTransform(
+    smoothProgress,
+    [0, 0.32, 0.38, 0.47, 0.53, 0.62, 0.68, 1],
+    ["100%", "100%", "0%", "0%", "100%", "100%", "0%", "0%"]
+  );
+
+  // Escala: pulso menor en medio de cada transición
+  const modelScale = useTransform(
+    smoothProgress,
+    [0, 0.32, 0.35, 0.38, 0.47, 0.50, 0.53, 0.62, 0.65, 0.68, 1],
+    [1, 1, 0.75, 1, 1, 0.75, 1, 1, 0.75, 1, 1]
+  );
+
+  // Opacidad: fade al entrar/salir
+  const modelOpacity = useTransform(
+    smoothProgress,
+    [0, 0.08, 0.92, 1],
+    [0, 1, 1, 0]
+  );
+
+  return (
+    <section
+      id="section-mission"
+      ref={sectionRef}
+      style={{
+        position: "relative",
+        background: "var(--color-bg)",
+        /* SIN overflow:hidden — rompe el sticky */
+      }}
+    >
+      <XDecoration seed={7} count={20} />
+
+      {/* ============ STICKY 3D BOXES — overlay sobre toda la sección ============ */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      >
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            width: "100%",
+          }}
+        >
+          <motion.div
+            data-boxes-wrapper
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: "50%",
+              x: modelX,
+              scale: modelScale,
+              opacity: modelOpacity,
+              willChange: "transform, opacity",
+            }}
+          >
+            <MissionBoxesClient progress={smoothProgress} />
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ============ CONTENIDO: título + 4 pilares alternados ============ */}
+      <div style={{ position: "relative", zIndex: 2 }}>
+        {/* Título arriba */}
+        <div
+          style={{
+            padding: "var(--space-2xl) var(--container-pad) var(--space-md)",
+            maxWidth: "50%",
+          }}
+        >
+          <span className="system-text">{site.mission.eyebrow}</span>
+          <h2
+            className="display"
+            style={{
+              fontSize: "clamp(3rem, 9vw, 8rem)",
+              marginTop: "var(--space-sm)",
+              color: "var(--color-accent)",
+            }}
+          >
+            {site.mission.title}
+          </h2>
+        </div>
+
+        {/* 4 pilares: cada uno 100vh, lado alternado */}
+        {site.mission.pillars.map((p, i) => {
+          const isRight = i % 2 === 1;  // 0=IZQ, 1=DER, 2=IZQ, 3=DER
+          return (
+            <motion.div
+              key={p.id}
+              data-pillar
+              initial={{ opacity: 0, y: 60 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.35 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                minHeight: "100vh",
+                display: "flex",
+                alignItems: "center",
+                paddingInline: "var(--container-pad)",
+                justifyContent: isRight ? "flex-end" : "flex-start",
+                borderTop: "1px solid var(--color-line)",
+              }}
+            >
+              <div
+                data-pillar-inner
+                style={{
+                  maxWidth: "42%",
+                  textAlign: isRight ? "right" : "left",
+                }}
+              >
+                <span
+                  className="system-text"
+                  style={{
+                    color: "var(--color-accent)",
+                    marginBottom: "var(--space-sm)",
+                    fontSize: "1.4rem",
+                    display: "block",
+                  }}
+                >
+                  {p.id}
+                </span>
+                <h3
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "clamp(2.5rem, 6vw, 5rem)",
+                    lineHeight: 0.95,
+                    marginBottom: "var(--space-md)",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {p.label}
+                </h3>
+                <p
+                  style={{
+                    fontSize: "1.1rem",
+                    lineHeight: 1.55,
+                    color: "var(--color-muted)",
+                    maxWidth: 460,
+                    marginLeft: isRight ? "auto" : 0,
+                  }}
+                >
+                  {p.copy}
+                </p>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

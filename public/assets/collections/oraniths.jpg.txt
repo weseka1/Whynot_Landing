@@ -1,0 +1,5 @@
+PLACEHOLDER — reemplazar este archivo por oraniths.jpg
+Sección: Collections → Oraniths
+Componente que la consume: components/CollectionBlock.tsx
+Path esperado en el HTML: /assets/collections/oraniths.jpg
+Aspect ratio recomendado: 4:5 (vertical), 1200×1500 px mínimo.

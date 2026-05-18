@@ -1,0 +1,50 @@
+node_modules/
+.next/
+out/
+build/
+.env*
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# Cache / TypeScript
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# OS / archivos temporales
+Thumbs.db
+*~
+
+# DICH original (referencia, no para deploy) — pesa ~7MB de HTML+assets
+DICH*Fashion*A*New*Era*of*Futuristic*Fashion.html
+DICH*Fashion*A*New*Era*of*Futuristic*Fashion_files/
+
+# Cajas 3D originales (62MB) — usamos las copias en public/assets/3d/boxes/
+cajas 3D/
+
+# Carpeta nuves staging (las copias finales están en public/nuves/)
+/nuves/
+
+# Carpetas / archivos ajenos al proyecto (otros proyectos almacenados en este dir)
+MIAMI_IMPORT/
+MIAMI_IMPORT.zip
+*.zip
+*.mov
+*.mp4
+*.avi
+
+# Claude config local
+.claude/
+
+# GLBs duplicados en root (las copias activas están en public/assets/3d/)
+/Mono 3d.glb
+/balenciaga 3xl 3D.glb
+
+# Imágenes sueltas en root (las usadas están en public/)
+/ChatGPT Image*.png
+/Fondo 1 cielo-nubes.png
+/Mono Fonto cielo.png
+/Whynot amk exclusive t-12.png
+/nube sin fondo*.*
+/meteorite-scroll-animation.gif

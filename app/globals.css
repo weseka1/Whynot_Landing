@@ -1,0 +1,313 @@
+/* ==========================================================================
+   GLOBALS — variables de diseño, reset y utilidades base.
+   Paleta: dark + peach/orange (cyber luxury fashion).
+   ========================================================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --------------------------------------------------------------------------
+   FUENTES LOCALES
+   Studio Innate / Blackbox Grafx T-12 (alias T-012). Usada en el marquee
+   del Hero. Para activarla: drop del archivo en /public/fonts/T-012.otf
+   (o T-12.otf, las dos rutas se intentan). Ver /public/fonts/README.md.
+   Mientras no esté el archivo, el fallback de --font-marquee usa
+   Bruno Ace SC (Google Fonts).
+   -------------------------------------------------------------------------- */
+@font-face {
+  font-family: "T-012";
+  src:
+    url("/fonts/T-012.woff2") format("woff2"),
+    url("/fonts/T-012.otf")   format("opentype"),
+    url("/fonts/T-012.ttf")   format("truetype"),
+    url("/fonts/T-12.woff2")  format("woff2"),
+    url("/fonts/T-12.otf")    format("opentype"),
+    url("/fonts/T-12.ttf")    format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+/* Alias por compatibilidad (algunos exportes traen el nombre interno
+   como "T-12" sin el cero, otros con). Apuntan al mismo archivo. */
+@font-face {
+  font-family: "T-12";
+  src:
+    url("/fonts/T-012.woff2") format("woff2"),
+    url("/fonts/T-012.otf")   format("opentype"),
+    url("/fonts/T-012.ttf")   format("truetype"),
+    url("/fonts/T-12.woff2")  format("woff2"),
+    url("/fonts/T-12.otf")    format("opentype"),
+    url("/fonts/T-12.ttf")    format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --------------------------------------------------------------------------
+   1) DESIGN TOKENS
+   -------------------------------------------------------------------------- */
+:root {
+  /* — Color base — */
+  --color-bg:        #0a0908;          /* casi negro */
+  --color-bg-2:      #15110d;          /* card / panel */
+  --color-fg:        #f3ece1;          /* texto */
+  --color-muted:     #6e6155;
+  --color-line:      #2a221c;
+  --color-accent:    #f4a982;          /* peach principal */
+  --color-accent-2:  #ffd166;          /* amarillo cálido */
+  --color-warn:      #ff5436;
+  --color-ok:        #6affad;
+
+  /* — Paleta invertida (secciones con bg claro tipo Collections) — */
+  /* Alineada al DICH original: --pastel-pink-main #ffdfc4, --black #070707 */
+  --color-peach-bg:    #ffdfc4;        /* pastel pink / peach del DICH */
+  --color-peach-bg-2:  #f5cea8;        /* variante saturada para layers */
+  --color-peach-line:  rgba(7,7,7,0.5); /* dotted líneas del DICH */
+  --color-peach-fg:    #070707;        /* texto/borde oscuro del DICH */
+  --color-peach-mute:  #6e5a48;
+  --color-peach-accent: #ff5436;       /* coral acento */
+
+  /* — Patrón de puntos (dots-grid del DICH) generado por CSS — */
+  --dots-pink-100:
+    radial-gradient(circle at center, rgba(7,7,7,0.18) 1.1px, transparent 1.4px);
+  --dots-pink-100-size: 18px 18px;
+
+  /* — Tipografía — */
+  --font-display:    "Times New Roman", "Times", serif;
+  --font-body:       "Helvetica Neue", "Inter", system-ui, sans-serif;
+  --font-mono:       "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+  /* Tipografía display para el marquee superior.
+     Orden de prioridad:
+       1) Orbitron (Google Fonts) — la que pediste, geométrica cyber
+       2) T-012 / T-12 local (ver /public/fonts/README.md) si la dropeás
+       3) Bruno Ace SC / Audiowide / Quantico → fallbacks */
+  --font-marquee:    "Orbitron", "T-012", "T-12", "Bruno Ace SC", "Audiowide", "Quantico", "Impact", system-ui, sans-serif;
+
+  /* — Spacing — */
+  --space-xs:        0.5rem;
+  --space-sm:        1rem;
+  --space-md:        2rem;
+  --space-lg:        4rem;
+  --space-xl:        8rem;
+  --space-2xl:       12rem;
+
+  --container-pad:   clamp(1rem, 3vw, 2.5rem);
+  --section-pad-y:   clamp(4rem, 10vw, 8rem);
+
+  /* — Radios — */
+  --radius-pill:     999px;
+  --radius-sm:       4px;
+
+  /* — Velocidades — */
+  --speed-fast:      180ms;
+  --speed-base:      400ms;
+  --speed-slow:      900ms;
+  --speed-ticker:    90s;       /* marquee del Hero — subí a 90s para que
+                                   se desplace más lento (más legible) */
+  --speed-preload:   3000ms;
+
+  --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:     cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* --------------------------------------------------------------------------
+   2) RESET
+   -------------------------------------------------------------------------- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { min-height: 100vh; overflow-x: hidden; }
+
+a { color: inherit; text-decoration: none; }
+img, svg, video { display: block; max-width: 100%; }
+button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; background: transparent; border: 0; outline: none; }
+
+/* Grain sutil sobre todo el fondo */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='1'/></svg>");
+}
+
+/* --------------------------------------------------------------------------
+   3) UTILIDADES
+   -------------------------------------------------------------------------- */
+.container-full { width: 100%; padding-inline: var(--container-pad); }
+
+.section {
+  padding-block: var(--section-pad-y);
+  position: relative;
+  z-index: 2;
+}
+
+.hairline-top    { border-top:    1px solid var(--color-line); }
+.hairline-bottom { border-bottom: 1px solid var(--color-line); }
+
+.system-text {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  font-size: clamp(3rem, 12vw, 14rem);
+}
+
+.accent { color: var(--color-accent); }
+
+/* --------------------------------------------------------------------------
+   DICH-style backgrounds (clases utilitarias)
+   -------------------------------------------------------------------------- */
+
+/* Fondo base "pastel" del DICH: peach + grid de puntos + viñeta sutil */
+.bg-dich-peach {
+  background-color: var(--color-peach-bg);
+  background-image:
+    radial-gradient(ellipse at top, rgba(255,255,255,0.35) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom, rgba(7,7,7,0.05) 0%, transparent 60%),
+    var(--dots-pink-100);
+  background-size: auto, auto, var(--dots-pink-100-size);
+  background-repeat: no-repeat, no-repeat, repeat;
+  color: var(--color-peach-fg);
+}
+
+/* Variante: peach + dots, sin viñeta (para secciones intermedias) */
+.bg-dich-peach-flat {
+  background-color: var(--color-peach-bg);
+  background-image: var(--dots-pink-100);
+  background-size: var(--dots-pink-100-size);
+  color: var(--color-peach-fg);
+}
+
+/* Variante: pastel "anturax" (lavanda como el original) */
+.bg-dich-lavender {
+  background-color: #d9d3ff;
+  background-image: var(--dots-pink-100);
+  background-size: var(--dots-pink-100-size);
+  color: var(--color-peach-fg);
+}
+
+/* Línea dotted DICH (border-bottom .0625rem dotted rgba(7,7,7,0.5)) */
+.dich-dotted-line {
+  border-bottom: 1px dotted rgba(7, 7, 7, 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   4) ANIMACIONES
+   -------------------------------------------------------------------------- */
+@keyframes marquee   { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes blink     { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+@keyframes fadeUp    { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scan      { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
+@keyframes floaty    { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes spinSlow  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.caret::after {
+  content: "_";
+  margin-left: 4px;
+  animation: blink 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Model-viewer (Google web component) */
+model-viewer {
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+  --poster-color: transparent;
+}
+
+/* ==========================================================================
+   MOBILE — adaptaciones para pantallas <= 768px
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Tipografía display más chica en mobile */
+  .display {
+    font-size: clamp(2.5rem, 14vw, 6rem) !important;
+  }
+
+  /* Ajuste de paddings de secciones */
+  :root {
+    --container-pad: clamp(0.75rem, 4vw, 1.25rem);
+    --section-pad-y: clamp(2.5rem, 8vw, 4.5rem);
+    --space-xl: 4rem;
+    --space-2xl: 6rem;
+  }
+
+  /* Mission: pilares se vuelven full-width y centrados, no alternan lado */
+  #section-mission [data-pillar] {
+    justify-content: flex-start !important;
+  }
+  #section-mission [data-pillar-inner] {
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    text-align: left !important;
+  }
+  #section-mission [data-pillar-inner] p {
+    margin-left: 0 !important;
+  }
+
+  /* Mission: las cajas 3D ocupan todo el ancho (no 50%) */
+  #section-mission [data-boxes-wrapper] {
+    width: 100% !important;
+    height: 50vh !important;
+    opacity: 0.35 !important;  /* más translúcido para no tapar el texto */
+  }
+
+  /* IdeaForm: layout 2-col → 1 col en mobile */
+  #section-form > div {
+    grid-template-columns: 1fr !important;
+  }
+  #section-form > div > * {
+    grid-column: 1 !important;
+  }
+
+  /* WhyNotEnd: ajustes */
+  #section-whynot-end {
+    padding: var(--space-md) var(--container-pad) !important;
+  }
+
+  /* Cloud band: nubes proporcionalmente más chicas */
+  /* (las % ya escalan, no necesita más) */
+
+  /* Hero: marquee más chico */
+  #hero {
+    overflow: hidden;
+  }
+}
+
+/* Pantallas muy chicas (< 480px) — ajustes adicionales */
+@media (max-width: 480px) {
+  .display {
+    font-size: clamp(2rem, 13vw, 4rem) !important;
+  }
+}

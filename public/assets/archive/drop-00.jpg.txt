@@ -1,0 +1,3 @@
+PLACEHOLDER — reemplazar por drop-00.jpg (Past Drop)
+Aspect ratio recomendado: 1:1 (cuadrado), 1000×1000 px.
+Editar en: components/PastDrop.tsx vía data/site.ts → pastDrop.items.
