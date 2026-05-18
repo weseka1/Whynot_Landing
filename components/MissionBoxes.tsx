@@ -48,8 +48,8 @@ const ANCHOR_RISE = 6.5;        // unidades world que sube por unidad de activeI
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
    - Fade-out en una ventana centrada en activeIndex = index+1 (arranca antes
      del fin de su pilar y termina al inicio del siguiente).                       */
-const LIFETIME_FADE_BEFORE = 0.20; // qué tanto antes del fin de su pilar arranca el fade
-const LIFETIME_FADE_AFTER  = 0.15; // qué tanto después del fin termina (caja invisible)
+const LIFETIME_FADE_BEFORE = 0.35; // qué tanto antes del fin de su pilar arranca el fade
+const LIFETIME_FADE_AFTER  = 0.05; // qué tanto después del fin termina (caja invisible)
 const TRANSITION_START = 0.40;  // % del pilar donde arranca la transición (más larga = más fluida)
 const TRANSITION_END   = 1.00;
 const POSITION_DAMP = 7;        // lerp temporal de posición — alto = sigue al target, bajo = perezoso
