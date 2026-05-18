@@ -43,13 +43,13 @@ const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva i
 const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
 const SPIN_RATE = 0.20;         // rad/s — giro propio de cada caja (lento → conserva el vértice visible)
-const ANCHOR_RISE = 6.5;        // unidades world que sube por unidad de activeIndex
+const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
-   - Fade-out en una ventana centrada en activeIndex = index+1 (arranca antes
-     del fin de su pilar y termina al inicio del siguiente).                       */
-const LIFETIME_FADE_BEFORE = 0.35; // qué tanto antes del fin de su pilar arranca el fade
-const LIFETIME_FADE_AFTER  = 0.05; // qué tanto después del fin termina (caja invisible)
+   - Fade-out en el último tramo del pilar de la caja, termina exactamente
+     en el cambio de pilar → al pilar siguiente NO se ve nada de la anterior. */
+const LIFETIME_FADE_BEFORE = 0.30; // último 30% del pilar de la caja: fade-out
+const LIFETIME_FADE_AFTER  = 0.00; // opacity = 0 exactamente al cambio de pilar
 const TRANSITION_START = 0.40;  // % del pilar donde arranca la transición (más larga = más fluida)
 const TRANSITION_END   = 1.00;
 const POSITION_DAMP = 7;        // lerp temporal de posición — alto = sigue al target, bajo = perezoso
