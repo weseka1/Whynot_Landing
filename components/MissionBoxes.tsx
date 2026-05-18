@@ -43,9 +43,9 @@ const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva i
 const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
 const SPIN_RATE = 0.20;         // rad/s — giro propio de cada caja (lento → conserva el vértice visible)
-const ANCHOR_RISE = 4.8;        // unidades world que sube por unidad de activeIndex
-const ANCHOR_FADE_START = 0.30;
-const ANCHOR_FADE_END   = 0.85;
+const ANCHOR_RISE = 6.5;        // unidades world que sube por unidad de activeIndex
+const ANCHOR_FADE_START = 0.05; // fade-out arranca casi al anclarse
+const ANCHOR_FADE_END   = 0.40; // y termina temprano → en el próximo pilar la caja ya no se ve
 const TRANSITION_START = 0.40;  // % del pilar donde arranca la transición (más larga = más fluida)
 const TRANSITION_END   = 1.00;
 const POSITION_DAMP = 7;        // lerp temporal de posición — alto = sigue al target, bajo = perezoso
