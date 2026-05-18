@@ -23,6 +23,9 @@ const BOX_SOURCES = [
   "/assets/3d/boxes/box-4-dior.glb",
 ];
 
+/* Los GLB están comprimidos con Draco — drei carga el decoder automáticamente
+   desde la CDN oficial de Google (gstatic). No requiere configuración extra. */
+
 // Preload todos los GLB (drei los cachea)
 BOX_SOURCES.forEach((src) => useGLTF.preload(src));
 
