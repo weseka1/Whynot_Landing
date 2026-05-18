@@ -123,9 +123,20 @@ html, body {
   font-size: 16px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
+  /* En mobile: evita pintar fondo blanco/overflow al re-orientar (rubber-band) */
+  overscroll-behavior-y: none;
+  /* Mejor render de fuentes en touch */
+  text-rendering: optimizeLegibility;
 }
 
-body { min-height: 100vh; overflow-x: hidden; }
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  /* Smooth scrolling (respeta prefers-reduced-motion abajo) */
+  scroll-behavior: smooth;
+  /* Optimiza scroll en iOS */
+  -webkit-overflow-scrolling: touch;
+}
 
 a { color: inherit; text-decoration: none; }
 img, svg, video { display: block; max-width: 100%; }
@@ -259,13 +270,24 @@ model-viewer {
   :root {
     --container-pad: clamp(0.75rem, 4vw, 1.25rem);
     --section-pad-y: clamp(2.5rem, 8vw, 4.5rem);
-    --space-xl: 4rem;
-    --space-2xl: 6rem;
+    --space-xl: 3.5rem;
+    --space-2xl: 5rem;
+  }
+
+  /* Tap targets más grandes (mínimo 44x44 px recomendado Apple/Google) */
+  button,
+  a[role="button"],
+  .form-cta,
+  [aria-label],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
   }
 
   /* Mission: pilares se vuelven full-width y centrados, no alternan lado */
   #section-mission [data-pillar] {
     justify-content: flex-start !important;
+    min-height: 70vh !important;  /* más compacto, evita scroll excesivo */
   }
   #section-mission [data-pillar-inner] {
     max-width: 100% !important;
@@ -276,32 +298,64 @@ model-viewer {
     margin-left: 0 !important;
   }
 
-  /* Mission: las cajas 3D ocupan todo el ancho (no 50%) */
+  /* Mission: las cajas 3D ocupan todo el ancho (no 50%) y van más translúcidas */
   #section-mission [data-boxes-wrapper] {
     width: 100% !important;
-    height: 50vh !important;
-    opacity: 0.35 !important;  /* más translúcido para no tapar el texto */
+    height: 45vh !important;
+    opacity: 0.30 !important;  /* tras texto, semi-transparente */
+  }
+
+  /* Mission: ancho del título full */
+  #section-mission > div > div:first-child {
+    max-width: 100% !important;
   }
 
   /* IdeaForm: layout 2-col → 1 col en mobile */
   #section-form > div {
     grid-template-columns: 1fr !important;
+    gap: var(--space-md) !important;
   }
   #section-form > div > * {
     grid-column: 1 !important;
+    justify-content: flex-start !important;
   }
 
   /* WhyNotEnd: ajustes */
   #section-whynot-end {
     padding: var(--space-md) var(--container-pad) !important;
+    min-height: auto !important;
+  }
+  /* WhyNotEnd info bar: 4 cols → 2 cols en mobile */
+  #section-whynot-end > div[style*="grid-template-columns: repeat(4"],
+  #section-whynot-end > div:last-child {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 
-  /* Cloud band: nubes proporcionalmente más chicas */
-  /* (las % ya escalan, no necesita más) */
+  /* MeteoriteSection bottom info: 3 cols → 1 col */
+  #section-meteorite > div:last-child {
+    grid-template-columns: 1fr !important;
+    text-align: left !important;
+  }
+  #section-meteorite > div:last-child > div {
+    text-align: left !important;
+  }
 
-  /* Hero: marquee más chico */
+  /* Hero: marquee más chico, sin overflow */
   #hero {
     overflow: hidden;
+  }
+
+  /* PastDrop card: 12-col grid → stack vertical */
+  #section-past-drop article {
+    grid-template-columns: 1fr !important;
+  }
+  #section-past-drop article > * {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Collections: thumbs row no se debería desbordar */
+  #section-collections {
+    overflow-x: hidden;
   }
 }
 
@@ -309,5 +363,24 @@ model-viewer {
 @media (max-width: 480px) {
   .display {
     font-size: clamp(2rem, 13vw, 4rem) !important;
+  }
+
+  /* Body text más chico */
+  body {
+    font-size: 14px;
+  }
+
+  /* Aún menos opacidad para las cajas 3D en pantallas muy chicas */
+  #section-mission [data-boxes-wrapper] {
+    opacity: 0.25 !important;
+    height: 35vh !important;
+  }
+}
+
+/* Touch devices: forzar hide del LiquidCursor */
+@media (hover: none) and (pointer: coarse) {
+  .liquid-cursor,
+  .liquid-cursor-trail {
+    display: none !important;
   }
 }

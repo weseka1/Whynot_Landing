@@ -7,6 +7,7 @@
    ============================================================================ */
 
 import { useEffect, useRef, useState } from "react";
+import { useIsTouch } from "./useIsMobile";
 
 const TEXT          = "WHY NOT";
 const LINE_COLOR    = "#ffdfc4";
@@ -27,6 +28,7 @@ type Point = { x: number; y: number; baseX: number; baseY: number };
 export default function WhyNotEnd() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const isTouch = useIsTouch();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -153,17 +155,22 @@ export default function WhyNotEnd() {
     }, 50);
 
     window.addEventListener("resize", resize);
-    canvas.addEventListener("mousemove", onMove);
-    canvas.addEventListener("mouseleave", onLeave);
+    // En touch devices no agregamos listeners de mouse (no aplican y consume CPU)
+    if (!isTouch) {
+      canvas.addEventListener("mousemove", onMove);
+      canvas.addEventListener("mouseleave", onLeave);
+    }
 
     return () => {
       clearTimeout(startId);
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
-      canvas.removeEventListener("mousemove", onMove);
-      canvas.removeEventListener("mouseleave", onLeave);
+      if (!isTouch) {
+        canvas.removeEventListener("mousemove", onMove);
+        canvas.removeEventListener("mouseleave", onLeave);
+      }
     };
-  }, []);
+  }, [isTouch]);
 
   return (
     <section

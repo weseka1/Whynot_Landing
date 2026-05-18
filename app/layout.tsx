@@ -1,10 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "WHYNOT — Future Fashion System",
   description: "Editable skeleton — cyber luxury fashion system.",
+  formatDetection: { telephone: false },
+};
+
+/* Viewport en Next 14 va como export separado, no dentro de metadata */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#0a0908",
 };
 
 export default function RootLayout({

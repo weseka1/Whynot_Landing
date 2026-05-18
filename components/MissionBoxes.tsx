@@ -15,6 +15,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, Bounds } from "@react-three/drei";
 import { MotionValue, useMotionValueEvent } from "framer-motion";
 import * as THREE from "three";
+import { useIsMobile } from "./useIsMobile";
 
 const BOX_SOURCES = [
   "/assets/3d/boxes/box-1-bape.glb",
@@ -52,24 +53,23 @@ function Box({ src, position, rotation, scale }: BoxProps) {
 
 interface BoxStarProps {
   progressRef: React.MutableRefObject<number>;
+  isMobile: boolean;
 }
 
-function BoxStar({ progressRef }: BoxStarProps) {
+function BoxStar({ progressRef, isMobile }: BoxStarProps) {
   const groupRef = useRef<THREE.Group>(null);
   const driftRef = useRef(0);  // acumulador del giro continuo (no se reinicia)
+
+  /* Drift rate: en mobile lo desactivamos (0) para que el canvas se
+     mantenga estático cuando el usuario no scrollea → menos render
+     load, mejor batería.                                                            */
+  const DRIFT_RATE = isMobile ? 0 : 0.35;
 
   useFrame((_, dt) => {
     const g = groupRef.current;
     if (!g) return;
     const p = progressRef.current;
-
-    /* Rotación UNICA sobre el eje Y → orbit tipo carrusel.
-       Dos componentes que se SUMAN cada frame (no se sobrescriben):
-         · scroll-tied: 4 vueltas en el recorrido total. Reacciona al scroll
-           hacia adelante Y hacia atrás.
-         · drift continuo: el grupo gira siempre, aún si el usuario no scrollea
-           (acumulador independiente).                                              */
-    driftRef.current += dt * 0.35;
+    driftRef.current += dt * DRIFT_RATE;
     g.rotation.y = p * Math.PI * 4 + driftRef.current;
   });
 
@@ -114,27 +114,34 @@ interface MissionBoxesProps {
 
 export default function MissionBoxes({ progress }: MissionBoxesProps) {
   const progressRef = useRef(0);
+  const isMobile = useIsMobile();
 
   useMotionValueEvent(progress, "change", (v) => {
     progressRef.current = v;
   });
 
+  /* En mobile bajamos DPR (1 fijo en lugar de 2) y simplificamos lighting
+     → menos draw calls + render más liviano + batería+CPU+GPU.            */
   return (
     <Canvas
       camera={{ position: [0, 1.8, 6.5], fov: 38 }}
-      dpr={[1, 2]}
+      dpr={isMobile ? 1 : [1, 2]}
       style={{ width: "100%", height: "100%", background: "transparent" }}
+      gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
     >
-      {/* Lighting */}
-      <ambientLight intensity={0.45} />
+      {/* Lighting — en mobile solo 2 lights, no pointLight */}
+      <ambientLight intensity={0.5} />
       <directionalLight position={[5, 6, 5]} intensity={1.6} color="#ffd9b8" />
-      <directionalLight position={[-4, -2, -3]} intensity={0.5} color="#5da3ff" />
-      <pointLight position={[0, 0, 5]} intensity={0.6} color="#ffffff" />
+      {!isMobile && (
+        <>
+          <directionalLight position={[-4, -2, -3]} intensity={0.5} color="#5da3ff" />
+          <pointLight position={[0, 0, 5]} intensity={0.6} color="#ffffff" />
+        </>
+      )}
 
       <Suspense fallback={null}>
-        {/* Bounds auto-fitea el viewport a los modelos cargados */}
         <Bounds fit clip observe margin={1.4}>
-          <BoxStar progressRef={progressRef} />
+          <BoxStar progressRef={progressRef} isMobile={isMobile} />
         </Bounds>
       </Suspense>
     </Canvas>

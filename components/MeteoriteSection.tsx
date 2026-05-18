@@ -14,13 +14,14 @@ import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
 import * as THREE from "three";
+import { useIsMobile } from "./useIsMobile";
 
-function Meteorite() {
+function Meteorite({ isMobile }: { isMobile: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null);
 
-  // Generamos una geometría con superficie irregular (cráteres)
+  /* En mobile bajamos la subdivisión del icosaedro (6 → 3) — menos polígonos. */
   const geometry = useMemo(() => {
-    const geo = new THREE.IcosahedronGeometry(1.4, 6);
+    const geo = new THREE.IcosahedronGeometry(1.4, isMobile ? 3 : 6);
     const pos = geo.attributes.position;
     const v = new THREE.Vector3();
     // Hash-noise simple para perturbar cada vértice → look de roca
@@ -37,7 +38,7 @@ function Meteorite() {
     pos.needsUpdate = true;
     geo.computeVertexNormals();
     return geo;
-  }, []);
+  }, [isMobile]);
 
   // Tumbling: rotaciones desincronizadas en los 3 ejes
   useFrame((_, delta) => {
@@ -61,6 +62,8 @@ function Meteorite() {
 }
 
 export default function MeteoriteSection() {
+  const isMobile = useIsMobile();
+
   return (
     <section
       id="section-meteorite"
@@ -116,33 +119,35 @@ export default function MeteoriteSection() {
         <Canvas
           camera={{ position: [0, 0, 4.5], fov: 35 }}
           style={{ width: "100%", height: "100%", position: "relative", zIndex: 1 }}
-          dpr={[1, 2]}
+          dpr={isMobile ? 1 : [1, 2]}
+          gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
         >
-          {/* Lighting */}
-          <ambientLight intensity={0.25} />
+          <ambientLight intensity={0.3} />
           <directionalLight
             position={[5, 4, 5]}
             intensity={1.6}
             color="#ffd9b8"
           />
-          <directionalLight
-            position={[-4, -2, -3]}
-            intensity={0.4}
-            color="#5da3ff"
-          />
+          {!isMobile && (
+            <directionalLight
+              position={[-4, -2, -3]}
+              intensity={0.4}
+              color="#5da3ff"
+            />
+          )}
 
-          {/* Stars de fondo */}
+          {/* Stars: cantidad y radio reducidos en mobile (1200 → 300) */}
           <Stars
             radius={50}
             depth={50}
-            count={1200}
+            count={isMobile ? 300 : 1200}
             factor={3}
             saturation={0}
             fade
-            speed={0.4}
+            speed={isMobile ? 0 : 0.4}
           />
 
-          <Meteorite />
+          <Meteorite isMobile={isMobile} />
         </Canvas>
       </div>
 
