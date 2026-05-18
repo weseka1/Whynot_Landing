@@ -40,25 +40,10 @@ export default function Mission() {
     restDelta: 0.0005,
   });
 
-  /* 4 pilares ⇒ 4 zonas de "pilar activo" + 3 transiciones entre ellos.
-     Keyframes empíricos:
-       0.32, 0.50, 0.68 = centros de cada transición (boundaries entre pilares) */
-
-  // X: 100% = mitad derecha, 0% = mitad izquierda. Alterna cada transición.
-  const modelX = useTransform(
-    smoothProgress,
-    [0, 0.32, 0.38, 0.47, 0.53, 0.62, 0.68, 1],
-    ["100%", "100%", "0%", "0%", "100%", "100%", "0%", "0%"]
-  );
-
-  // Escala: pulso menor en medio de cada transición
-  const modelScale = useTransform(
-    smoothProgress,
-    [0, 0.32, 0.35, 0.38, 0.47, 0.50, 0.53, 0.62, 0.65, 0.68, 1],
-    [1, 1, 0.75, 1, 1, 0.75, 1, 1, 0.75, 1, 1]
-  );
-
-  // Opacidad: fade al entrar/salir
+  /* El canvas ocupa el 100% del viewport: la alternancia izq/der y el
+     drop-off de cada caja se manejan dentro del canvas (MissionBoxes),
+     leyendo `smoothProgress` por frame. Acá solo aplicamos opacity fade
+     al entrar/salir de la sección.                                       */
   const modelOpacity = useTransform(
     smoothProgress,
     [0, 0.08, 0.92, 1],
@@ -99,14 +84,9 @@ export default function Mission() {
             data-boxes-wrapper
             style={{
               position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: "50%",
-              x: modelX,
-              scale: modelScale,
+              inset: 0,
               opacity: modelOpacity,
-              willChange: "transform, opacity",
+              willChange: "opacity",
             }}
           >
             <MissionBoxesClient progress={smoothProgress} />
