@@ -36,10 +36,13 @@ const PROGRESS_IN   = 0.08;
 const PROGRESS_OUT  = 0.92;
 
 const R = 1.05;                 // radio de las formaciones — más chico = cajas más juntas
-const SQRT3_2 = 0.8660254;      // sin(60°)
+const SQRT2_2 = 0.7071068;      // sin/cos(45°) — vértices diagonales (estrella ×)
+const SQRT3_2 = 0.8660254;      // sin(60°) — triángulo
 const BASE_SCALE = 0.50;        // scale base de cada caja (modelos GLB son grandes)
 const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva isométrica
-const SPIN_RATE = 0.32;         // rad/s — giro propio de cada caja
+const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
+const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
+const SPIN_RATE = 0.20;         // rad/s — giro propio de cada caja (lento → conserva el vértice visible)
 const ANCHOR_RISE = 4.8;        // unidades world que sube por unidad de activeIndex
 const ANCHOR_FADE_START = 0.30;
 const ANCHOR_FADE_END   = 0.85;
@@ -47,7 +50,7 @@ const TRANSITION_START = 0.40;  // % del pilar donde arranca la transición (má
 const TRANSITION_END   = 1.00;
 const POSITION_DAMP = 7;        // lerp temporal de posición — alto = sigue al target, bajo = perezoso
 const OPACITY_DAMP  = 6;
-const OFFSET_DIVISOR = 6;       // viewport.width/OFFSET_DIVISOR = magnitud del lateral izq/der
+const OFFSET_DIVISOR = 5;       // viewport.width/OFFSET_DIVISOR = magnitud del lateral izq/der
 
 /* FORMATIONS[N][slot] = posición (x,y,z) del slot `slot` cuando hay N cajas activas.
    Slot 0 = la caja que va a anclarse al final de ESTE pilar (la "saliente").
@@ -56,10 +59,13 @@ const OFFSET_DIVISOR = 6;       // viewport.width/OFFSET_DIVISOR = magnitud del 
    transicionar entre formaciones consecutivas (4→3→2→1).                       */
 const FORMATIONS: Record<number, [number, number, number][]> = {
   4: [
-    [ R,  0,  0],   // slot 0 → caja 0 (bape, sale al pilar 2)
-    [ 0,  R,  0],   // slot 1 → caja 1
-    [-R,  0,  0],   // slot 2 → caja 2
-    [ 0, -R,  0],   // slot 3 → caja 3
+    /* Estrella × (4 vértices diagonales), no cruz +.
+       Cada caja queda en una esquina diagonal y con Y_VERTEX_OFFSET
+       muestra su vértice al frente → silueta de estrella de 4 puntas. */
+    [ R * SQRT2_2,  R * SQRT2_2, 0], // slot 0 → caja 0 (bape, sale al pilar 2) — NE
+    [-R * SQRT2_2,  R * SQRT2_2, 0], // slot 1 → caja 1                          — NW
+    [-R * SQRT2_2, -R * SQRT2_2, 0], // slot 2 → caja 2                          — SW
+    [ R * SQRT2_2, -R * SQRT2_2, 0], // slot 3 → caja 3                          — SE
   ],
   3: [
     [ 0,            R,        0], // slot 0 → caja 1 (bale, apex; sale al pilar 3)
@@ -204,9 +210,12 @@ function Box({ src, index, progressRef }: BoxProps) {
     /* Scale base fijo (modelos GLB son grandes en su unidad nativa) */
     obj.scale.setScalar(BASE_SCALE);
 
-    /* Spin continuo basado en clock → no acumula drift en pausas */
+    /* Spin continuo basado en clock → no acumula drift en pausas.
+       Y_VERTEX_OFFSET = 45° → la caja siempre muestra un vértice al frente
+       (cara plana queda en diagonal); con SPIN_RATE bajo el vértice
+       persiste casi todo el tiempo, dando silueta de "punta de estrella". */
     const t0 = state.clock.elapsedTime;
-    obj.rotation.y = t0 * SPIN_RATE + phaseOffset;
+    obj.rotation.y = Y_VERTEX_OFFSET + t0 * SPIN_RATE + phaseOffset;
     obj.rotation.x = Math.sin(t0 * SPIN_RATE * 0.6 + phaseOffset) * 0.18;
 
     /* Opacity también con damp para fade fluido */
@@ -225,12 +234,12 @@ interface BoxStarProps {
 }
 
 function BoxStar({ progressRef }: BoxStarProps) {
-  /* Tilt en X del grupo entero → la estrella se inclina hacia atrás,
-     mostrando 3 caras de cada caja (efecto isométrico). La subida de
-     las cajas ancladas se desplaza en world Y, que después del tilt
-     sigue dando dirección "hacia arriba" en pantalla.                  */
+  /* Tilt en X del grupo + offset Y negativo:
+     - tilt inclina la estrella hacia atrás (efecto isométrico).
+     - GROUP_Y_OFFSET baja toda la composición para que no se solape
+       con el texto del pilar (que vive en la mitad superior del viewport). */
   return (
-    <group rotation={[GROUP_TILT_X, 0, 0]}>
+    <group position={[0, GROUP_Y_OFFSET, 0]} rotation={[GROUP_TILT_X, 0, 0]}>
       {BOX_SOURCES.map((src, i) => (
         <Box key={src} src={src} index={i} progressRef={progressRef} />
       ))}
