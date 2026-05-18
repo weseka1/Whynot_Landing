@@ -35,14 +35,18 @@ const PILLAR_COUNT  = BOX_SOURCES.length; // 4
 const PROGRESS_IN   = 0.08;
 const PROGRESS_OUT  = 0.92;
 
-const R = 1.5;                  // radio de las formaciones
+const R = 1.7;                  // radio de las formaciones
 const SQRT3_2 = 0.8660254;      // sin(60°)
-const SPIN_RATE = 0.35;         // rad/s — giro propio de cada caja
-const ANCHOR_RISE = 4.5;        // unidades world que sube por unidad de activeIndex
-const ANCHOR_FADE_START = 0.35; // scrollSince a partir del que empieza fade-out
-const ANCHOR_FADE_END   = 0.95;
-const TRANSITION_START = 0.55;  // % del pilar donde arranca la transición a la sig formación
+const BASE_SCALE = 0.55;        // scale base de cada caja (modelos GLB son grandes)
+const GROUP_TILT_X = 0.14;      // inclinación del grupo en X → perspectiva isométrica
+const SPIN_RATE = 0.32;         // rad/s — giro propio de cada caja
+const ANCHOR_RISE = 4.8;        // unidades world que sube por unidad de activeIndex
+const ANCHOR_FADE_START = 0.30;
+const ANCHOR_FADE_END   = 0.85;
+const TRANSITION_START = 0.40;  // % del pilar donde arranca la transición (más larga = más fluida)
 const TRANSITION_END   = 1.00;
+const POSITION_DAMP = 7;        // lerp temporal de posición — alto = sigue al target, bajo = perezoso
+const OPACITY_DAMP  = 6;
 
 /* FORMATIONS[N][slot] = posición (x,y,z) del slot `slot` cuando hay N cajas activas.
    Slot 0 = la caja que va a anclarse al final de ESTE pilar (la "saliente").
@@ -119,7 +123,7 @@ function Box({ src, index, progressRef }: BoxProps) {
   /* Phase offset por caja → no spinean todas en el mismo ángulo */
   const phaseOffset = useMemo(() => index * (Math.PI / 3), [index]);
 
-  useFrame((state) => {
+  useFrame((state, dt) => {
     const obj = ref.current;
     if (!obj) return;
 
@@ -137,23 +141,23 @@ function Box({ src, index, progressRef }: BoxProps) {
     // Offset lateral en world units (~mitad del medio viewport)
     const offsetMagnitude = state.viewport.width / 4.5;
 
-    let posX: number, posY: number, posZ: number;
-    let opacity = 1;
+    let targetX: number, targetY: number, targetZ: number;
+    let targetOpacity = 1;
 
     if (index < currentPillar) {
       /* ===== Caja ya ANCLADA (su pilar quedó atrás) ===== */
       const base = posOnPillar(index, index); // slot 0 de su formación de origen
       const scrollSince = activeIndex - (index + 1); // >= 0 (puede ser 0 al cruzar exacto)
-      posX = base[0] + pillarSign(index) * offsetMagnitude;
-      posY = base[1] + Math.max(scrollSince, 0) * ANCHOR_RISE;
-      posZ = base[2];
+      targetX = base[0] + pillarSign(index) * offsetMagnitude;
+      targetY = base[1] + Math.max(scrollSince, 0) * ANCHOR_RISE;
+      targetZ = base[2];
 
       const fadeT = THREE.MathUtils.smoothstep(
         Math.max(scrollSince, 0),
         ANCHOR_FADE_START,
         ANCHOR_FADE_END
       );
-      opacity = 1 - fadeT;
+      targetOpacity = 1 - fadeT;
     } else {
       /* ===== Caja ACTIVA (en formación o transicionando) ===== */
       const posNow = posOnPillar(currentPillar, index);
@@ -167,41 +171,49 @@ function Box({ src, index, progressRef }: BoxProps) {
       const isLeavingHere = index === currentPillar && !isLastPillar;
 
       if (isLastPillar) {
-        // Última caja en el último pilar → sin transición
         posTarget = posNow;
         signTarget = signNow;
         transitionT = 0;
       } else if (isLeavingHere) {
-        // Esta caja se va a anclar al final del pilar actual → no se mueve XYZ,
-        // tampoco cambia de lado. La transición a "anclada" la maneja el branch de arriba
-        // cuando activeIndex cruza index+1.
         posTarget = posNow;
         signTarget = signNow;
         transitionT = THREE.MathUtils.smoothstep(tInPillar, TRANSITION_START, TRANSITION_END);
       } else {
-        // Esta caja pasa al pilar siguiente → reorganiza posición y cambia de lado
         posTarget = posOnPillar(currentPillar + 1, index);
         signTarget = pillarSign(currentPillar + 1);
         transitionT = THREE.MathUtils.smoothstep(tInPillar, TRANSITION_START, TRANSITION_END);
       }
 
-      posX = THREE.MathUtils.lerp(posNow[0], posTarget[0], transitionT);
-      posY = THREE.MathUtils.lerp(posNow[1], posTarget[1], transitionT);
-      posZ = THREE.MathUtils.lerp(posNow[2], posTarget[2], transitionT);
+      targetX = THREE.MathUtils.lerp(posNow[0], posTarget[0], transitionT);
+      targetY = THREE.MathUtils.lerp(posNow[1], posTarget[1], transitionT);
+      targetZ = THREE.MathUtils.lerp(posNow[2], posTarget[2], transitionT);
 
       const signLerped = THREE.MathUtils.lerp(signNow, signTarget, transitionT);
-      posX += signLerped * offsetMagnitude;
+      targetX += signLerped * offsetMagnitude;
     }
 
-    obj.position.set(posX, posY, posZ);
+    /* Lerp temporal: la posición persigue al target con easing exponencial.
+       Aunque target salte al cruzar pilares, la posición real interpola suavemente.
+       Framerate-independent: `1 - exp(-dt*k)` da la misma respuesta en 60/120 fps. */
+    const kPos = 1 - Math.exp(-dt * POSITION_DAMP);
+    obj.position.x += (targetX - obj.position.x) * kPos;
+    obj.position.y += (targetY - obj.position.y) * kPos;
+    obj.position.z += (targetZ - obj.position.z) * kPos;
 
-    // Spin continuo sobre Y (+ leve sobre X) basado en clock → no acumula drift
+    /* Scale base fijo (modelos GLB son grandes en su unidad nativa) */
+    obj.scale.setScalar(BASE_SCALE);
+
+    /* Spin continuo basado en clock → no acumula drift en pausas */
     const t0 = state.clock.elapsedTime;
     obj.rotation.y = t0 * SPIN_RATE + phaseOffset;
     obj.rotation.x = Math.sin(t0 * SPIN_RATE * 0.6 + phaseOffset) * 0.18;
 
-    for (const m of materialsRef.current) m.opacity = opacity;
-    obj.visible = opacity > 0.01;
+    /* Opacity también con damp para fade fluido */
+    const kOp = 1 - Math.exp(-dt * OPACITY_DAMP);
+    const currentOp = materialsRef.current[0]?.opacity ?? 1;
+    const newOp = currentOp + (targetOpacity - currentOp) * kOp;
+    for (const m of materialsRef.current) m.opacity = newOp;
+    obj.visible = newOp > 0.01;
   });
 
   return <primitive ref={ref} object={cloned} />;
@@ -212,8 +224,12 @@ interface BoxStarProps {
 }
 
 function BoxStar({ progressRef }: BoxStarProps) {
+  /* Tilt en X del grupo entero → la estrella se inclina hacia atrás,
+     mostrando 3 caras de cada caja (efecto isométrico). La subida de
+     las cajas ancladas se desplaza en world Y, que después del tilt
+     sigue dando dirección "hacia arriba" en pantalla.                  */
   return (
-    <group>
+    <group rotation={[GROUP_TILT_X, 0, 0]}>
       {BOX_SOURCES.map((src, i) => (
         <Box key={src} src={src} index={i} progressRef={progressRef} />
       ))}
@@ -235,7 +251,9 @@ export default function MissionBoxes({ progress }: MissionBoxesProps) {
 
   return (
     <Canvas
-      camera={{ position: [0, 0, 7], fov: 42 }}
+      /* Cámara alejada + Y elevada → más perspectiva 3D, cajas se ven más chicas.
+         FOV bajo (36) reduce distorsión en los bordes.                           */
+      camera={{ position: [0, 1.1, 9], fov: 36 }}
       dpr={isMobile ? 1 : [1, 2]}
       style={{ width: "100%", height: "100%", background: "transparent" }}
       gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
