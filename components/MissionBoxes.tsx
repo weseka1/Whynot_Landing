@@ -35,10 +35,10 @@ const PILLAR_COUNT  = BOX_SOURCES.length; // 4
 const PROGRESS_IN   = 0.08;
 const PROGRESS_OUT  = 0.92;
 
-const R = 1.7;                  // radio de las formaciones
+const R = 1.05;                 // radio de las formaciones — más chico = cajas más juntas
 const SQRT3_2 = 0.8660254;      // sin(60°)
-const BASE_SCALE = 0.55;        // scale base de cada caja (modelos GLB son grandes)
-const GROUP_TILT_X = 0.14;      // inclinación del grupo en X → perspectiva isométrica
+const BASE_SCALE = 0.50;        // scale base de cada caja (modelos GLB son grandes)
+const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva isométrica
 const SPIN_RATE = 0.32;         // rad/s — giro propio de cada caja
 const ANCHOR_RISE = 4.8;        // unidades world que sube por unidad de activeIndex
 const ANCHOR_FADE_START = 0.30;
@@ -47,6 +47,7 @@ const TRANSITION_START = 0.40;  // % del pilar donde arranca la transición (má
 const TRANSITION_END   = 1.00;
 const POSITION_DAMP = 7;        // lerp temporal de posición — alto = sigue al target, bajo = perezoso
 const OPACITY_DAMP  = 6;
+const OFFSET_DIVISOR = 6;       // viewport.width/OFFSET_DIVISOR = magnitud del lateral izq/der
 
 /* FORMATIONS[N][slot] = posición (x,y,z) del slot `slot` cuando hay N cajas activas.
    Slot 0 = la caja que va a anclarse al final de ESTE pilar (la "saliente").
@@ -138,8 +139,8 @@ function Box({ src, index, progressRef }: BoxProps) {
     const currentPillar = Math.min(Math.floor(activeIndex), PILLAR_COUNT - 1);
     const tInPillar = activeIndex - currentPillar;
 
-    // Offset lateral en world units (~mitad del medio viewport)
-    const offsetMagnitude = state.viewport.width / 4.5;
+    // Offset lateral en world units (la formación se desplaza al lado del pilar)
+    const offsetMagnitude = state.viewport.width / OFFSET_DIVISOR;
 
     let targetX: number, targetY: number, targetZ: number;
     let targetOpacity = 1;
