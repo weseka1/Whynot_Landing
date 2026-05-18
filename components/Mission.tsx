@@ -89,7 +89,11 @@ export default function Mission() {
               willChange: "opacity",
             }}
           >
-            <MissionBoxesClient progress={smoothProgress} />
+            {/* scrollYProgress raw — MissionBoxes hace su propio smoothing
+                temporal (POSITION_DAMP/OPACITY_DAMP). Usar smoothProgress acá
+                era doble suavizado: la caja anclada se quedaba visible más
+                tiempo del esperado.                                          */}
+            <MissionBoxesClient progress={scrollYProgress} />
           </motion.div>
         </div>
       </div>

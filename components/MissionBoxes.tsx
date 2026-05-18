@@ -44,8 +44,12 @@ const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con e
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
 const SPIN_RATE = 0.20;         // rad/s — giro propio de cada caja (lento → conserva el vértice visible)
 const ANCHOR_RISE = 6.5;        // unidades world que sube por unidad de activeIndex
-const ANCHOR_FADE_START = 0.05; // fade-out arranca casi al anclarse
-const ANCHOR_FADE_END   = 0.40; // y termina temprano → en el próximo pilar la caja ya no se ve
+/* Fade unificado por "lifetime" de cada caja:
+   - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
+   - Fade-out en una ventana centrada en activeIndex = index+1 (arranca antes
+     del fin de su pilar y termina al inicio del siguiente).                       */
+const LIFETIME_FADE_BEFORE = 0.20; // qué tanto antes del fin de su pilar arranca el fade
+const LIFETIME_FADE_AFTER  = 0.15; // qué tanto después del fin termina (caja invisible)
 const TRANSITION_START = 0.40;  // % del pilar donde arranca la transición (más larga = más fluida)
 const TRANSITION_END   = 1.00;
 const POSITION_DAMP = 7;        // lerp temporal de posición — alto = sigue al target, bajo = perezoso
@@ -149,22 +153,28 @@ function Box({ src, index, progressRef }: BoxProps) {
     const offsetMagnitude = state.viewport.width / OFFSET_DIVISOR;
 
     let targetX: number, targetY: number, targetZ: number;
+
+    /* OPACITY UNIFICADA: función única del activeIndex, no del branch.
+       Visible mientras la caja está "en vida"; fade en ventana centrada
+       en su fin. La última caja (dior) nunca se va.                    */
     let targetOpacity = 1;
+    if (index < PILLAR_COUNT - 1) {
+      const endOfLife = index + 1;
+      targetOpacity = 1 - THREE.MathUtils.smoothstep(
+        activeIndex,
+        endOfLife - LIFETIME_FADE_BEFORE,
+        endOfLife + LIFETIME_FADE_AFTER
+      );
+    }
 
     if (index < currentPillar) {
-      /* ===== Caja ya ANCLADA (su pilar quedó atrás) ===== */
-      const base = posOnPillar(index, index); // slot 0 de su formación de origen
-      const scrollSince = activeIndex - (index + 1); // >= 0 (puede ser 0 al cruzar exacto)
+      /* ===== Caja ya ANCLADA — la posición sigue calculada para
+         reversibilidad (scroll up reintegra la caja a la formación). ===== */
+      const base = posOnPillar(index, index);
+      const scrollSince = activeIndex - (index + 1);
       targetX = base[0] + pillarSign(index) * offsetMagnitude;
       targetY = base[1] + Math.max(scrollSince, 0) * ANCHOR_RISE;
       targetZ = base[2];
-
-      const fadeT = THREE.MathUtils.smoothstep(
-        Math.max(scrollSince, 0),
-        ANCHOR_FADE_START,
-        ANCHOR_FADE_END
-      );
-      targetOpacity = 1 - fadeT;
     } else {
       /* ===== Caja ACTIVA (en formación o transicionando) ===== */
       const posNow = posOnPillar(currentPillar, index);
