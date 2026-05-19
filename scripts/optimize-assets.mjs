@@ -19,6 +19,7 @@ const TARGETS = [
   { in: "public/assets/hero/character.png",      alpha: true,  quality: 86 },
   { in: "public/assets/hero/extra.png",          alpha: true,  quality: 86 },
   { in: "public/assets/marquee/whynot-text.png", alpha: true,  quality: 88 },
+  { in: "public/assets/hero/golden-goose.jpg",   alpha: false, quality: 85 },
 ];
 
 function fmtBytes(n) {
@@ -32,7 +33,7 @@ let totalOut = 0;
 
 for (const t of TARGETS) {
   const inPath = path.join(root, t.in);
-  const outPath = inPath.replace(/\.png$/i, ".webp");
+  const outPath = inPath.replace(/\.(png|jpe?g)$/i, ".webp");
 
   try {
     const inStat = await fs.stat(inPath);
