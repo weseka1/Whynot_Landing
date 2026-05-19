@@ -195,12 +195,14 @@ export default function Collections() {
                     aria-hidden
                     style={{
                       /* 75% del circulo (10% mas grande que el 65% previo),
-                         centrado con grid. La zapatilla respira sin
-                         recortarse contra el borde.                        */
+                         centrado con grid. translateY -8% para subir la
+                         zapatilla — el frame del video la tiene un poco
+                         abajo y quedaba pegada al borde inferior.         */
                       width: "75%",
                       height: "75%",
                       objectFit: "contain",
                       filter: "saturate(1.05)",
+                      transform: "translateY(-8%)",
                     }}
                   />
                 ) : (
@@ -218,17 +220,6 @@ export default function Collections() {
               </motion.div>
             </AnimatePresence>
 
-            {/* Línea ecuatorial decorativa muy sutil */}
-            <div
-              aria-hidden
-              style={{
-                position: "absolute",
-                left: 0, right: 0, top: "50%",
-                height: 1,
-                background: "rgba(244,169,130,0.25)",
-                pointerEvents: "none",
-              }}
-            />
           </div>
 
           {/* Coordenadas debajo del círculo */}
