@@ -68,6 +68,16 @@
   --color-peach-mute:  #6e5a48;
   --color-peach-accent: #ff5436;       /* coral acento */
 
+  /* — Paleta AR premium para Collections gallery (luxury sneaker scanner) — */
+  --color-pearl:        #f4f1ec;       /* blanco roto base */
+  --color-pearl-2:      #ebe6dd;       /* perla mas oscuro para capas */
+  --color-platinum:     #a9a299;       /* gris-beige tipo cromo mate */
+  --color-platinum-2:   rgba(46,42,37,0.32); /* lineas finas HUD */
+  --color-platinum-3:   rgba(46,42,37,0.12); /* lineas muy sutiles */
+  --color-graphite:     #2e2a25;       /* texto principal sobre claro */
+  --color-graphite-mute: #6c645c;      /* texto secundario */
+  --color-gold-soft:    #c9ad6b;       /* dorado minimo / acento */
+
   /* — Patrón de puntos (dots-grid del DICH) generado por CSS — */
   --dots-pink-100:
     radial-gradient(circle at center, rgba(7,7,7,0.18) 1.1px, transparent 1.4px);
@@ -223,6 +233,20 @@ body::before {
   color: var(--color-peach-fg);
 }
 
+/* === Fondo AR premium para Collections rediseñada (luxury gallery) ===
+   Pearl base + viñeta blanca arriba + grilla tecnica muy sutil.
+   Sin tonos amarillentos / crema fuerte — toda la paleta es fria/cromo. */
+.bg-ar-gallery {
+  background-color: var(--color-pearl);
+  background-image:
+    radial-gradient(ellipse at top, rgba(255,255,255,0.55) 0%, transparent 60%),
+    radial-gradient(ellipse at bottom, rgba(46,42,37,0.04) 0%, transparent 50%),
+    radial-gradient(circle at center, rgba(46,42,37,0.10) 1px, transparent 1.5px);
+  background-size: auto, auto, 26px 26px;
+  background-repeat: no-repeat, no-repeat, repeat;
+  color: var(--color-graphite);
+}
+
 /* Línea dotted DICH (border-bottom .0625rem dotted rgba(7,7,7,0.5)) */
 .dich-dotted-line {
   border-bottom: 1px dotted rgba(7, 7, 7, 0.5);
@@ -237,6 +261,30 @@ body::before {
 @keyframes scan      { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
 @keyframes floaty    { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
 @keyframes spinSlow  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* === AR scanner animations para Collections premium === */
+@keyframes ar-orbit      { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
+@keyframes ar-orbit-rev  { from { transform: rotate(360deg); } to { transform: rotate(0deg);   } }
+@keyframes ar-scan-line  {
+  0%   { transform: translateY(-50%); opacity: 0; }
+  8%   { opacity: 0.85; }
+  92%  { opacity: 0.85; }
+  100% { transform: translateY(150%); opacity: 0; }
+}
+@keyframes ar-float {
+  0%, 100% { transform: translateY(-9%); }
+  50%      { transform: translateY(-12%); }
+}
+@keyframes ar-chrome-shine {
+  0%, 100% { box-shadow:
+    0 0 0 1px rgba(255,255,255,0.7),
+    0 0 40px rgba(201, 173, 107, 0.12),
+    0 30px 80px -20px rgba(46,42,37,0.28); }
+  50%      { box-shadow:
+    0 0 0 1px rgba(255,255,255,0.95),
+    0 0 70px rgba(201, 173, 107, 0.22),
+    0 30px 80px -20px rgba(46,42,37,0.35); }
+}
 
 .caret::after {
   content: "_";
