@@ -158,7 +158,9 @@ export default function Collections() {
               width: "min(70vh, 600px)",
               aspectRatio: "1",
               borderRadius: "50%",
-              background: "var(--color-bg)",
+              /* Fondo blanco para fundirse con el fondo blanco del video
+                 (golden-goose) — sin distincion visible video/circulo.   */
+              background: "#ffffff",
               border: "1px solid var(--color-peach-line)",
               overflow: "hidden",
               boxShadow: "0 30px 80px -20px rgba(0,0,0,0.4)",
@@ -192,11 +194,11 @@ export default function Collections() {
                     preload="auto"
                     aria-hidden
                     style={{
-                      /* Achicado al 65% del circulo y centrado con grid →
-                         la zapatilla deja respiracion alrededor y no se
-                         siente recortada.                                  */
-                      width: "65%",
-                      height: "65%",
+                      /* 75% del circulo (10% mas grande que el 65% previo),
+                         centrado con grid. La zapatilla respira sin
+                         recortarse contra el borde.                        */
+                      width: "75%",
+                      height: "75%",
                       objectFit: "contain",
                       filter: "saturate(1.05)",
                     }}
