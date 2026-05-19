@@ -277,34 +277,6 @@ export default function Collections() {
 
         {/* ----- COLUMNA DERECHA: index + CTA + copy ----- */}
         <div style={{ display: "grid", gap: "var(--space-md)" }}>
-          {/* mini card icon arriba */}
-          <div
-            style={{
-              width: 96,
-              height: 96,
-              border: "1px solid var(--color-peach-line)",
-              background: "var(--color-peach-bg)",
-              display: "grid",
-              placeItems: "center",
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.7rem",
-              color: "var(--color-peach-fg)",
-            }}
-          >
-            <div style={{ display: "grid", gap: 3 }}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    height: 1,
-                    background: "currentColor",
-                    width: `${30 + i * 8}px`,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
           <div className="system-text" style={{ color: "var(--color-peach-mute)" }}>
             {site.collections.eyebrow}
           </div>
