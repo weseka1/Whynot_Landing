@@ -15,6 +15,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
+import { useInViewport } from "./useInViewport";
 
 function Meteorite({ isMobile }: { isMobile: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -63,6 +64,12 @@ function Meteorite({ isMobile }: { isMobile: boolean }) {
 
 export default function MeteoriteSection() {
   const isMobile = useIsMobile();
+  /* Pausa el render loop de R3F cuando el canvas esta fuera del viewport.
+     frameloop="never" deja el canvas montado (no remountamos GLB ni stars)
+     pero detiene useFrame → ahorro de CPU/GPU sustancial.                 */
+  const { ref: canvasContainerRef, isInView } = useInViewport<HTMLDivElement>({
+    rootMargin: "100px",
+  });
 
   return (
     <section
@@ -94,7 +101,7 @@ export default function MeteoriteSection() {
       </div>
 
       {/* CANVAS 3D */}
-      <div style={{ position: "relative", minHeight: 460 }}>
+      <div ref={canvasContainerRef} style={{ position: "relative", minHeight: 460 }}>
         {/* Título atrás */}
         <h2
           aria-hidden
@@ -117,9 +124,10 @@ export default function MeteoriteSection() {
         </h2>
 
         <Canvas
+          frameloop={isInView ? "always" : "never"}
           camera={{ position: [0, 0, 4.5], fov: 35 }}
           style={{ width: "100%", height: "100%", position: "relative", zIndex: 1 }}
-          dpr={isMobile ? 1 : [1, 2]}
+          dpr={isMobile ? 1 : [1, 1.5]}
           gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
         >
           <ambientLight intensity={0.3} />

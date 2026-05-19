@@ -67,12 +67,20 @@ export default function LiquidCursor() {
       raf = requestAnimationFrame(loop);
     };
 
+    const start = () => { if (!raf) raf = requestAnimationFrame(loop); };
+    const stop  = () => { if (raf) { cancelAnimationFrame(raf); raf = 0; } };
+
+    /* Pausa cuando la tab esta oculta — sin mouse no hay cambios visibles. */
+    const onVis = () => { document.hidden ? stop() : start(); };
+    document.addEventListener("visibilitychange", onVis);
+
     window.addEventListener("mousemove", onMove, { passive: true });
-    raf = requestAnimationFrame(loop);
+    start();
 
     return () => {
       window.removeEventListener("mousemove", onMove);
-      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", onVis);
+      stop();
     };
   }, []);
 

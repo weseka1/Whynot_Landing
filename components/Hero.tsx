@@ -26,6 +26,7 @@ import MarqueeBanner from "./MarqueeBanner";
 
 export default function Hero() {
   const modelRef = useRef<HTMLElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const MAX_ANGLE = 22;       // grados a cada lado (rango acotado)
@@ -36,8 +37,11 @@ export default function Hero() {
     let targetAngle  = 0;
     let currentAngle = 0;
     let raf = 0;
+    let visible = true; // hero en viewport
+    let hidden  = false; // tab oculta
 
     const onMove = (e: MouseEvent) => {
+      if (!visible || hidden) return;
       // Normalizamos clientX a [-1, 1] sobre el ancho del viewport.
       // Signo NEGADO: mouse a la izq → mono mira a la izq (sigue al cursor).
       const normalized = (e.clientX / window.innerWidth) * 2 - 1;
@@ -56,20 +60,54 @@ export default function Hero() {
       raf = requestAnimationFrame(loop);
     };
 
+    const start = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    };
+
+    /* IntersectionObserver: pausa el rAF cuando el Hero sale del viewport
+       (el usuario ya esta scrolleando otras secciones). Reanuda al volver. */
+    let io: IntersectionObserver | null = null;
+    if (sectionRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        ([entry]) => {
+          visible = entry.isIntersecting;
+          if (visible && !hidden) start();
+          else stop();
+        },
+        { rootMargin: "100px" }
+      );
+      io.observe(sectionRef.current);
+    }
+
+    /* Visibility API: pausa cuando la tab esta oculta (background). */
+    const onVis = () => {
+      hidden = document.hidden;
+      if (visible && !hidden) start();
+      else stop();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
     window.addEventListener("mousemove",  onMove, { passive: true });
     window.addEventListener("mouseleave", onLeave);
-    raf = requestAnimationFrame(loop);
+    start();
 
     return () => {
       window.removeEventListener("mousemove",  onMove);
       window.removeEventListener("mouseleave", onLeave);
-      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", onVis);
+      io?.disconnect();
+      stop();
     };
   }, []);
 
   return (
     <section
       id="hero"
+      ref={sectionRef}
       style={{
         position: "relative",
         minHeight: "100vh",

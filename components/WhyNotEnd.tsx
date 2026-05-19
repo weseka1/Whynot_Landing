@@ -36,6 +36,10 @@ export default function WhyNotEnd() {
   const { ref: sectionRef, isInView, hasBeenInView } = useInViewport<HTMLElement>({
     rootMargin: "200px",
   });
+  /* Ref espejo para que el loop lea siempre el valor mas reciente
+     sin re-crear el useEffect.                                            */
+  const isInViewRef = useRef(false);
+  useEffect(() => { isInViewRef.current = isInView; }, [isInView]);
 
   useEffect(() => {
     if (!hasBeenInView) return;
@@ -107,6 +111,12 @@ export default function WhyNotEnd() {
     }
 
     function tick() {
+      /* Pausa si la tab esta oculta o la seccion fuera del viewport — sin
+         cursor no hay cambios visibles y rAF consume CPU.                 */
+      if (document.hidden || !isInViewRef.current) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
       const w = canvas!.width  / dpr;
       const h = canvas!.height / dpr;
 

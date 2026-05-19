@@ -274,7 +274,7 @@ export default function MissionBoxes({ progress }: MissionBoxesProps) {
       /* Cámara alejada + Y elevada → más perspectiva 3D, cajas se ven más chicas.
          FOV bajo (36) reduce distorsión en los bordes.                           */
       camera={{ position: [0, 1.1, 9], fov: 36 }}
-      dpr={isMobile ? 1 : [1, 2]}
+      dpr={isMobile ? 1 : [1, 1.5]}
       style={{ width: "100%", height: "100%", background: "transparent" }}
       gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
     >
