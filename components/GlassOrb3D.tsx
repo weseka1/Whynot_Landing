@@ -320,33 +320,33 @@ function ProductPlane({
 /* ---------------- Esfera de cristal ---------------- */
 
 function GlassSphere({ isMobile }: { isMobile: boolean }) {
-  /* Parametros pensados para look "luxury sneaker scanner premium":
-     - thickness moderado para refraccion visible pero no excesiva
-     - clearcoat alto: capa exterior bien pulida
-     - chromaticAberration sutil: dispersion cromatica en los bordes
-     - anisotropy + distortion bajos: deformacion suave del producto
-     - color blanco apenas teñido warm                                    */
+  /* Parametros ajustados para que el cristal NO deforme la zapatilla:
+     - transmission alto pero thickness y ior muy bajos → casi sin
+       refraccion (la zapatilla se ve nitida, no como pez ojo)
+     - chromaticAberration y distortion en cero → sin fringes RGB
+     - clearcoat alto → reflejos pulidos en la superficie
+     - envMapIntensity baja → el HDR no domina visualmente            */
   return (
     <mesh>
       <sphereGeometry args={[1.2, isMobile ? 48 : 96, isMobile ? 48 : 96]} />
       <MeshTransmissionMaterial
         backside
-        backsideThickness={0.4}
-        thickness={0.45}
-        transmission={1}
-        roughness={0.05}
-        ior={1.32}
-        chromaticAberration={0.04}
-        anisotropy={0.18}
-        distortion={0.06}
-        distortionScale={0.4}
-        temporalDistortion={0.04}
+        backsideThickness={0.05}
+        thickness={0.1}
+        transmission={0.95}
+        roughness={0.04}
+        ior={1.08}
+        chromaticAberration={0}
+        anisotropy={0}
+        distortion={0}
+        distortionScale={0}
+        temporalDistortion={0}
         clearcoat={1}
-        clearcoatRoughness={0.04}
-        attenuationColor="#fffefb"
-        attenuationDistance={3.2}
+        clearcoatRoughness={0.06}
+        attenuationColor="#ffffff"
+        attenuationDistance={6}
         color="#ffffff"
-        envMapIntensity={1.4}
+        envMapIntensity={0.55}
       />
     </mesh>
   );
@@ -391,9 +391,10 @@ export default function GlassOrb3D({
       <directionalLight position={[3, 1, -2]} intensity={0.6} color="#d4e2ff" />
       <pointLight position={[0, 0, 4]} intensity={0.35} color="#ffffff" />
 
-      {/* HDR environment para los reflejos del cristal (solo desktop por
-          performance — en mobile el cristal queda solo con las luces). */}
-      {!isMobile && <Environment preset="city" />}
+      {/* HDR environment SOLO para reflejos del cristal — no como background.
+          "apartment" es un HDR interior claro / neutro: el cristal refleja
+          tonos blancos/grises calidos en vez de rascacielos.            */}
+      {!isMobile && <Environment preset="apartment" background={false} />}
 
       {/* Producto adentro, flotando con Float */}
       <Float
