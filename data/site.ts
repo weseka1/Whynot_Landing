@@ -50,10 +50,11 @@ export const site = {
     items: [
       /* image = preview del thumb. video (opcional) = lo que se muestra en
          el circulo central cuando este item esta activo. Si no hay video,
-         el circulo muestra image como background. */
+         el circulo muestra image como background. Cada item tiene su
+         propio video (white-black / silver / gold). */
       { id: "01", name: "Capsule 01", caption: "Shift the vision",  image: "/assets/hero/golden-goose.webp", video: "/assets/hero/golden-goose.mp4" },
-      { id: "02", name: "Capsule 02", caption: "Evolve",            image: "/assets/hero/extra.webp" },
-      { id: "03", name: "Capsule 03", caption: "Touch the void",    image: "/assets/hero/character.webp", video: "/assets/hero/golden-goose.mp4" },
+      { id: "02", name: "Capsule 02", caption: "Evolve",            image: "/assets/hero/golden-goose.webp", video: "/assets/hero/golden-goose-silver.mp4" },
+      { id: "03", name: "Capsule 03", caption: "Touch the void",    image: "/assets/hero/golden-goose.webp", video: "/assets/hero/golden-goose-gold.mp4" },
       { id: "04", name: "Capsule 04", caption: "Decrypted",          image: "/assets/hero/extra.webp" },
     ],
   },
