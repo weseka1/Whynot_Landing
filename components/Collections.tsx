@@ -75,6 +75,74 @@ export default function Collections() {
         gap={12}
       />
 
+      {/* Thumbnails en esquina superior derecha — navegador de items */}
+      <div
+        style={{
+          position: "absolute",
+          top: "calc(var(--space-md) + 16px)",
+          right: "calc(var(--container-pad) + 16px)",
+          display: "flex",
+          gap: "var(--space-xs)",
+          zIndex: 3,
+        }}
+      >
+        {items.map((it, i) => (
+          <div
+            key={it.id}
+            style={{
+              position: "relative",
+              display: "inline-block",
+              lineHeight: 0,
+            }}
+          >
+            <button
+              onClick={() => setActive(i)}
+              aria-label={`Show ${it.name}`}
+              style={{
+                display: "block",
+                width: "clamp(48px, 5vw, 76px)",
+                aspectRatio: "3 / 4",
+                borderRadius: 4,
+                background: "var(--color-bg)",
+                backgroundImage: `url(${it.image})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                border:
+                  i === active
+                    ? "2px solid var(--color-peach-fg)"
+                    : "1px solid var(--color-peach-line)",
+                cursor: "pointer",
+                transition: "transform var(--speed-fast), border-color var(--speed-fast)",
+                transform: i === active ? "translateY(-3px)" : "translateY(0)",
+                padding: 0,
+                margin: 0,
+              }}
+            />
+
+            <span
+              style={{
+                position: "absolute",
+                bottom: 4,
+                right: 4,
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.6rem",
+                fontWeight: 700,
+                background: "var(--color-peach-fg)",
+                color: "var(--color-peach-bg)",
+                padding: "2px 5px",
+                letterSpacing: "0.08em",
+                borderRadius: 2,
+                lineHeight: 1,
+                pointerEvents: "none",
+                zIndex: 2,
+              }}
+            >
+              0{i + 1}
+            </span>
+          </div>
+        ))}
+      </div>
+
       {/* ============= GRID PRINCIPAL ============= */}
       <div
         style={{
@@ -275,84 +343,23 @@ export default function Collections() {
         </div>
       </div>
 
-      {/* ============= FOOTER DE LA SECCIÓN: thumbs + título ============= */}
+      {/* ============= FOOTER DE LA SECCIÓN: solo título rotado ============= */}
       <div
         style={{
           position: "relative",
           zIndex: 2,
           marginTop: "var(--space-xl)",
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           alignItems: "end",
-          gap: "var(--space-lg)",
-          flexWrap: "wrap",
         }}
       >
-        {/* Thumbnails — wrapper relative + badge como HERMANO del button. */}
-        <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-          {items.map((it, i) => (
-            <div
-              key={it.id}
-              style={{
-                position: "relative",
-                display: "inline-block",
-                lineHeight: 0,
-              }}
-            >
-              <button
-                onClick={() => setActive(i)}
-                aria-label={`Show ${it.name}`}
-                style={{
-                  display: "block",
-                  width: "clamp(48px, 5vw, 76px)",
-                  aspectRatio: "3 / 4",
-                  borderRadius: 4,
-                  background: "var(--color-bg)",
-                  backgroundImage: `url(${it.image})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  border:
-                    i === active
-                      ? "2px solid var(--color-peach-fg)"
-                      : "1px solid var(--color-peach-line)",
-                  cursor: "pointer",
-                  transition: "transform var(--speed-fast), border-color var(--speed-fast)",
-                  transform: i === active ? "translateY(-3px)" : "translateY(0)",
-                  padding: 0,
-                  margin: 0,
-                }}
-              />
-
-              <span
-                style={{
-                  position: "absolute",
-                  bottom: 4,
-                  right: 4,
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  background: "var(--color-peach-fg)",
-                  color: "var(--color-peach-bg)",
-                  padding: "2px 5px",
-                  letterSpacing: "0.08em",
-                  borderRadius: 2,
-                  lineHeight: 1,
-                  pointerEvents: "none",
-                  zIndex: 2,
-                }}
-              >
-                0{i + 1}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Título "Oraniths" rotado 180° — ahora a la DERECHA y más chico */}
+        {/* Título "Oraniths" rotado 180° */}
         <h2
           style={{
             fontFamily: "var(--font-marquee)",
             fontWeight: 900,
-            fontSize: "clamp(2.5rem, 7vw, 7rem)",         /* más chico */
+            fontSize: "clamp(2.5rem, 7vw, 7rem)",
             lineHeight: 0.85,
             letterSpacing: "-0.04em",
             transform: "rotate(180deg)",
