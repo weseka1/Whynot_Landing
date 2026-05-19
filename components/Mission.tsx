@@ -23,9 +23,16 @@ import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { site } from "@/data/site";
 import XDecoration from "./XDecoration";
 import MissionBoxesClient from "./MissionBoxesClient";
+import { useInViewport } from "./useInViewport";
 
 export default function Mission() {
   const sectionRef = useRef<HTMLElement>(null);
+  /* Lazy mount: hasta que la seccion no entra al viewport (con 400px de
+     margen para precargar), no instanciamos el Canvas R3F. Eso evita
+     descargar three+drei en el bundle inicial.                          */
+  const { ref: viewportRef, hasBeenInView } = useInViewport<HTMLDivElement>({
+    rootMargin: "400px",
+  });
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -64,6 +71,7 @@ export default function Mission() {
 
       {/* ============ STICKY 3D BOXES — overlay sobre toda la sección ============ */}
       <div
+        ref={viewportRef}
         aria-hidden
         style={{
           position: "absolute",
@@ -89,11 +97,13 @@ export default function Mission() {
               willChange: "opacity",
             }}
           >
-            {/* scrollYProgress raw — MissionBoxes hace su propio smoothing
+            {/* Lazy mount: hasta que la seccion no entra al viewport, no
+                instanciamos el Canvas (evita descargar three+drei eager).
+                scrollYProgress raw — MissionBoxes hace su propio smoothing
                 temporal (POSITION_DAMP/OPACITY_DAMP). Usar smoothProgress acá
                 era doble suavizado: la caja anclada se quedaba visible más
                 tiempo del esperado.                                          */}
-            <MissionBoxesClient progress={scrollYProgress} />
+            {hasBeenInView && <MissionBoxesClient progress={scrollYProgress} />}
           </motion.div>
         </div>
       </div>

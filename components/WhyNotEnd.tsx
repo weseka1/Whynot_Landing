@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useIsTouch } from "./useIsMobile";
+import { useInViewport } from "./useInViewport";
 
 const TEXT          = "WHY NOT";
 const LINE_COLOR    = "#ffdfc4";
@@ -29,8 +30,15 @@ export default function WhyNotEnd() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const isTouch = useIsTouch();
+  /* Lazy: hasta que la seccion no entra al viewport (con 200px de margen),
+     no construimos las 28 lineas ni arrancamos el rAF. Cuando se va el
+     viewport el rAF se cancela (chequeamos isInView dentro del loop).      */
+  const { ref: sectionRef, isInView, hasBeenInView } = useInViewport<HTMLElement>({
+    rootMargin: "200px",
+  });
 
   useEffect(() => {
+    if (!hasBeenInView) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -170,11 +178,12 @@ export default function WhyNotEnd() {
         canvas.removeEventListener("mouseleave", onLeave);
       }
     };
-  }, [isTouch]);
+  }, [isTouch, hasBeenInView]);
 
   return (
     <section
       id="section-whynot-end"
+      ref={sectionRef}
       style={{
         position: "relative",
         background: "#070707",
