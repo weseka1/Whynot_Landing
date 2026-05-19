@@ -272,14 +272,17 @@ export default function Collections() {
               }}
             />
 
-            {/* --- Circulo principal (capsula blanca + borde cromado + glow) --- */}
+            {/* --- Circulo principal (capsula blanca + borde cromado + glow) ---
+                Fondo blanco PURO #ffffff (sin gradiente interno) para que
+                coincida exacto con el bg blanco del video. Los degradados
+                que dan el "vidrio" estan en capas separadas — el bg base
+                tiene que ser el mismo blanco que la zona blanca del video. */}
             <div
               style={{
                 position: "absolute",
                 inset: 0,
                 borderRadius: "50%",
-                background:
-                  "radial-gradient(circle at 30% 30%, #ffffff 0%, #fbfaf7 70%, #f1ede5 100%)",
+                background: "#ffffff",
                 /* Borde cromado: outer thin platinum + inner glow */
                 boxShadow:
                   "0 0 0 1px rgba(255,255,255,0.85), 0 0 0 2px var(--color-platinum-3), 0 30px 80px -20px rgba(46,42,37,0.28), 0 0 40px rgba(201,173,107,0.10)",
@@ -287,7 +290,8 @@ export default function Collections() {
                 overflow: "hidden",
               }}
             >
-              {/* Reflexion superior cromada (highlight) */}
+              {/* Reflexion superior cromada — bajada a opacity muy sutil
+                  para no crear una banda visible donde corta con el video. */}
               <div
                 aria-hidden
                 style={{
@@ -295,10 +299,11 @@ export default function Collections() {
                   top: 0,
                   left: 0,
                   right: 0,
-                  height: "30%",
+                  height: "40%",
                   background:
-                    "linear-gradient(180deg, rgba(255,255,255,0.7), transparent)",
+                    "linear-gradient(180deg, rgba(255,255,255,0.35), transparent)",
                   pointerEvents: "none",
+                  mixBlendMode: "screen",
                 }}
               />
 
@@ -364,24 +369,36 @@ export default function Collections() {
                       preload="auto"
                       aria-hidden
                       style={{
-                        width: "72%",
-                        height: "72%",
+                        width: "78%",
+                        height: "78%",
                         objectFit: "contain",
                         filter: "saturate(1.05)",
                         animation: "ar-float 6s ease-in-out infinite",
+                        /* Mascara radial: el centro (donde esta la zapatilla)
+                           se ve 100%, los bordes del rectangulo se desvanecen
+                           hacia transparent → el "marco" del video se funde
+                           con el bg blanco del circulo y no se nota.        */
+                        WebkitMaskImage:
+                          "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
+                        maskImage:
+                          "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
                       }}
                     />
                   ) : (
                     <div
                       style={{
-                        width: "72%",
-                        height: "72%",
+                        width: "78%",
+                        height: "78%",
                         backgroundImage: `url(${current.image})`,
                         backgroundSize: "contain",
                         backgroundPosition: "center",
                         backgroundRepeat: "no-repeat",
                         filter: "saturate(1.05)",
                         animation: "ar-float 6s ease-in-out infinite",
+                        WebkitMaskImage:
+                          "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
+                        maskImage:
+                          "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
                       }}
                     />
                   )}
