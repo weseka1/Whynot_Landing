@@ -25,22 +25,23 @@ function GlassSphere() {
     if (ref.current) ref.current.rotation.y += dt * 0.04;
   });
 
+  /* Esfera BLANCA OPACA con shading direccional real (no cristal) — actua
+     como el "fondo blanco" curvado donde va a flotar el producto. El
+     lighting (directional + ambient + environment) genera highlights y
+     terminador oscuro naturales: eso es lo que da la sensacion de esfera
+     3D vs el circulo plano CSS anterior.                                 */
   return (
     <mesh ref={ref}>
-      <sphereGeometry args={[1.0, 64, 64]} />
+      <sphereGeometry args={[1.0, 96, 96]} />
       <meshPhysicalMaterial
         color="#ffffff"
-        metalness={0}
-        roughness={0.04}
-        transmission={1}
-        thickness={1.4}
-        ior={1.35}
-        clearcoat={0.8}
-        clearcoatRoughness={0.05}
-        attenuationColor="#fff4e0"
-        attenuationDistance={5}
-        transparent
-        opacity={1}
+        metalness={0.05}
+        roughness={0.38}
+        clearcoat={0.6}
+        clearcoatRoughness={0.25}
+        sheen={0.4}
+        sheenColor="#fff4e0"
+        sheenRoughness={0.5}
       />
     </mesh>
   );
@@ -63,14 +64,15 @@ function PlanetaryRings() {
   return (
     <group rotation={[Math.PI / 2 - 0.32, 0, -0.18]}>
       <mesh ref={refOuter}>
-        {/* Torus(radius, tube, radialSegments, tubularSegments) */}
+        {/* Torus(radius, tube, radialSegments, tubularSegments) — radios
+            ajustados para acompañar la sphere de 1.0 unidad.             */}
         <torusGeometry args={[1.55, 0.006, 8, 128]} />
         <meshStandardMaterial
           color="#a9a299"
           roughness={0.6}
           metalness={0.3}
           transparent
-          opacity={0.55}
+          opacity={0.6}
         />
       </mesh>
       <mesh ref={refMid}>
@@ -80,7 +82,7 @@ function PlanetaryRings() {
           roughness={0.5}
           metalness={0.4}
           transparent
-          opacity={0.45}
+          opacity={0.5}
         />
       </mesh>
       <mesh ref={refInner}>
@@ -90,7 +92,7 @@ function PlanetaryRings() {
           roughness={0.7}
           metalness={0.2}
           transparent
-          opacity={0.30}
+          opacity={0.35}
         />
       </mesh>
     </group>

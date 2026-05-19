@@ -225,40 +225,25 @@ export default function Collections() {
               }}
             />
 
-            {/* --- Esfera principal con shading volumetrico ---
-                El truco para que se vea esfera y no circulo: el bg sigue
-                siendo casi blanco (el video se funde), pero por encima de
-                TODO el contenido (incluso la zapatilla) ponemos capas de
-                luz/sombra con radial-gradient direccional. Da sensacion
-                de curvatura y luz cenital desde arriba-izquierda.        */}
+            {/* --- Wrapper transparente sobre la esfera 3D ---
+                Antes este div tenia background blanco opaco + boxShadow
+                inset + animacion chrome-shine. Eso pisaba la esfera 3D y
+                la hacia ver como circulo plano. Ahora es transparente
+                solo para CONTENER las capas internas (scan line, video
+                con mask, penumbra, especular). El shading 3D real lo
+                hace la sphere de R3F detras (meshPhysicalMaterial).      */}
             <div
               style={{
                 position: "absolute",
                 inset: 0,
                 borderRadius: "50%",
-                background: "#ffffff",
-                /* Borde cromado + sombra inset diagonal abajo-derecha →
-                   la esfera tiene "terminador" oscuro tipo planeta.      */
+                background: "transparent",
+                /* Drop shadow + ring outline tipo HUD (sin tapar la esfera) */
                 boxShadow:
-                  "0 0 0 1px rgba(255,255,255,0.85), 0 0 0 2px var(--color-platinum-3), 0 30px 80px -20px rgba(46,42,37,0.32), 0 0 40px rgba(201,173,107,0.10), inset -40px -50px 100px -30px rgba(46,42,37,0.16), inset 30px 40px 80px -40px rgba(255,255,255,0.9)",
-                animation: "ar-chrome-shine 5.5s ease-in-out infinite",
+                  "0 30px 80px -20px rgba(46,42,37,0.28), 0 0 0 1px rgba(255,255,255,0.4)",
                 overflow: "hidden",
               }}
             >
-              {/* Highlight radial direccional desde arriba-izquierda
-                  → sensacion de luz cenital sobre la esfera (terminador
-                  luminoso). zIndex bajo: queda debajo del producto.       */}
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "radial-gradient(circle at 28% 22%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 22%, transparent 55%)",
-                  pointerEvents: "none",
-                  zIndex: 1,
-                }}
-              />
 
               {/* Scan line horizontal (8s loop, atraviesa el circulo) */}
               <div
