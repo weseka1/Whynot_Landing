@@ -276,7 +276,16 @@ export default function Collections() {
         </div>
 
         {/* ----- COLUMNA DERECHA: index + CTA + copy ----- */}
-        <div style={{ display: "grid", gap: "var(--space-md)" }}>
+        <div
+          style={{
+            display: "grid",
+            gap: "var(--space-md)",
+            /* Padding-top ~4cm para bajar todo el bloque (eyebrow + index
+               + Discover + copy) por debajo de la altura de los thumbs y
+               dar respiracion vertical con el circulo central.            */
+            paddingTop: "clamp(80px, 12vw, 150px)",
+          }}
+        >
           <div className="system-text" style={{ color: "var(--color-peach-mute)" }}>
             {site.collections.eyebrow}
           </div>
