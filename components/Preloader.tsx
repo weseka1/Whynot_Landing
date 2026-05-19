@@ -1,11 +1,13 @@
 "use client";
 
 /* ============================================================================
-   PRELOADER
-   - Pantalla de boot a fullscreen, fondo dark.
-   - Contador 0% → 100% (~ --speed-preload).
-   - Corners SVG en las 4 esquinas.
-   - Secuencia de logs tipo terminal.
+   PRELOADER — version REAL (no fake timer)
+   - Espera a que carguen los assets criticos del Hero (sky, marquee, GLB)
+     + fonts (document.fonts.ready).
+   - Progreso atado a la fraccion de assets ya completos.
+   - MIN_TIME: minimo 1.2s en pantalla (evita flash si la red es muy rapida).
+   - MAX_TIME: hard timeout 5s (si la red esta saturada igual liberamos UI).
+   - Conserva el look: corners SVG, scanline, % grande, logs de boot.
    ============================================================================ */
 
 import { useEffect, useState } from "react";
@@ -13,28 +15,89 @@ import { AnimatePresence, motion } from "framer-motion";
 import { site } from "@/data/site";
 import CornerFrame from "./CornerFrame";
 
+const MIN_TIME = 1200;
+const MAX_TIME = 5000;
+
+/* Helpers de precarga — cada uno resuelve cuando el asset esta listo. */
+function loadImage(src: string): Promise<void> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve(); // fallar no debe trabar el preloader
+    img.src = src;
+  });
+}
+
+function fetchAsset(src: string): Promise<void> {
+  return new Promise((resolve) => {
+    fetch(src, { cache: "force-cache" })
+      .then((r) => r.blob())
+      .then(() => resolve())
+      .catch(() => resolve());
+  });
+}
+
+function fontsReady(): Promise<void> {
+  if (typeof document !== "undefined" && (document as any).fonts?.ready) {
+    return (document as any).fonts.ready.then(() => undefined);
+  }
+  return Promise.resolve();
+}
+
 export default function Preloader() {
   const [pct, setPct] = useState(0);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const total = 3000; // = --speed-preload
-    const step = 30;
-    const inc = (step / total) * 100;
+    const start = performance.now();
 
-    const id = setInterval(() => {
-      setPct((p) => {
-        const next = p + inc;
-        if (next >= 100) {
-          clearInterval(id);
-          setTimeout(() => setVisible(false), 400);
-          return 100;
-        }
-        return next;
-      });
-    }, step);
+    /* Lista de "trabajos" — cada uno aporta 1/N al progreso. */
+    const jobs: Promise<void>[] = [
+      loadImage(site.hero.bgImage),
+      loadImage("/assets/marquee/whynot-text.webp"),
+      fetchAsset(site.hero.model),
+      fontsReady(),
+    ];
 
-    return () => clearInterval(id);
+    let done = 0;
+    const total = jobs.length;
+    let cancelled = false;
+
+    /* Update visual del % conforme jobs completan. */
+    const tick = () => {
+      if (cancelled) return;
+      const target = Math.round((done / total) * 100);
+      setPct((p) => (p < target ? Math.min(target, p + 2) : p));
+      if (done < total) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+
+    /* Cuando cada job termina, sumamos al contador. */
+    jobs.forEach((p) => p.then(() => { done++; }));
+
+    /* Cierre: cuando todos terminaron Y paso MIN_TIME. */
+    Promise.all(jobs).then(() => {
+      if (cancelled) return;
+      const elapsed = performance.now() - start;
+      const wait = Math.max(0, MIN_TIME - elapsed);
+      setTimeout(() => {
+        if (cancelled) return;
+        setPct(100);
+        setTimeout(() => setVisible(false), 350);
+      }, wait);
+    });
+
+    /* Hard timeout: si la red tarda demasiado, cerramos igual. */
+    const hard = setTimeout(() => {
+      if (cancelled) return;
+      setPct(100);
+      setTimeout(() => setVisible(false), 350);
+    }, MAX_TIME);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(hard);
+    };
   }, []);
 
   const logs = [

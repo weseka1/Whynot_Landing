@@ -44,6 +44,30 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Audiowide&family=Bruno+Ace+SC&family=Quantico:wght@700&family=Orbitron:wght@700;900&display=swap"
         />
+
+        {/* Preload de assets criticos del Hero — el browser los pide en
+            paralelo con el JS, no espera a que React monte el componente. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="preload"
+          as="image"
+          href="/assets/hero/sky-background.webp"
+          type="image/webp"
+          // @ts-ignore fetchpriority no esta en types aun pero el browser lo respeta
+          fetchpriority="high"
+        />
+        <link
+          rel="preload"
+          as="image"
+          href="/assets/marquee/whynot-text.webp"
+          type="image/webp"
+        />
+        <link
+          rel="preload"
+          as="fetch"
+          href="/assets/3d/mono.glb"
+          crossOrigin=""
+        />
       </head>
       <body>
         {children}
