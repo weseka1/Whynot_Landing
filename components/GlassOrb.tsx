@@ -248,13 +248,8 @@ export default function GlassOrb({
             animation: none !important;
           }
         }
-
-        /* Mobile: orb mas chico por defecto */
-        @media (max-width: 600px) {
-          .glass-orb {
-            width: min(82vw, 340px) !important;
-          }
-        }
+        /* Sin override de width en mobile — el size lo controla el padre o
+           el clamp default. Asi GlassOrb se adapta al contenedor.        */
       `}</style>
     </div>
   );

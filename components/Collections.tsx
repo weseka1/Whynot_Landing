@@ -33,7 +33,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { site } from "@/data/site";
-import CollectionsSphereClient from "./CollectionsSphereClient";
+import GlassOrb from "./GlassOrb";
 
 /* Stats tecnicos que rodean el circulo (HUD AR scanner). Cambiar libremente. */
 const TECH_STATS_LEFT = [
@@ -179,109 +179,35 @@ export default function Collections() {
               aspectRatio: "1",
             }}
           >
-            {/* --- ESFERA 3D real (R3F + Three.js) ---
-                Reemplaza los anillos CSS + capas de shading planas. La
-                esfera vive en un Canvas y se renderiza con material
-                transmission=1 (vidrio refractante real). Los anillos son
-                Torus 3D inclinados.
-
-                Posicionada absolute DETRAS del circulo blanco + video.
-                Inset negativo para que la esfera y sus anillos puedan
-                desbordarse mas alla del clip circular.                  */}
-            <div
-              aria-hidden
-              style={{
-                position: "absolute",
-                inset: "-15%",
-                width: "130%",
-                height: "130%",
-                pointerEvents: "none",
-                zIndex: 0,
-              }}
-            >
-              <CollectionsSphereClient />
-            </div>
-
-            {/* --- Esquinas tipo viewfinder AR (corners) --- */}
+            {/* --- Esquinas tipo viewfinder AR (corners HUD afuera del orb) --- */}
             {(["tl", "tr", "bl", "br"] as const).map((p) => (
               <ArCornerBracket key={p} pos={p} />
             ))}
 
-            {/* --- Reflejo / sombra suave debajo del producto --- */}
+            {/* --- Sombra al piso debajo del producto (da peso a la esfera) --- */}
             <div
               aria-hidden
               style={{
                 position: "absolute",
                 left: "18%",
                 right: "18%",
-                bottom: "8%",
-                height: 30,
+                bottom: "-2%",
+                height: 28,
                 borderRadius: "50%",
                 background:
-                  "radial-gradient(ellipse at center, rgba(46,42,37,0.18), transparent 70%)",
-                filter: "blur(6px)",
+                  "radial-gradient(ellipse at center, rgba(46,42,37,0.20), transparent 70%)",
+                filter: "blur(8px)",
                 pointerEvents: "none",
-                zIndex: 1,
+                zIndex: 0,
               }}
             />
 
-            {/* --- Wrapper transparente sobre la esfera 3D ---
-                Antes este div tenia background blanco opaco + boxShadow
-                inset + animacion chrome-shine. Eso pisaba la esfera 3D y
-                la hacia ver como circulo plano. Ahora es transparente
-                solo para CONTENER las capas internas (scan line, video
-                con mask, penumbra, especular). El shading 3D real lo
-                hace la sphere de R3F detras (meshPhysicalMaterial).      */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: "50%",
-                background: "transparent",
-                /* Drop shadow + ring outline tipo HUD (sin tapar la esfera) */
-                boxShadow:
-                  "0 30px 80px -20px rgba(46,42,37,0.28), 0 0 0 1px rgba(255,255,255,0.4)",
-                overflow: "hidden",
-              }}
-            >
-
-              {/* Scan line horizontal (8s loop, atraviesa el circulo) */}
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 60,
-                  background:
-                    "linear-gradient(180deg, transparent 0%, rgba(201,173,107,0.18) 45%, rgba(201,173,107,0.42) 50%, rgba(201,173,107,0.18) 55%, transparent 100%)",
-                  animation: "ar-scan-line 8s ease-in-out infinite",
-                  pointerEvents: "none",
-                  zIndex: 4,
-                }}
-              />
-
-              {/* Crosshair central sutil */}
-              <svg
-                aria-hidden
-                viewBox="0 0 100 100"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  pointerEvents: "none",
-                  zIndex: 2,
-                  opacity: 0.18,
-                }}
-              >
-                <line x1="46" y1="50" x2="54" y2="50" stroke="var(--color-graphite)" strokeWidth="0.3" />
-                <line x1="50" y1="46" x2="50" y2="54" stroke="var(--color-graphite)" strokeWidth="0.3" />
-                <circle cx="50" cy="50" r="1" fill="var(--color-graphite)" />
-              </svg>
-
-              {/* --- Video / imagen del producto --- */}
+            {/* === GLASS ORB con el video del producto adentro ===
+                El GlassOrb tiene sus propias capas internas (cristal
+                semitransparente, highlight especular, rim de vidrio,
+                aro, sombra inferior, backdrop blur). Las zapatillas
+                del video flotan DENTRO de la esfera de cristal.       */}
+            <GlassOrb size="100%" innerScale={1} glow="warm">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={current.id}
@@ -290,11 +216,10 @@ export default function Collections() {
                   exit={{ opacity: 0, scale: 1.02 }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                   style={{
-                    position: "absolute",
-                    inset: 0,
+                    width: "100%",
+                    height: "100%",
                     display: "grid",
                     placeItems: "center",
-                    zIndex: 3,
                   }}
                 >
                   {"video" in current && current.video ? (
@@ -307,15 +232,13 @@ export default function Collections() {
                       preload="auto"
                       aria-hidden
                       style={{
-                        width: "78%",
-                        height: "78%",
+                        width: "72%",
+                        height: "72%",
                         objectFit: "contain",
-                        filter: "saturate(1.05)",
-                        animation: "ar-float 6s ease-in-out infinite",
-                        /* Mascara radial: el centro (donde esta la zapatilla)
-                           se ve 100%, los bordes del rectangulo se desvanecen
-                           hacia transparent → el "marco" del video se funde
-                           con el bg blanco del circulo y no se nota.        */
+                        filter:
+                          "saturate(1.05) drop-shadow(0 20px 24px rgba(0,0,0,0.18))",
+                        /* Mascara radial: difumina el "rectangulo" del video
+                           para que se funda con el cristal del orb. */
                         WebkitMaskImage:
                           "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
                         maskImage:
@@ -325,14 +248,14 @@ export default function Collections() {
                   ) : (
                     <div
                       style={{
-                        width: "78%",
-                        height: "78%",
+                        width: "72%",
+                        height: "72%",
                         backgroundImage: `url(${current.image})`,
                         backgroundSize: "contain",
                         backgroundPosition: "center",
                         backgroundRepeat: "no-repeat",
-                        filter: "saturate(1.05)",
-                        animation: "ar-float 6s ease-in-out infinite",
+                        filter:
+                          "saturate(1.05) drop-shadow(0 20px 24px rgba(0,0,0,0.18))",
                         WebkitMaskImage:
                           "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
                         maskImage:
@@ -342,44 +265,7 @@ export default function Collections() {
                   )}
                 </motion.div>
               </AnimatePresence>
-
-              {/* Penumbra esferica SOBRE el producto: sombra direccional
-                  desde abajo-derecha hacia arriba-izquierda, opacity muy
-                  baja para no tapar la zapatilla — solo da volumen 3D
-                  curvado. mixBlendMode multiply hace que aplique sobre
-                  blanco sin oscurecer demasiado el contenido oscuro.    */}
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "radial-gradient(circle at 78% 82%, rgba(46,42,37,0.22) 0%, rgba(46,42,37,0.10) 28%, transparent 60%)",
-                  pointerEvents: "none",
-                  zIndex: 4,
-                  mixBlendMode: "multiply",
-                }}
-              />
-
-              {/* Especular brillo concentrado arriba-izquierda → punto de
-                  reflejo de luz tipo bola de billar / planeta. zIndex 5,
-                  encima de todo, pero MUY chico para no tapar nada.     */}
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  top: "8%",
-                  left: "14%",
-                  width: "18%",
-                  height: "14%",
-                  background:
-                    "radial-gradient(ellipse at center, rgba(255,255,255,0.55) 0%, transparent 70%)",
-                  pointerEvents: "none",
-                  zIndex: 5,
-                  filter: "blur(4px)",
-                }}
-              />
-            </div>
+            </GlassOrb>
           </div>
 
           {/* === Coordenadas debajo del circulo === */}
