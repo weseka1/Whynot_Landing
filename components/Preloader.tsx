@@ -51,13 +51,11 @@ export default function Preloader() {
   useEffect(() => {
     const start = performance.now();
 
-    /* Lista de "trabajos" — cada uno aporta 1/N al progreso.
-       El video del Hero se calienta cache con fetch() para que cuando
-       el <video> lo pida ya este en disco.                              */
+    /* Lista de "trabajos" — cada uno aporta 1/N al progreso. */
     const jobs: Promise<void>[] = [
       loadImage(site.hero.bgImage),
       loadImage("/assets/marquee/whynot-text.webp"),
-      fetchAsset(site.hero.video),
+      fetchAsset(site.hero.model),
       fontsReady(),
     ];
 

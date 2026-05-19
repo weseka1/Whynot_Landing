@@ -2,26 +2,107 @@
 
 /* ============================================================================
    HERO
-   - Fondo: cielo WebP full-bleed.
-   - Centerpiece: <video> autoplay+loop+muted+playsInline con golden-goose.mp4.
-     Reemplaza al modelo GLB anterior (mono.glb 2.7MB → video 307KB, -89%).
-     Sin mouse-tracking (los <video> nativos no orbitan), pero a cambio:
-       * arranca a reproducir antes de descargar todo
-       * sin parser 3D ni shaders en el main thread
-       * cero JS adicional vs <model-viewer> 3.5
-   - Marquee superior con PNG/WebP de "WHYNOT AMK EXCLUSIVE".
+   - Fondo: cielo PNG full-bleed.
+   - Centerpiece: <model-viewer> GLB Mono 3D.
+     • Sigue al mouse en eje X con rango ACOTADO (no rota libremente).
+     • Empieza centrado (de frente) y vuelve al centro si el mouse sale.
+     • Lerp para movimiento suave.
+   - Marquee superior con PNG de "WHYNOT AMK EXCLUSIVE".
    - Botón Discover circular abajo a la derecha.
    - 4 corner frames decorativos.
+
+   Tunear el seguimiento del mouse (constantes abajo en useEffect):
+     - MAX_ANGLE → cuántos grados se permite hacia cada lado
+     - POLAR     → ángulo vertical fijo (88 ≈ horizontal directo)
+     - RADIUS    → distancia de cámara fija
+     - LERP      → suavidad (0.05 muy amortiguado, 0.2 muy rápido)
    ============================================================================ */
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { site } from "@/data/site";
 import FrameBorder from "./FrameBorder";
 import DiscoverButton from "./DiscoverButton";
 import MarqueeBanner from "./MarqueeBanner";
 
 export default function Hero() {
+  const modelRef = useRef<HTMLElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const MAX_ANGLE = 22;       // grados a cada lado (rango acotado)
+    const POLAR     = 88;       // ángulo vertical (88 ≈ mirando de frente)
+    const RADIUS    = "55%";    // distancia de cámara
+    const LERP      = 0.08;     // suavidad del seguimiento
+
+    let targetAngle  = 0;
+    let currentAngle = 0;
+    let raf = 0;
+    let visible = true; // hero en viewport
+    let hidden  = false; // tab oculta
+
+    const onMove = (e: MouseEvent) => {
+      if (!visible || hidden) return;
+      // Normalizamos clientX a [-1, 1] sobre el ancho del viewport.
+      // Signo NEGADO: mouse a la izq → mono mira a la izq (sigue al cursor).
+      const normalized = (e.clientX / window.innerWidth) * 2 - 1;
+      targetAngle = -normalized * MAX_ANGLE;
+    };
+
+    // Si el mouse sale de la ventana, vuelve al centro
+    const onLeave = () => { targetAngle = 0; };
+
+    const loop = () => {
+      currentAngle += (targetAngle - currentAngle) * LERP;
+      const el = modelRef.current as any;
+      if (el) {
+        el.cameraOrbit = `${currentAngle.toFixed(2)}deg ${POLAR}deg ${RADIUS}`;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+
+    const start = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    };
+
+    /* IntersectionObserver: pausa el rAF cuando el Hero sale del viewport
+       (el usuario ya esta scrolleando otras secciones). Reanuda al volver. */
+    let io: IntersectionObserver | null = null;
+    if (sectionRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        ([entry]) => {
+          visible = entry.isIntersecting;
+          if (visible && !hidden) start();
+          else stop();
+        },
+        { rootMargin: "100px" }
+      );
+      io.observe(sectionRef.current);
+    }
+
+    /* Visibility API: pausa cuando la tab esta oculta (background). */
+    const onVis = () => {
+      hidden = document.hidden;
+      if (visible && !hidden) start();
+      else stop();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    window.addEventListener("mousemove",  onMove, { passive: true });
+    window.addEventListener("mouseleave", onLeave);
+    start();
+
+    return () => {
+      window.removeEventListener("mousemove",  onMove);
+      window.removeEventListener("mouseleave", onLeave);
+      document.removeEventListener("visibilitychange", onVis);
+      io?.disconnect();
+      stop();
+    };
+  }, []);
 
   return (
     <section
@@ -78,33 +159,33 @@ export default function Hero() {
         />
       </div>
 
-      {/* — Video centerpiece — */}
+      {/* — Modelo 3D (mouse-driven) — */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           paddingTop: "8vh",
           zIndex: 3,
-          display: "grid",
-          placeItems: "center",
-          pointerEvents: "none",
         }}
       >
-        <video
-          src={site.hero.video}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          aria-hidden
+        {/* @ts-ignore — web component */}
+        <model-viewer
+          ref={modelRef}
+          src={site.hero.model}
+          alt="3D centerpiece"
+          disable-zoom
+          shadow-intensity="0.5"
+          shadow-softness="1"
+          exposure="1.15"
+          camera-orbit="0deg 88deg 55%"
+          camera-target="0m 0.45m 0m"
+          field-of-view="26deg"
+          interaction-prompt="none"
+          loading="eager"
           style={{
-            width: "min(80vh, 80vw)",
-            height: "auto",
-            maxHeight: "80vh",
-            objectFit: "contain",
+            width:  "100%",
+            height: "100%",
             background: "transparent",
-            pointerEvents: "none",
           }}
         />
       </div>

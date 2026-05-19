@@ -174,12 +174,43 @@ export default function Collections() {
                 style={{
                   position: "absolute",
                   inset: 0,
-                  backgroundImage: `url(${current.image})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  filter: "saturate(1.05)",
+                  overflow: "hidden",
                 }}
-              />
+              >
+                {/* Si el item activo tiene video → render <video> (los 01 y
+                    03 reemplazan el mono por el video del golden-goose).
+                    Si solo tiene image → fondo CSS como antes.            */}
+                {"video" in current && current.video ? (
+                  <video
+                    src={current.video}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      filter: "saturate(1.05)",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      backgroundImage: `url(${current.image})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      filter: "saturate(1.05)",
+                    }}
+                  />
+                )}
+              </motion.div>
             </AnimatePresence>
 
             {/* Línea ecuatorial decorativa muy sutil */}
