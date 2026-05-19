@@ -284,38 +284,38 @@ export default function Collections() {
               }}
             />
 
-            {/* --- Circulo principal (capsula blanca + borde cromado + glow) ---
-                Fondo blanco PURO #ffffff (sin gradiente interno) para que
-                coincida exacto con el bg blanco del video. Los degradados
-                que dan el "vidrio" estan en capas separadas — el bg base
-                tiene que ser el mismo blanco que la zona blanca del video. */}
+            {/* --- Esfera principal con shading volumetrico ---
+                El truco para que se vea esfera y no circulo: el bg sigue
+                siendo casi blanco (el video se funde), pero por encima de
+                TODO el contenido (incluso la zapatilla) ponemos capas de
+                luz/sombra con radial-gradient direccional. Da sensacion
+                de curvatura y luz cenital desde arriba-izquierda.        */}
             <div
               style={{
                 position: "absolute",
                 inset: 0,
                 borderRadius: "50%",
                 background: "#ffffff",
-                /* Borde cromado: outer thin platinum + inner glow */
+                /* Borde cromado + sombra inset diagonal abajo-derecha →
+                   la esfera tiene "terminador" oscuro tipo planeta.      */
                 boxShadow:
-                  "0 0 0 1px rgba(255,255,255,0.85), 0 0 0 2px var(--color-platinum-3), 0 30px 80px -20px rgba(46,42,37,0.28), 0 0 40px rgba(201,173,107,0.10)",
+                  "0 0 0 1px rgba(255,255,255,0.85), 0 0 0 2px var(--color-platinum-3), 0 30px 80px -20px rgba(46,42,37,0.32), 0 0 40px rgba(201,173,107,0.10), inset -40px -50px 100px -30px rgba(46,42,37,0.16), inset 30px 40px 80px -40px rgba(255,255,255,0.9)",
                 animation: "ar-chrome-shine 5.5s ease-in-out infinite",
                 overflow: "hidden",
               }}
             >
-              {/* Reflexion superior cromada — bajada a opacity muy sutil
-                  para no crear una banda visible donde corta con el video. */}
+              {/* Highlight radial direccional desde arriba-izquierda
+                  → sensacion de luz cenital sobre la esfera (terminador
+                  luminoso). zIndex bajo: queda debajo del producto.       */}
               <div
                 aria-hidden
                 style={{
                   position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: "40%",
+                  inset: 0,
                   background:
-                    "linear-gradient(180deg, rgba(255,255,255,0.35), transparent)",
+                    "radial-gradient(circle at 28% 22%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 22%, transparent 55%)",
                   pointerEvents: "none",
-                  mixBlendMode: "screen",
+                  zIndex: 1,
                 }}
               />
 
@@ -416,6 +416,43 @@ export default function Collections() {
                   )}
                 </motion.div>
               </AnimatePresence>
+
+              {/* Penumbra esferica SOBRE el producto: sombra direccional
+                  desde abajo-derecha hacia arriba-izquierda, opacity muy
+                  baja para no tapar la zapatilla — solo da volumen 3D
+                  curvado. mixBlendMode multiply hace que aplique sobre
+                  blanco sin oscurecer demasiado el contenido oscuro.    */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "radial-gradient(circle at 78% 82%, rgba(46,42,37,0.22) 0%, rgba(46,42,37,0.10) 28%, transparent 60%)",
+                  pointerEvents: "none",
+                  zIndex: 4,
+                  mixBlendMode: "multiply",
+                }}
+              />
+
+              {/* Especular brillo concentrado arriba-izquierda → punto de
+                  reflejo de luz tipo bola de billar / planeta. zIndex 5,
+                  encima de todo, pero MUY chico para no tapar nada.     */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: "8%",
+                  left: "14%",
+                  width: "18%",
+                  height: "14%",
+                  background:
+                    "radial-gradient(ellipse at center, rgba(255,255,255,0.55) 0%, transparent 70%)",
+                  pointerEvents: "none",
+                  zIndex: 5,
+                  filter: "blur(4px)",
+                }}
+              />
             </div>
           </div>
 
