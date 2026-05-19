@@ -33,6 +33,11 @@ interface Props {
   innerScale?: number;
   glow?: "warm" | "cool" | "neutral";
   shadow?: boolean;
+  /* "clear"  — cristal mas transparente (default), ideal para PNG sin fondo
+     "frosted" — cristal con relleno blanco mas opaco en el centro, ideal
+                  para imagen/video con fondo blanco horneado (mix-blend
+                  multiply abajo "absorbe" el blanco horneado).            */
+  glassFill?: "clear" | "frosted";
   children?: ReactNode;
   className?: string;
   style?: CSSProperties;
@@ -51,12 +56,14 @@ export default function GlassOrb({
   innerScale = 0.62,
   glow = "warm",
   shadow = true,
+  glassFill = "clear",
   children,
   className,
   style,
 }: Props) {
   const colors = GLOW_COLORS[glow];
   const innerPct = `${Math.round(innerScale * 100)}%`;
+  const isFrosted = glassFill === "frosted";
 
   return (
     <div
@@ -121,21 +128,35 @@ export default function GlassOrb({
           z-index: 0;
         }
 
-        /* 2) BODY — el "cristal" en si: gradiente radial con sombreado direccional */
+        /* 2) BODY — el "cristal" en si: gradiente radial con sombreado direccional.
+              Frosted: capa interna blanca casi opaca, ideal para que video/imagen
+              con fondo blanco horneado se funda via mix-blend-mode multiply.
+              Clear: cristal mas transparente, ideal para PNG transparente.    */
         .glass-orb__body {
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          background:
-            radial-gradient(
-              circle at 32% 28%,
-              rgba(255,255,255,0.95) 0%,
-              rgba(255,255,255,0.55) 18%,
-              rgba(255,255,255,0.18) 38%,
-              rgba(255,255,255,0.08) 62%,
-              rgba(255,255,255,0.22) 82%,
-              rgba(0,0,0,0.06) 100%
-            );
+          background: ${
+            isFrosted
+              ? `radial-gradient(
+                  circle at 32% 28%,
+                  rgba(255,255,255,1) 0%,
+                  rgba(255,255,255,0.96) 30%,
+                  rgba(255,255,255,0.88) 55%,
+                  rgba(255,255,255,0.72) 75%,
+                  rgba(255,255,255,0.55) 92%,
+                  rgba(0,0,0,0.06) 100%
+                )`
+              : `radial-gradient(
+                  circle at 32% 28%,
+                  rgba(255,255,255,0.95) 0%,
+                  rgba(255,255,255,0.55) 18%,
+                  rgba(255,255,255,0.18) 38%,
+                  rgba(255,255,255,0.08) 62%,
+                  rgba(255,255,255,0.22) 82%,
+                  rgba(0,0,0,0.06) 100%
+                )`
+          };
           z-index: 1;
         }
 

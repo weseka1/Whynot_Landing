@@ -202,12 +202,20 @@ export default function Collections() {
               }}
             />
 
-            {/* === GLASS ORB con el video del producto adentro ===
-                El GlassOrb tiene sus propias capas internas (cristal
-                semitransparente, highlight especular, rim de vidrio,
-                aro, sombra inferior, backdrop blur). Las zapatillas
-                del video flotan DENTRO de la esfera de cristal.       */}
-            <GlassOrb size="100%" innerScale={1} glow="warm">
+            {/* === GLASS ORB con la zapatilla FLOTANDO DENTRO ===
+                Truco para que el video con fondo blanco horneado NO se
+                vea como "card rectangular pegada encima":
+                  1) Una capa de fondo blanco DENTRO del orb (donde se
+                     posiciona la zapatilla) — sin esto, el blanco del
+                     video destaca contra el cristal semitransparente.
+                  2) mix-blend-mode: multiply en el video → el blanco
+                     puro del video se vuelve transparente al cristal
+                     (255 * X / 255 = X), solo queda la zapatilla oscura.
+                  3) Mask radial suaviza los bordes del rectangulo del
+                     video → fade hacia transparent en los limites.
+                Resultado: el producto se ve como objeto suelto flotando
+                dentro del cristal, sin rectangulo visible.            */}
+            <GlassOrb size="100%" innerScale={1} glow="warm" glassFill="frosted">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={current.id}
@@ -220,6 +228,8 @@ export default function Collections() {
                     height: "100%",
                     display: "grid",
                     placeItems: "center",
+                    position: "relative",
+                    zIndex: 1,
                   }}
                 >
                   {"video" in current && current.video ? (
@@ -235,10 +245,12 @@ export default function Collections() {
                         width: "72%",
                         height: "72%",
                         objectFit: "contain",
-                        filter:
-                          "saturate(1.05) drop-shadow(0 20px 24px rgba(0,0,0,0.18))",
-                        /* Mascara radial: difumina el "rectangulo" del video
-                           para que se funda con el cristal del orb. */
+                        /* mix-blend-mode: multiply elimina el blanco horneado
+                           del video — el pixel blanco (255) deja pasar lo de
+                           atras intacto, solo la zapatilla oscura se ve.    */
+                        mixBlendMode: "multiply",
+                        /* Mask radial: difumina los bordes del rectangulo
+                           del video para fundirlo con el cristal del orb.  */
                         WebkitMaskImage:
                           "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
                         maskImage:
@@ -254,8 +266,7 @@ export default function Collections() {
                         backgroundSize: "contain",
                         backgroundPosition: "center",
                         backgroundRepeat: "no-repeat",
-                        filter:
-                          "saturate(1.05) drop-shadow(0 20px 24px rgba(0,0,0,0.18))",
+                        mixBlendMode: "multiply",
                         WebkitMaskImage:
                           "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
                         maskImage:
