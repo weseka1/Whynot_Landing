@@ -175,6 +175,8 @@ export default function Collections() {
                   position: "absolute",
                   inset: 0,
                   overflow: "hidden",
+                  display: "grid",
+                  placeItems: "center",
                 }}
               >
                 {/* Si el item activo tiene video → render <video> (los 01 y
@@ -190,11 +192,12 @@ export default function Collections() {
                     preload="auto"
                     aria-hidden
                     style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
+                      /* Achicado al 65% del circulo y centrado con grid →
+                         la zapatilla deja respiracion alrededor y no se
+                         siente recortada.                                  */
+                      width: "65%",
+                      height: "65%",
+                      objectFit: "contain",
                       filter: "saturate(1.05)",
                     }}
                   />
