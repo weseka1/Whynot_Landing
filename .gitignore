@@ -34,6 +34,8 @@ MIAMI_IMPORT.zip
 *.mov
 *.mp4
 *.avi
+# excepcion: el video del Hero si va al deploy
+!public/assets/hero/golden-goose.mp4
 
 # Claude config local
 .claude/

@@ -252,14 +252,6 @@ body::before {
   }
 }
 
-/* Model-viewer (Google web component) */
-model-viewer {
-  width: 100%;
-  height: 100%;
-  background-color: transparent;
-  --poster-color: transparent;
-}
-
 /* ==========================================================================
    MOBILE — adaptaciones para pantallas <= 768px
    ========================================================================== */

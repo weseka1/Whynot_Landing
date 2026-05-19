@@ -36,8 +36,9 @@ export const site = {
     discover:  "Discover",
     metaLeft:  "VERSION 02.6",
     metaRight: "EST. 20XX",
-    /* GLB model centerpiece (reemplazar archivo en /public/assets/3d/) */
-    model:     "/assets/3d/mono.glb",
+    /* Video centerpiece (reemplaza al GLB del mono — mucho mas liviano
+       y nativo del browser, sin parser 3D ni shader compilation). */
+    video:     "/assets/hero/golden-goose.mp4",
     /* Fondo del hero (WebP cielo, fallback PNG si hace falta). */
     bgImage:   "/assets/hero/sky-background.webp",
   },

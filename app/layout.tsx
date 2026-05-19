@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,14 +28,6 @@ export default function RootLayout({
           Tipografías cargadas desde Google Fonts vía <link> directo.
           Cambiar acá la familia si querés otro look — la variable
           asociada vive en app/globals.css → --font-marquee.
-
-          Candidatas con look sci-fi / retro-futurista geométrico:
-            - Audiowide     ← actual (arcos + cortes característicos)
-            - Bruno Ace SC  ← stencil más marcado
-            - Quantico      ← más sobria, ancha
-            - Genos         ← variable, angular
-            - Russo One     ← más chunky
-            - Major Mono    ← display mono
         */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -64,19 +55,13 @@ export default function RootLayout({
         />
         <link
           rel="preload"
-          as="fetch"
-          href="/assets/3d/mono.glb"
-          crossOrigin=""
+          as="video"
+          href="/assets/hero/golden-goose.mp4"
+          // @ts-ignore "type" sobre rel=preload as=video lo respeta el browser
+          type="video/mp4"
         />
       </head>
-      <body>
-        {children}
-        <Script
-          type="module"
-          src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"
-          strategy="afterInteractive"
-        />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
