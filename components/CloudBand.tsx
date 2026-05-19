@@ -70,6 +70,7 @@ export default function CloudBand() {
         <img
           src="/nuves/cloud-center.webp"
           alt=""
+          decoding="async"
           style={{
             position: "absolute",
             left: "5%",
@@ -86,6 +87,7 @@ export default function CloudBand() {
         <img
           src="/nuves/cloud-center.webp"
           alt=""
+          decoding="async"
           style={{
             position: "absolute",
             left: "50%",
@@ -102,6 +104,7 @@ export default function CloudBand() {
         <img
           src="/nuves/cloud-2.webp"
           alt=""
+          decoding="async"
           style={{
             position: "absolute",
             right: "5%",
@@ -118,6 +121,7 @@ export default function CloudBand() {
         <img
           src="/nuves/cloud-center-bottom.webp"
           alt=""
+          decoding="async"
           style={{
             position: "absolute",
             left: "50%",

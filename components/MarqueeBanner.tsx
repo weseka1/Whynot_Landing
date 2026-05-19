@@ -70,6 +70,10 @@ export default function MarqueeBanner({
             src={image}
             alt=""
             aria-hidden
+            /* La imagen del marquee es UNA SOLA (browser deduplica los 6 imgs
+               apuntando al mismo src). Marcar decoding async para no bloquear
+               el main thread mientras el browser pinta el Hero.            */
+            decoding="async"
             style={{
               height: imageHeight,
               width: "auto",
