@@ -1,248 +1,420 @@
 "use client";
 
 /* ============================================================================
-   COLLECTIONS — Oraniths
-   Sección con paleta INVERTIDA (peach claro + negro). Layout 3-columnas:
+   COLLECTIONS — AR PRODUCT GALLERY (rediseño premium / luxury)
+   --------------------------------------------------------------------------
+   Estética: AR product scanner, vitrina futurista de zapatillas de lujo.
+   Paleta: pearl/perla, cromo/plata, dorado minimo, graphite. SIN neon ni
+   tonos crema amarillentos.
 
-     ┌─────────────────────────────────────────────────────────────┐
-     │  META            ┌──────────┐         INDEX  .01            │
-     │  // CHANNEL      │          │         ┌────────┐            │
-     │  STATUS: ACTIVE  │  ACTIVE  │         │DISCOVER│            │
-     │  (system text)   │  CIRCLE  │         └────────┘            │
-     │                  │          │         description…          │
-     │                  └──────────┘                                │
-     │                                                              │
-     │  ORANITHS (big rotated)            [card] [card] [card] [card]
-     └─────────────────────────────────────────────────────────────┘
+   Layout:
+     ┌──────────────────────────────────────────────────────────────────┐
+     │  +++ WHYNOT // COLLECTIONS                                       │
+     │  AR PRODUCT SCAN / LUXURY SNEAKER GALLERY                        │
+     │                                                                  │
+     │   ┌──────────────────────────────┐  ┌────────────────────────┐   │
+     │   │  [tech stats columna]        │  │ thumbs 01 02 03 04     │   │
+     │   │                              │  │ eyebrow                │   │
+     │   │     ╭─────  CIRCLE  ─────╮   │  │ .01 (index gigante)    │   │
+     │   │     │  • orbital rings   │   │  │ Discover (minimal)     │   │
+     │   │     │  • scan line       │   │  │ copy editorial         │   │
+     │   │     │  • corner brackets │   │  │                        │   │
+     │   │     │  • video floating  │   │  │                        │   │
+     │   │     │  • reflejo         │   │  │                        │   │
+     │   │     ╰────────────────────╯   │  │                        │   │
+     │   │   X 0150.11 // Y 0238.77     │  │                        │   │
+     │   └──────────────────────────────┘  └────────────────────────┘   │
+     └──────────────────────────────────────────────────────────────────┘
 
-   - El círculo central muestra la imagen del item activo.
-   - Las 4 miniaturas abajo a la derecha funcionan como navegador
-     (click → cambia el item activo).
-   - Background con dot-grid sutil.
-   - FrameBorder alrededor.
-   - X scatter difuso.
-
-   Editar items: data/site.ts → collections.items.
+   Items siguen en data/site.ts → collections.items. Si el item activo
+   tiene `video`, el circulo reproduce <video>; sino renderiza imagen.
    ============================================================================ */
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { site } from "@/data/site";
-import FrameBorder from "./FrameBorder";
-import XDecoration from "./XDecoration";
-import DiscoverButton from "./DiscoverButton";
 
-/* Etiquetas de meta-texto genéricas — categorías de "campos del sistema",
-   tipo dashboard cyberpunk. Cambiar libremente. */
-const LEFT_META = [
-  { label: "// CHANNEL",   value: "ORANITHS" },
-  { label: "STATUS",       value: "ACTIVE" },
-  { label: "MODE",         value: "DISPLAY" },
-  { label: "SIGNAL",       value: "STABLE" },
+/* Stats tecnicos que rodean el circulo (HUD AR scanner). Cambiar libremente. */
+const TECH_STATS_LEFT = [
+  { k: "AR SCAN MODE",      v: "ACTIVE" },
+  { k: "PRECISION VIEW",    v: "1:1 SCALE" },
+  { k: "RES.",              v: "4K" },
+  { k: "MATERIAL ANALYSIS", v: "RUNNING" },
 ];
 
-const CENTER_META = [
-  { label: "CLASS",        value: "CAPSULE" },
-  { label: "PALETTE",      value: "PEACH" },
-  { label: "MATERIAL",     value: "TECH FIBER" },
-  { label: "RELEASE",      value: "AW / 01" },
+const TECH_STATS_RIGHT = [
+  { k: "DROP ID",           v: "COLLECTION 01" },
+  { k: "CHANNEL",           v: "ORANITHS" },
+  { k: "STATUS",            v: "ACTIVE" },
+  { k: "SIGNAL",            v: "STABLE" },
 ];
 
 export default function Collections() {
-  const items  = site.collections.items;
+  const items = site.collections.items;
   const [active, setActive] = useState(0);
   const current = items[active];
 
   return (
     <section
       id="section-collections"
-      className="bg-dich-peach"
+      className="bg-ar-gallery"
       style={{
         position: "relative",
-        padding: "var(--space-2xl) var(--container-pad) var(--space-lg)",
+        padding: "var(--space-2xl) var(--container-pad) var(--space-xl)",
         overflow: "hidden",
       }}
     >
+      {/* ============ TITULO Y SUBTITULO EDITORIAL ============ */}
+      <header
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: "var(--space-xl)",
+        }}
+      >
+        <span
+          className="system-text"
+          style={{
+            color: "var(--color-platinum)",
+            letterSpacing: "0.32em",
+          }}
+        >
+          +++ WHYNOT // COLLECTIONS
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.7rem",
+            letterSpacing: "0.42em",
+            color: "var(--color-graphite-mute)",
+            textTransform: "uppercase",
+          }}
+        >
+          AR Product Scan · Luxury Sneaker Gallery
+        </span>
+        {/* Linea fina cromada que subraya el header */}
+        <span
+          aria-hidden
+          style={{
+            marginTop: 14,
+            width: 60,
+            height: 1,
+            background:
+              "linear-gradient(90deg, transparent, var(--color-platinum), transparent)",
+          }}
+        />
+      </header>
 
-      {/* X decorations difusas */}
-      <XDecoration seed={3} count={16} color="var(--color-peach-line)" />
-
-      {/* Frame de la sección */}
-      <FrameBorder
-        color="var(--color-peach-line)"
-        inset={16}
-        corner={48}
-        gap={12}
-      />
-
-      {/* ============= GRID PRINCIPAL ============= */}
+      {/* ============ GRID PRINCIPAL: capsula | info ============ */}
       <div
+        className="ar-grid"
         style={{
           position: "relative",
           zIndex: 2,
           display: "grid",
-          gridTemplateColumns: "1fr 1.6fr 1fr",
-          gap: "var(--space-md)",
+          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+          gap: "clamp(2rem, 5vw, 5rem)",
           alignItems: "start",
-          minHeight: "70vh",
         }}
       >
-        {/* ----- COLUMNA IZQUIERDA: meta tipo código ----- */}
-        <div style={{ display: "grid", gap: "var(--space-md)" }}>
-          {LEFT_META.map((m) => (
-            <div key={m.label}>
-              <div
-                className="system-text"
-                style={{ color: "var(--color-peach-mute)" }}
-              >
-                {m.label}
-              </div>
-              <div
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.85rem",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  marginTop: 4,
-                }}
-              >
-                {m.value}
-              </div>
-            </div>
-          ))}
-
-          {/* Bloque de "código" compacto en el medio */}
-          <pre
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.72rem",
-              color: "var(--color-peach-fg)",
-              lineHeight: 1.7,
-              letterSpacing: "0.02em",
-              marginTop: "var(--space-md)",
-            }}
-          >
-{`<section.collection
-  index="${current.id}"
-  channel="oraniths"
-  status="active"
-  release="aw/01"
-/>`}
-          </pre>
-        </div>
-
-        {/* ----- COLUMNA CENTRO: círculo negro con item activo ----- */}
+        {/* =================== CAPSULA AR (col izquierda) =================== */}
         <div
           style={{
             position: "relative",
             display: "grid",
             placeItems: "center",
+            gap: "var(--space-md)",
           }}
         >
-          {/* Meta superior del círculo */}
+          {/* === Stats laterales izquierda === */}
           <div
-            className="system-text"
+            aria-hidden
+            className="ar-stats-col ar-stats-left"
             style={{
-              color: "var(--color-peach-mute)",
-              marginBottom: "var(--space-sm)",
-              alignSelf: "start",
+              position: "absolute",
+              top: "10%",
+              left: 0,
+              display: "grid",
+              gap: 14,
+              zIndex: 3,
+              pointerEvents: "none",
             }}
           >
-            +++ DICH // COLLECTIONS
+            {TECH_STATS_LEFT.map((s) => (
+              <TechRow key={s.k} k={s.k} v={s.v} align="left" />
+            ))}
           </div>
 
-          {/* CÍRCULO */}
+          {/* === Stats laterales derecha === */}
           <div
+            aria-hidden
+            className="ar-stats-col ar-stats-right"
             style={{
-              position: "relative",
-              width: "min(70vh, 600px)",
-              aspectRatio: "1",
-              borderRadius: "50%",
-              /* Fondo blanco para fundirse con el fondo blanco del video
-                 (golden-goose) — sin distincion visible video/circulo.   */
-              background: "#ffffff",
-              border: "1px solid var(--color-peach-line)",
-              overflow: "hidden",
-              boxShadow: "0 30px 80px -20px rgba(0,0,0,0.4)",
+              position: "absolute",
+              top: "10%",
+              right: 0,
+              display: "grid",
+              gap: 14,
+              textAlign: "right",
+              zIndex: 3,
+              pointerEvents: "none",
             }}
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={current.id}
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.02 }}
-                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            {TECH_STATS_RIGHT.map((s) => (
+              <TechRow key={s.k} k={s.k} v={s.v} align="right" />
+            ))}
+          </div>
+
+          {/* ============= CIRCULO con sus capas ============= */}
+          <div
+            className="ar-capsule"
+            style={{
+              position: "relative",
+              width: "min(62vh, 540px)",
+              aspectRatio: "1",
+            }}
+          >
+            {/* --- Anillos orbitales (3 SVG circles rotando) --- */}
+            <svg
+              aria-hidden
+              viewBox="0 0 200 200"
+              style={{
+                position: "absolute",
+                inset: "-12%",
+                width: "124%",
+                height: "124%",
+                pointerEvents: "none",
+                animation: "ar-orbit 60s linear infinite",
+              }}
+            >
+              <circle
+                cx="100" cy="100" r="95"
+                fill="none"
+                stroke="var(--color-platinum-2)"
+                strokeWidth="0.4"
+                strokeDasharray="0.5 1.5"
+              />
+            </svg>
+            <svg
+              aria-hidden
+              viewBox="0 0 200 200"
+              style={{
+                position: "absolute",
+                inset: "-6%",
+                width: "112%",
+                height: "112%",
+                pointerEvents: "none",
+                animation: "ar-orbit-rev 90s linear infinite",
+              }}
+            >
+              <circle
+                cx="100" cy="100" r="92"
+                fill="none"
+                stroke="var(--color-platinum-3)"
+                strokeWidth="0.3"
+              />
+              {/* 4 marcas tipo cardinal a 0°/90°/180°/270° */}
+              {[0, 90, 180, 270].map((deg) => (
+                <line
+                  key={deg}
+                  x1="100" y1="0" x2="100" y2="6"
+                  stroke="var(--color-platinum)"
+                  strokeWidth="0.6"
+                  transform={`rotate(${deg} 100 100)`}
+                />
+              ))}
+            </svg>
+            <svg
+              aria-hidden
+              viewBox="0 0 200 200"
+              style={{
+                position: "absolute",
+                inset: "-2%",
+                width: "104%",
+                height: "104%",
+                pointerEvents: "none",
+                animation: "ar-orbit 45s linear infinite",
+              }}
+            >
+              <circle
+                cx="100" cy="100" r="86"
+                fill="none"
+                stroke="var(--color-platinum-3)"
+                strokeWidth="0.25"
+                strokeDasharray="1 3"
+              />
+            </svg>
+
+            {/* --- Esquinas tipo viewfinder AR (corners) --- */}
+            {(["tl", "tr", "bl", "br"] as const).map((p) => (
+              <ArCornerBracket key={p} pos={p} />
+            ))}
+
+            {/* --- Reflejo / sombra suave debajo del producto --- */}
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: "18%",
+                right: "18%",
+                bottom: "8%",
+                height: 30,
+                borderRadius: "50%",
+                background:
+                  "radial-gradient(ellipse at center, rgba(46,42,37,0.18), transparent 70%)",
+                filter: "blur(6px)",
+                pointerEvents: "none",
+                zIndex: 1,
+              }}
+            />
+
+            {/* --- Circulo principal (capsula blanca + borde cromado + glow) --- */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                background:
+                  "radial-gradient(circle at 30% 30%, #ffffff 0%, #fbfaf7 70%, #f1ede5 100%)",
+                /* Borde cromado: outer thin platinum + inner glow */
+                boxShadow:
+                  "0 0 0 1px rgba(255,255,255,0.85), 0 0 0 2px var(--color-platinum-3), 0 30px 80px -20px rgba(46,42,37,0.28), 0 0 40px rgba(201,173,107,0.10)",
+                animation: "ar-chrome-shine 5.5s ease-in-out infinite",
+                overflow: "hidden",
+              }}
+            >
+              {/* Reflexion superior cromada (highlight) */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: "30%",
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.7), transparent)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Scan line horizontal (8s loop, atraviesa el circulo) */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 60,
+                  background:
+                    "linear-gradient(180deg, transparent 0%, rgba(201,173,107,0.18) 45%, rgba(201,173,107,0.42) 50%, rgba(201,173,107,0.18) 55%, transparent 100%)",
+                  animation: "ar-scan-line 8s ease-in-out infinite",
+                  pointerEvents: "none",
+                  zIndex: 4,
+                }}
+              />
+
+              {/* Crosshair central sutil */}
+              <svg
+                aria-hidden
+                viewBox="0 0 100 100"
                 style={{
                   position: "absolute",
                   inset: 0,
-                  overflow: "hidden",
-                  display: "grid",
-                  placeItems: "center",
+                  width: "100%",
+                  height: "100%",
+                  pointerEvents: "none",
+                  zIndex: 2,
+                  opacity: 0.18,
                 }}
               >
-                {/* Si el item activo tiene video → render <video> (los 01 y
-                    03 reemplazan el mono por el video del golden-goose).
-                    Si solo tiene image → fondo CSS como antes.            */}
-                {"video" in current && current.video ? (
-                  <video
-                    src={current.video}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload="auto"
-                    aria-hidden
-                    style={{
-                      /* 75% del circulo (10% mas grande que el 65% previo),
-                         centrado con grid. translateY -8% para subir la
-                         zapatilla — el frame del video la tiene un poco
-                         abajo y quedaba pegada al borde inferior.         */
-                      width: "75%",
-                      height: "75%",
-                      objectFit: "contain",
-                      filter: "saturate(1.05)",
-                      transform: "translateY(-8%)",
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      backgroundImage: `url(${current.image})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      filter: "saturate(1.05)",
-                    }}
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
+                <line x1="46" y1="50" x2="54" y2="50" stroke="var(--color-graphite)" strokeWidth="0.3" />
+                <line x1="50" y1="46" x2="50" y2="54" stroke="var(--color-graphite)" strokeWidth="0.3" />
+                <circle cx="50" cy="50" r="1" fill="var(--color-graphite)" />
+              </svg>
 
+              {/* --- Video / imagen del producto --- */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={current.id}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.02 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    zIndex: 3,
+                  }}
+                >
+                  {"video" in current && current.video ? (
+                    <video
+                      src={current.video}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload="auto"
+                      aria-hidden
+                      style={{
+                        width: "72%",
+                        height: "72%",
+                        objectFit: "contain",
+                        filter: "saturate(1.05)",
+                        animation: "ar-float 6s ease-in-out infinite",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "72%",
+                        height: "72%",
+                        backgroundImage: `url(${current.image})`,
+                        backgroundSize: "contain",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
+                        filter: "saturate(1.05)",
+                        animation: "ar-float 6s ease-in-out infinite",
+                      }}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
 
-          {/* Coordenadas debajo del círculo */}
+          {/* === Coordenadas debajo del circulo === */}
           <div
-            className="system-text"
             style={{
-              marginTop: "var(--space-sm)",
-              color: "var(--color-peach-mute)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.7rem",
+              letterSpacing: "0.32em",
+              color: "var(--color-graphite-mute)",
+              textTransform: "uppercase",
+              marginTop: 10,
             }}
           >
-            X.{(active * 75).toString().padStart(4, "0")}  //  Y.{(active * 119).toString().padStart(4, "0")}
+            X {(150 + active * 24.37).toFixed(2)} //{" "}
+            Y {(238 + active * 17.93).toFixed(2)}
           </div>
         </div>
 
-        {/* ----- COLUMNA DERECHA: thumbs + index + CTA + copy ----- */}
+        {/* =================== PANEL INFO (col derecha) =================== */}
         <div
           style={{
             display: "grid",
             gap: "var(--space-md)",
+            paddingTop: "clamp(40px, 5vw, 80px)",
           }}
         >
-          {/* Thumbnails 01-04 — navegador de items. Alineados con el
-              left edge de la columna del texto (mismo padding).           */}
+          {/* === Thumbs 01-04 === */}
           <div
             style={{
               display: "flex",
@@ -262,22 +434,29 @@ export default function Collections() {
                 <button
                   onClick={() => setActive(i)}
                   aria-label={`Show ${it.name}`}
+                  className="ar-thumb"
+                  data-active={i === active ? "true" : "false"}
                   style={{
                     display: "block",
                     width: "clamp(48px, 5vw, 76px)",
                     aspectRatio: "3 / 4",
                     borderRadius: 4,
-                    background: "var(--color-bg)",
+                    background: "#fff",
                     backgroundImage: `url(${it.image})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     border:
                       i === active
-                        ? "2px solid var(--color-peach-fg)"
-                        : "1px solid var(--color-peach-line)",
+                        ? "1px solid var(--color-graphite)"
+                        : "1px solid var(--color-platinum-2)",
                     cursor: "pointer",
-                    transition: "transform var(--speed-fast), border-color var(--speed-fast)",
+                    transition:
+                      "transform var(--speed-fast) var(--ease-out), border-color var(--speed-fast), box-shadow var(--speed-base)",
                     transform: i === active ? "translateY(-3px)" : "translateY(0)",
+                    boxShadow:
+                      i === active
+                        ? "0 6px 18px -6px rgba(46,42,37,0.35), 0 0 0 1px rgba(255,255,255,0.6)"
+                        : "0 2px 6px -3px rgba(46,42,37,0.18)",
                     padding: 0,
                     margin: 0,
                   }}
@@ -289,16 +468,17 @@ export default function Collections() {
                     bottom: 4,
                     right: 4,
                     fontFamily: "var(--font-mono)",
-                    fontSize: "0.6rem",
-                    fontWeight: 700,
-                    background: "var(--color-peach-fg)",
-                    color: "var(--color-peach-bg)",
+                    fontSize: "0.58rem",
+                    fontWeight: 600,
+                    background: "rgba(255,255,255,0.92)",
+                    color: "var(--color-graphite)",
                     padding: "2px 5px",
-                    letterSpacing: "0.08em",
+                    letterSpacing: "0.12em",
                     borderRadius: 2,
                     lineHeight: 1,
                     pointerEvents: "none",
                     zIndex: 2,
+                    border: "1px solid var(--color-platinum-3)",
                   }}
                 >
                   0{i + 1}
@@ -307,11 +487,19 @@ export default function Collections() {
             ))}
           </div>
 
-          <div className="system-text" style={{ color: "var(--color-peach-mute)" }}>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.7rem",
+              letterSpacing: "0.32em",
+              color: "var(--color-graphite-mute)",
+              textTransform: "uppercase",
+            }}
+          >
             {site.collections.eyebrow}
           </div>
 
-          {/* Index grande */}
+          {/* === Index gigante === */}
           <div
             style={{
               fontFamily: "var(--font-marquee)",
@@ -319,59 +507,223 @@ export default function Collections() {
               fontSize: "clamp(4rem, 9vw, 8rem)",
               lineHeight: 0.85,
               letterSpacing: "-0.04em",
-              color: "var(--color-peach-fg)",
+              color: "var(--color-graphite)",
             }}
           >
             .{current.id}
           </div>
 
-          {/* CTA Discover */}
-          <DiscoverButton label="Discover" href={`#collection-${current.id}`} />
-
-          {/* Description */}
-          <p
+          {/* === Discover button minimalista === */}
+          <a
+            href={`#collection-${current.id}`}
+            className="ar-discover"
             style={{
-              maxWidth: 320,
-              fontSize: "0.95rem",
-              lineHeight: 1.5,
-              color: "var(--color-peach-fg)",
-              marginTop: "var(--space-sm)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "14px 28px",
+              border: "1px solid var(--color-graphite)",
+              borderRadius: "var(--radius-pill)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.8rem",
+              letterSpacing: "0.32em",
+              textTransform: "uppercase",
+              color: "var(--color-graphite)",
+              background: "transparent",
+              transition:
+                "background var(--speed-base), color var(--speed-base), box-shadow var(--speed-base), transform var(--speed-fast)",
+              width: "fit-content",
             }}
           >
-            {site.collections.items[active].caption}. Limited capsule release —
-            engineered silhouettes from recycled tech-fibers, documented and
-            versioned for the wearer.
+            <span>Discover</span>
+            <svg
+              width="20"
+              height="10"
+              viewBox="0 0 20 10"
+              aria-hidden
+              style={{ display: "block" }}
+            >
+              {[0, 6, 12].map((x) => (
+                <path
+                  key={x}
+                  d={`M ${x} 1 L ${x + 4} 5 L ${x} 9`}
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              ))}
+            </svg>
+          </a>
+
+          {/* === Copy === */}
+          <p
+            style={{
+              maxWidth: 360,
+              fontSize: "0.95rem",
+              lineHeight: 1.6,
+              color: "var(--color-graphite)",
+              marginTop: "var(--space-xs)",
+            }}
+          >
+            {current.caption}. Limited capsule release — engineered silhouettes
+            from recycled tech-fibers, documented and versioned for the wearer.
           </p>
         </div>
       </div>
 
-      {/* ============= FOOTER DE LA SECCIÓN: solo título rotado ============= */}
+      {/* ============ FOOTER: nombre de coleccion en plata ============ */}
       <div
         style={{
           position: "relative",
           zIndex: 2,
           marginTop: "var(--space-xl)",
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           alignItems: "end",
+          paddingTop: "var(--space-md)",
+          borderTop: "1px solid var(--color-platinum-3)",
         }}
       >
-        {/* Título "Oraniths" rotado 180° */}
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.7rem",
+            letterSpacing: "0.32em",
+            color: "var(--color-graphite-mute)",
+            textTransform: "uppercase",
+          }}
+        >
+          GALLERY · ZONE 01 · {String(items.length).padStart(2, "0")} CAPSULES
+        </span>
+
         <h2
           style={{
             fontFamily: "var(--font-marquee)",
             fontWeight: 900,
-            fontSize: "clamp(2.5rem, 7vw, 7rem)",
+            fontSize: "clamp(1.6rem, 4vw, 4rem)",
             lineHeight: 0.85,
-            letterSpacing: "-0.04em",
-            transform: "rotate(180deg)",
-            color: "var(--color-peach-fg)",
+            letterSpacing: "-0.02em",
+            color: "var(--color-platinum)",
             margin: 0,
           }}
         >
           {site.collections.title.toUpperCase()}
         </h2>
       </div>
+
+      {/* ============ Styles JSX scoped (hover del discover + thumbs) ============ */}
+      <style jsx>{`
+        .ar-discover:hover {
+          background: var(--color-graphite);
+          color: var(--color-pearl);
+          box-shadow:
+            0 0 0 4px rgba(46,42,37,0.06),
+            0 0 24px rgba(201,173,107,0.18);
+        }
+        .ar-thumb:hover {
+          transform: translateY(-2px) !important;
+          box-shadow:
+            0 6px 18px -6px rgba(46,42,37,0.30),
+            0 0 0 1px var(--color-platinum) !important;
+        }
+        /* Responsive: en mobile colapsamos a 1 columna y movemos los
+           stats tecnicos para que no se solapen con el circulo.        */
+        @media (max-width: 900px) {
+          :global(.ar-grid) {
+            grid-template-columns: 1fr !important;
+          }
+          :global(.ar-stats-col) {
+            position: static !important;
+            grid-template-columns: 1fr 1fr;
+            text-align: left !important;
+            margin-bottom: var(--space-sm);
+            opacity: 0.7;
+          }
+          :global(.ar-stats-right) {
+            text-align: left !important;
+          }
+        }
+        @media (max-width: 600px) {
+          :global(.ar-stats-col) {
+            display: none !important;
+          }
+        }
+      `}</style>
     </section>
+  );
+}
+
+/* ============================================================================
+   Subcomponentes auxiliares
+   ============================================================================ */
+
+/* Fila tecnica HUD — label fina + valor mas marcado */
+function TechRow({
+  k,
+  v,
+  align,
+}: {
+  k: string;
+  v: string;
+  align: "left" | "right";
+}) {
+  return (
+    <div style={{ display: "grid", gap: 2, textAlign: align }}>
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.6rem",
+          letterSpacing: "0.32em",
+          color: "var(--color-platinum)",
+          textTransform: "uppercase",
+        }}
+      >
+        {k}
+      </span>
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.72rem",
+          letterSpacing: "0.18em",
+          color: "var(--color-graphite)",
+          textTransform: "uppercase",
+        }}
+      >
+        {v}
+      </span>
+    </div>
+  );
+}
+
+/* Esquina tipo viewfinder AR: 2 trazos en "L" posicionados en una esquina
+   del contenedor padre (que es position:relative). Los 4 brackets juntos
+   dan el look "encuadre de escaneo".                                       */
+function ArCornerBracket({
+  pos,
+}: {
+  pos: "tl" | "tr" | "bl" | "br";
+}) {
+  const SIZE = 28;
+  const STROKE = "var(--color-graphite)";
+  const W = 1.2;
+
+  const wrapStyle: React.CSSProperties = {
+    position: "absolute",
+    width: SIZE,
+    height: SIZE,
+    pointerEvents: "none",
+    zIndex: 5,
+  };
+  if (pos === "tl") { wrapStyle.top = -6;    wrapStyle.left = -6; }
+  if (pos === "tr") { wrapStyle.top = -6;    wrapStyle.right = -6;  wrapStyle.transform = "scaleX(-1)"; }
+  if (pos === "bl") { wrapStyle.bottom = -6; wrapStyle.left = -6;   wrapStyle.transform = "scaleY(-1)"; }
+  if (pos === "br") { wrapStyle.bottom = -6; wrapStyle.right = -6;  wrapStyle.transform = "scale(-1)"; }
+
+  return (
+    <svg viewBox="0 0 28 28" style={wrapStyle} aria-hidden>
+      <path d={`M 0 1 L 12 1`} stroke={STROKE} strokeWidth={W} fill="none" />
+      <path d={`M 1 0 L 1 12`} stroke={STROKE} strokeWidth={W} fill="none" />
+    </svg>
   );
 }
