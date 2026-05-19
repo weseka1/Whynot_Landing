@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "optimize:assets": "node scripts/optimize-assets.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.0",
@@ -24,6 +25,7 @@
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.7",
     "typescript": "^5.5.3"
   }
