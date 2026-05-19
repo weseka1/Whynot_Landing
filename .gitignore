@@ -42,6 +42,9 @@ MIAMI_IMPORT.zip
 # Claude config local
 .claude/
 
+# Pipeline de bg-removal — frames intermedios
+scripts/process-shoe-video/tmp/
+
 # GLBs duplicados en root (las copias activas están en public/assets/3d/)
 /Mono 3d.glb
 /balenciaga 3xl 3D.glb
