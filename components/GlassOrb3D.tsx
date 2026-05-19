@@ -22,7 +22,7 @@
      editar el asset.
    ============================================================================ */
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   MeshTransmissionMaterial,
@@ -32,6 +32,12 @@ import {
 } from "@react-three/drei";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
+
+const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov"];
+function isVideoUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  return VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
 
 /* ---------------- helpers ---------------- */
 
@@ -126,9 +132,9 @@ function useProcessedTexture(
   return data;
 }
 
-/* ---------------- Plane del producto dentro de la esfera ---------------- */
+/* ---------------- Plane del producto: imagen (offscreen canvas chroma) -- */
 
-function ProductPlane({
+function ProductImagePlane({
   url,
   chromaKey,
 }: {
@@ -138,9 +144,6 @@ function ProductPlane({
   const data = useProcessedTexture(url, chromaKey);
   if (!data) return null;
 
-  /* Plane proporcional al aspect del producto, escalado para caber en una
-     esfera de radio 1.2. Ajustar este multiplicador para que la zapatilla
-     ocupe mas/menos espacio dentro del cristal.                          */
   const SCALE = 1.4;
   const w = SCALE * data.aspect;
   const h = SCALE;
@@ -157,6 +160,161 @@ function ProductPlane({
       />
     </mesh>
   );
+}
+
+/* ---------------- Plane del producto: video (chroma key en shader) ------
+   El chroma key se hace por frame en GPU (fragment shader) con
+   onBeforeCompile + smoothstep para feather. Casi 0 costo CPU.        */
+
+function ProductVideoPlane({
+  url,
+  chromaKey,
+  tolerance = 0.22,
+  feather = 0.16,
+}: {
+  url: string;
+  chromaKey: string | null;
+  tolerance?: number;
+  feather?: number;
+}) {
+  const [texture, setTexture] = useState<THREE.VideoTexture | null>(null);
+  const [aspect, setAspect] = useState(1);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = document.createElement("video");
+    video.src = url;
+    video.crossOrigin = "anonymous";
+    video.loop = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    // @ts-ignore disablePictureInPicture no esta en types pero browsers lo respetan
+    video.disablePictureInPicture = true;
+    video.preload = "auto";
+    videoRef.current = video;
+
+    const onLoaded = () => {
+      setAspect(video.videoWidth / video.videoHeight || 1);
+      const tex = new THREE.VideoTexture(video);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+      setTexture(tex);
+    };
+
+    video.addEventListener("loadedmetadata", onLoaded);
+    video.play().catch(() => {
+      /* autoplay puede ser bloqueado en algunos browsers — el video
+         queda cargado pero no reproduciendose. Igual seteamos textura. */
+    });
+
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [url]);
+
+  /* Shader inject: chroma key + feather en el fragment del meshBasicMaterial.
+     Usamos onBeforeCompile para inyectar 3 uniforms + logica despues del
+     `<map_fragment>` chunk de three.js.                                 */
+  const uniformsRef = useRef({
+    uChromaKey: { value: new THREE.Vector3(1, 1, 1) },
+    uTolerance: { value: tolerance },
+    uFeather:   { value: feather },
+  });
+
+  /* Update uniforms si cambian los props */
+  useEffect(() => {
+    if (chromaKey) {
+      const [r, g, b] = hexToRgb(chromaKey);
+      uniformsRef.current.uChromaKey.value.set(r / 255, g / 255, b / 255);
+    }
+    uniformsRef.current.uTolerance.value = tolerance;
+    uniformsRef.current.uFeather.value = feather;
+  }, [chromaKey, tolerance, feather]);
+
+  const onBeforeCompile = useMemo(() => {
+    return (shader: any) => {
+      shader.uniforms.uChromaKey = uniformsRef.current.uChromaKey;
+      shader.uniforms.uTolerance = uniformsRef.current.uTolerance;
+      shader.uniforms.uFeather   = uniformsRef.current.uFeather;
+
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "#include <common>",
+          `
+            #include <common>
+            uniform vec3 uChromaKey;
+            uniform float uTolerance;
+            uniform float uFeather;
+          `
+        )
+        // Despues de aplicar el map, evaluamos distancia al chroma key
+        // y modulamos el alpha. smoothstep da feather suave.
+        .replace(
+          "#include <map_fragment>",
+          `
+            #include <map_fragment>
+            #ifdef USE_MAP
+              float chromaDist = distance(diffuseColor.rgb, uChromaKey);
+              float chromaAlpha = smoothstep(uTolerance, uTolerance + uFeather, chromaDist);
+              diffuseColor.a *= chromaAlpha;
+              if (diffuseColor.a < 0.02) discard;
+            #endif
+          `
+        );
+    };
+  }, []);
+
+  if (!texture || !chromaKey) {
+    if (!texture) return null;
+    // Sin chroma key: render directo
+    const SCALE = 1.4;
+    return (
+      <mesh>
+        <planeGeometry args={[SCALE * aspect, SCALE]} />
+        <meshBasicMaterial
+          map={texture}
+          transparent
+          toneMapped={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    );
+  }
+
+  const SCALE = 1.4;
+  return (
+    <mesh>
+      <planeGeometry args={[SCALE * aspect, SCALE]} />
+      <meshBasicMaterial
+        map={texture}
+        transparent
+        toneMapped={false}
+        side={THREE.DoubleSide}
+        onBeforeCompile={onBeforeCompile}
+      />
+    </mesh>
+  );
+}
+
+/* ---------------- Switcher: decide imagen vs video segun extension ---- */
+
+function ProductPlane({
+  url,
+  chromaKey,
+}: {
+  url: string;
+  chromaKey: string | null;
+}) {
+  if (isVideoUrl(url)) {
+    return <ProductVideoPlane url={url} chromaKey={chromaKey} />;
+  }
+  return <ProductImagePlane url={url} chromaKey={chromaKey} />;
 }
 
 /* ---------------- Esfera de cristal ---------------- */

@@ -204,14 +204,17 @@ export default function Collections() {
 
             {/* === GLASS ORB 3D (R3F + MeshTransmissionMaterial) ===
                 Esfera de vidrio renderizada en WebGL con refraccion real.
-                El producto va DENTRO como plane texturizado, con chroma
-                key automatico para eliminar el fondo blanco horneado de
-                la imagen (golden-goose.webp).
+                El producto va DENTRO como plane texturizado.
 
-                IMPORTANTE: idealmente el `productImage` deberia ser PNG
-                con fondo transparente. Como nuestro asset tiene fondo
-                blanco, pasamos chromaKey="#ffffff" y el componente lo
-                vuelve transparente en runtime (offscreen canvas).      */}
+                Si el item tiene `video` (01/02/03 con golden-goose mp4
+                variantes), GlassOrb3D detecta la extension .mp4 y usa
+                VideoTexture + chroma key en fragment shader (por frame,
+                GPU). El fondo blanco horneado del MP4 se vuelve trans-
+                parente en GPU y la zapatilla queda flotando en el cristal.
+
+                Si el item NO tiene video (04), cae a la imagen estatica
+                con chroma key procesado en offscreen canvas (CPU una sola
+                vez al cargar).                                          */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={current.id}
@@ -222,7 +225,9 @@ export default function Collections() {
                 style={{ position: "absolute", inset: 0 }}
               >
                 <GlassOrb3DClient
-                  productImage={current.image}
+                  productImage={
+                    ("video" in current && current.video) || current.image
+                  }
                   chromaKey="#ffffff"
                 />
               </motion.div>
