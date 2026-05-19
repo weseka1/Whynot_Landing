@@ -33,6 +33,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { site } from "@/data/site";
+import CollectionsSphereClient from "./CollectionsSphereClient";
 
 /* Stats tecnicos que rodean el circulo (HUD AR scanner). Cambiar libremente. */
 const TECH_STATS_LEFT = [
@@ -178,88 +179,28 @@ export default function Collections() {
               aspectRatio: "1",
             }}
           >
-            {/* --- Anillos planetarios estilo Jupiter/Saturno ---
-                Cada anillo es un SVG circle envuelto en un wrapper que
-                aplica scaleY (aplasta verticalmente) + rotate de tilt fijo.
-                El SVG interno se queda con la animacion de rotacion (gira
-                en su plano elipsoidal — efecto de orbita planetaria). */}
-            {[
-              { inset: "-14%", size: "128%", r: 95, stroke: "var(--color-platinum-2)", strokeWidth: 0.5, dash: undefined,    spin: "ar-orbit 90s linear infinite",     squish: 0.16, tilt: -14 },
-              { inset: "-8%",  size: "116%", r: 92, stroke: "var(--color-platinum)",   strokeWidth: 0.4, dash: undefined,    spin: "ar-orbit-rev 120s linear infinite", squish: 0.20, tilt: -14 },
-              { inset: "-4%",  size: "108%", r: 88, stroke: "var(--color-platinum-3)", strokeWidth: 0.35, dash: "1 4",        spin: "ar-orbit 70s linear infinite",     squish: 0.24, tilt: -14 },
-            ].map((ring, i) => (
-              <div
-                key={i}
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: ring.inset,
-                  width: ring.size,
-                  height: ring.size,
-                  pointerEvents: "none",
-                  /* Wrapper: aplasta vertical + tilt → vista de anillo
-                     planetario. SVG interno gira en su plano.            */
-                  transform: `rotate(${ring.tilt}deg) scaleY(${ring.squish})`,
-                  transformOrigin: "center",
-                }}
-              >
-                <svg
-                  viewBox="0 0 200 200"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    animation: ring.spin,
-                  }}
-                >
-                  <circle
-                    cx="100" cy="100" r={ring.r}
-                    fill="none"
-                    stroke={ring.stroke}
-                    strokeWidth={ring.strokeWidth}
-                    strokeDasharray={ring.dash}
-                  />
-                  {/* Marcas cardinales solo en el anillo medio */}
-                  {i === 1 &&
-                    [0, 90, 180, 270].map((deg) => (
-                      <line
-                        key={deg}
-                        x1="100" y1="0" x2="100" y2="6"
-                        stroke="var(--color-platinum)"
-                        strokeWidth="0.6"
-                        transform={`rotate(${deg} 100 100)`}
-                      />
-                    ))}
-                </svg>
-              </div>
-            ))}
+            {/* --- ESFERA 3D real (R3F + Three.js) ---
+                Reemplaza los anillos CSS + capas de shading planas. La
+                esfera vive en un Canvas y se renderiza con material
+                transmission=1 (vidrio refractante real). Los anillos son
+                Torus 3D inclinados.
 
-            {/* --- Atmosfera / rim glow externo: anillo de luz alrededor
-                de la esfera, como halo planetario. No es un anillo
-                planetario (no es plano), es el "aire" alrededor del planeta. */}
+                Posicionada absolute DETRAS del circulo blanco + video.
+                Inset negativo para que la esfera y sus anillos puedan
+                desbordarse mas alla del clip circular.                  */}
             <div
               aria-hidden
               style={{
                 position: "absolute",
-                inset: "-4%",
-                borderRadius: "50%",
+                inset: "-15%",
+                width: "130%",
+                height: "130%",
                 pointerEvents: "none",
-                background:
-                  "radial-gradient(circle at center, transparent 49%, rgba(201,173,107,0.10) 50%, transparent 56%)",
                 zIndex: 0,
               }}
-            />
-            <div
-              aria-hidden
-              style={{
-                position: "absolute",
-                inset: "-8%",
-                borderRadius: "50%",
-                pointerEvents: "none",
-                background:
-                  "radial-gradient(circle at center, transparent 50%, rgba(169,162,153,0.06) 53%, transparent 60%)",
-                zIndex: 0,
-              }}
-            />
+            >
+              <CollectionsSphereClient />
+            </div>
 
             {/* --- Esquinas tipo viewfinder AR (corners) --- */}
             {(["tl", "tr", "bl", "br"] as const).map((p) => (
