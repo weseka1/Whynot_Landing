@@ -33,7 +33,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { site } from "@/data/site";
-import GlassOrb from "./GlassOrb";
+import GlassOrb3DClient from "./GlassOrb3DClient";
 
 /* Stats tecnicos que rodean el circulo (HUD AR scanner). Cambiar libremente. */
 const TECH_STATS_LEFT = [
@@ -202,81 +202,31 @@ export default function Collections() {
               }}
             />
 
-            {/* === GLASS ORB con la zapatilla FLOTANDO DENTRO ===
-                Truco para que el video con fondo blanco horneado NO se
-                vea como "card rectangular pegada encima":
-                  1) Una capa de fondo blanco DENTRO del orb (donde se
-                     posiciona la zapatilla) — sin esto, el blanco del
-                     video destaca contra el cristal semitransparente.
-                  2) mix-blend-mode: multiply en el video → el blanco
-                     puro del video se vuelve transparente al cristal
-                     (255 * X / 255 = X), solo queda la zapatilla oscura.
-                  3) Mask radial suaviza los bordes del rectangulo del
-                     video → fade hacia transparent en los limites.
-                Resultado: el producto se ve como objeto suelto flotando
-                dentro del cristal, sin rectangulo visible.            */}
-            <GlassOrb size="100%" innerScale={1} glow="warm" glassFill="frosted">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={current.id}
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 1.02 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "grid",
-                    placeItems: "center",
-                    position: "relative",
-                    zIndex: 1,
-                  }}
-                >
-                  {"video" in current && current.video ? (
-                    <video
-                      src={current.video}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      preload="auto"
-                      aria-hidden
-                      style={{
-                        width: "72%",
-                        height: "72%",
-                        objectFit: "contain",
-                        /* mix-blend-mode: multiply elimina el blanco horneado
-                           del video — el pixel blanco (255) deja pasar lo de
-                           atras intacto, solo la zapatilla oscura se ve.    */
-                        mixBlendMode: "multiply",
-                        /* Mask radial: difumina los bordes del rectangulo
-                           del video para fundirlo con el cristal del orb.  */
-                        WebkitMaskImage:
-                          "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
-                        maskImage:
-                          "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: "72%",
-                        height: "72%",
-                        backgroundImage: `url(${current.image})`,
-                        backgroundSize: "contain",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
-                        mixBlendMode: "multiply",
-                        WebkitMaskImage:
-                          "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
-                        maskImage:
-                          "radial-gradient(ellipse 70% 60% at center, #000 55%, transparent 95%)",
-                      }}
-                    />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </GlassOrb>
+            {/* === GLASS ORB 3D (R3F + MeshTransmissionMaterial) ===
+                Esfera de vidrio renderizada en WebGL con refraccion real.
+                El producto va DENTRO como plane texturizado, con chroma
+                key automatico para eliminar el fondo blanco horneado de
+                la imagen (golden-goose.webp).
+
+                IMPORTANTE: idealmente el `productImage` deberia ser PNG
+                con fondo transparente. Como nuestro asset tiene fondo
+                blanco, pasamos chromaKey="#ffffff" y el componente lo
+                vuelve transparente en runtime (offscreen canvas).      */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                style={{ position: "absolute", inset: 0 }}
+              >
+                <GlassOrb3DClient
+                  productImage={current.image}
+                  chromaKey="#ffffff"
+                />
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* === Coordenadas debajo del circulo === */}
