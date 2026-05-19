@@ -25,23 +25,33 @@ function GlassSphere() {
     if (ref.current) ref.current.rotation.y += dt * 0.04;
   });
 
-  /* Esfera BLANCA OPACA con shading direccional real (no cristal) — actua
-     como el "fondo blanco" curvado donde va a flotar el producto. El
-     lighting (directional + ambient + environment) genera highlights y
-     terminador oscuro naturales: eso es lo que da la sensacion de esfera
-     3D vs el circulo plano CSS anterior.                                 */
+  /* Esfera SEMITRANSPARENTE tipo burbuja de cristal / jabon.
+     - transmission=1 + thickness bajo → vidrio real refractante
+     - ior 1.2 → indice de refraccion suave (no distorsiona mucho)
+     - clearcoat=1 → capa exterior bien pulida tipo glass
+     - color blanco apenas teñido para que se note el volumen
+     - sheen warm → rim glow tipo burbuja iluminada
+     - se ve el bg de la seccion + el video a traves de la esfera   */
   return (
     <mesh ref={ref}>
       <sphereGeometry args={[1.0, 96, 96]} />
       <meshPhysicalMaterial
-        color="#ffffff"
-        metalness={0.05}
-        roughness={0.38}
-        clearcoat={0.6}
-        clearcoatRoughness={0.25}
-        sheen={0.4}
+        color="#fbf9f5"
+        metalness={0}
+        roughness={0.08}
+        transmission={1}
+        thickness={0.45}
+        ior={1.22}
+        clearcoat={1}
+        clearcoatRoughness={0.04}
+        sheen={0.6}
         sheenColor="#fff4e0"
-        sheenRoughness={0.5}
+        sheenRoughness={0.35}
+        attenuationColor="#ffffff"
+        attenuationDistance={4}
+        specularIntensity={0.9}
+        specularColor="#ffffff"
+        transparent
       />
     </mesh>
   );
