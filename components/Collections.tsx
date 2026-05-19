@@ -75,76 +75,6 @@ export default function Collections() {
         gap={12}
       />
 
-      {/* Thumbnails en esquina superior derecha — navegador de items.
-          Top bajado ~4cm (clamp 80-150px) para alinearse con la columna
-          derecha del grid que tambien se corrio hacia abajo.            */}
-      <div
-        style={{
-          position: "absolute",
-          top: "clamp(80px, 12vw, 150px)",
-          right: "calc(var(--container-pad) + 16px)",
-          display: "flex",
-          gap: "var(--space-xs)",
-          zIndex: 3,
-        }}
-      >
-        {items.map((it, i) => (
-          <div
-            key={it.id}
-            style={{
-              position: "relative",
-              display: "inline-block",
-              lineHeight: 0,
-            }}
-          >
-            <button
-              onClick={() => setActive(i)}
-              aria-label={`Show ${it.name}`}
-              style={{
-                display: "block",
-                width: "clamp(48px, 5vw, 76px)",
-                aspectRatio: "3 / 4",
-                borderRadius: 4,
-                background: "var(--color-bg)",
-                backgroundImage: `url(${it.image})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                border:
-                  i === active
-                    ? "2px solid var(--color-peach-fg)"
-                    : "1px solid var(--color-peach-line)",
-                cursor: "pointer",
-                transition: "transform var(--speed-fast), border-color var(--speed-fast)",
-                transform: i === active ? "translateY(-3px)" : "translateY(0)",
-                padding: 0,
-                margin: 0,
-              }}
-            />
-
-            <span
-              style={{
-                position: "absolute",
-                bottom: 4,
-                right: 4,
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.6rem",
-                fontWeight: 700,
-                background: "var(--color-peach-fg)",
-                color: "var(--color-peach-bg)",
-                padding: "2px 5px",
-                letterSpacing: "0.08em",
-                borderRadius: 2,
-                lineHeight: 1,
-                pointerEvents: "none",
-                zIndex: 2,
-              }}
-            >
-              0{i + 1}
-            </span>
-          </div>
-        ))}
-      </div>
-
       {/* ============= GRID PRINCIPAL ============= */}
       <div
         style={{
@@ -277,17 +207,79 @@ export default function Collections() {
           </div>
         </div>
 
-        {/* ----- COLUMNA DERECHA: index + CTA + copy ----- */}
+        {/* ----- COLUMNA DERECHA: thumbs + index + CTA + copy ----- */}
         <div
           style={{
             display: "grid",
             gap: "var(--space-md)",
-            /* Padding-top ~4cm para bajar todo el bloque (eyebrow + index
-               + Discover + copy) por debajo de la altura de los thumbs y
-               dar respiracion vertical con el circulo central.            */
-            paddingTop: "clamp(80px, 12vw, 150px)",
           }}
         >
+          {/* Thumbnails 01-04 — navegador de items. Alineados con el
+              left edge de la columna del texto (mismo padding).           */}
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--space-xs)",
+              flexWrap: "wrap",
+            }}
+          >
+            {items.map((it, i) => (
+              <div
+                key={it.id}
+                style={{
+                  position: "relative",
+                  display: "inline-block",
+                  lineHeight: 0,
+                }}
+              >
+                <button
+                  onClick={() => setActive(i)}
+                  aria-label={`Show ${it.name}`}
+                  style={{
+                    display: "block",
+                    width: "clamp(48px, 5vw, 76px)",
+                    aspectRatio: "3 / 4",
+                    borderRadius: 4,
+                    background: "var(--color-bg)",
+                    backgroundImage: `url(${it.image})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    border:
+                      i === active
+                        ? "2px solid var(--color-peach-fg)"
+                        : "1px solid var(--color-peach-line)",
+                    cursor: "pointer",
+                    transition: "transform var(--speed-fast), border-color var(--speed-fast)",
+                    transform: i === active ? "translateY(-3px)" : "translateY(0)",
+                    padding: 0,
+                    margin: 0,
+                  }}
+                />
+
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: 4,
+                    right: 4,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.6rem",
+                    fontWeight: 700,
+                    background: "var(--color-peach-fg)",
+                    color: "var(--color-peach-bg)",
+                    padding: "2px 5px",
+                    letterSpacing: "0.08em",
+                    borderRadius: 2,
+                    lineHeight: 1,
+                    pointerEvents: "none",
+                    zIndex: 2,
+                  }}
+                >
+                  0{i + 1}
+                </span>
+              </div>
+            ))}
+          </div>
+
           <div className="system-text" style={{ color: "var(--color-peach-mute)" }}>
             {site.collections.eyebrow}
           </div>
