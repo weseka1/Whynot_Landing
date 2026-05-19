@@ -143,15 +143,18 @@ img, svg, video { display: block; max-width: 100%; }
 button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
 input, textarea { font: inherit; color: inherit; background: transparent; border: 0; outline: none; }
 
-/* Grain sutil sobre todo el fondo */
+/* Grain sutil sobre todo el fondo (desktop only).
+   `mix-blend-mode: overlay` + `fixed inset:0` repintaba todo el viewport en
+   cada scroll → un costo grande en pintura por una sutileza decorativa.
+   En mobile lo desactivamos por completo (la pantalla chica + DPR alto
+   amplifica el impacto). En desktop lo bajamos a opacity simple sin blend. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.06;
-  mix-blend-mode: overlay;
+  opacity: 0.05;
   background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='1'/></svg>");
 }
@@ -261,6 +264,12 @@ model-viewer {
    MOBILE — adaptaciones para pantallas <= 768px
    ========================================================================== */
 @media (max-width: 768px) {
+  /* Grain off — en mobile el repintar fixed inset:0 por scroll es caro,
+     y a 768px el efecto decorativo es casi imperceptible. */
+  body::before {
+    display: none !important;
+  }
+
   /* Tipografía display más chica en mobile */
   .display {
     font-size: clamp(2.5rem, 14vw, 6rem) !important;
