@@ -75,11 +75,13 @@ export default function Collections() {
         gap={12}
       />
 
-      {/* Thumbnails en esquina superior derecha — navegador de items */}
+      {/* Thumbnails en esquina superior derecha — navegador de items.
+          Top bajado ~4cm (clamp 80-150px) para alinearse con la columna
+          derecha del grid que tambien se corrio hacia abajo.            */}
       <div
         style={{
           position: "absolute",
-          top: "calc(var(--space-md) + 16px)",
+          top: "clamp(80px, 12vw, 150px)",
           right: "calc(var(--container-pad) + 16px)",
           display: "flex",
           gap: "var(--space-xs)",
