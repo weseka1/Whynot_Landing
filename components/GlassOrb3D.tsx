@@ -59,8 +59,8 @@ function hexToRgb(hex: string): [number, number, number] {
 function useProcessedTexture(
   url: string,
   chromaKey: string | null,
-  tolerance = 70,
-  feather = 50
+  tolerance = 100,
+  feather = 25
 ) {
   const [data, setData] = useState<{ texture: THREE.Texture; aspect: number } | null>(null);
 
@@ -169,8 +169,8 @@ function ProductImagePlane({
 function ProductVideoPlane({
   url,
   chromaKey,
-  tolerance = 0.22,
-  feather = 0.16,
+  tolerance = 0.34,
+  feather = 0.08,
 }: {
   url: string;
   chromaKey: string | null;
@@ -344,9 +344,9 @@ function GlassSphere({ isMobile }: { isMobile: boolean }) {
         clearcoat={1}
         clearcoatRoughness={0.06}
         attenuationColor="#ffffff"
-        attenuationDistance={6}
+        attenuationDistance={8}
         color="#ffffff"
-        envMapIntensity={0.55}
+        envMapIntensity={0.25}
       />
     </mesh>
   );
@@ -396,14 +396,18 @@ export default function GlassOrb3D({
           tonos blancos/grises calidos en vez de rascacielos.            */}
       {!isMobile && <Environment preset="apartment" background={false} />}
 
-      {/* Producto adentro, flotando con Float */}
+      {/* Producto adentro del cristal: posicionado en z=-0.3 (atras del
+          centro) para que la sphere tenga "aire" delante y el producto
+          se sienta dentro de la burbuja, no pegado al vidrio frontal. */}
       <Float
         speed={1.3}
         rotationIntensity={0.12}
         floatIntensity={0.4}
         floatingRange={[-0.06, 0.06]}
       >
-        <ProductPlane url={productImage} chromaKey={chromaKey} />
+        <group position={[0, 0, -0.3]}>
+          <ProductPlane url={productImage} chromaKey={chromaKey} />
+        </group>
       </Float>
 
       {/* Esfera de cristal envolviendo al producto */}
