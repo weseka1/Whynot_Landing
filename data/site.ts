@@ -38,8 +38,8 @@ export const site = {
     metaRight: "EST. 20XX",
     /* GLB model centerpiece (reemplazar archivo en /public/assets/3d/) */
     model:     "/assets/3d/mono.glb",
-    /* Fondo del hero (PNG cielo). Reemplazar en /public/assets/hero/ */
-    bgImage:   "/assets/hero/sky-background.png",
+    /* Fondo del hero (WebP cielo, fallback PNG si hace falta). */
+    bgImage:   "/assets/hero/sky-background.webp",
   },
 
   /* ---------------- COLLECTIONS / ORANITHS ---------------- */
@@ -48,10 +48,10 @@ export const site = {
     title:   "Oraniths",
     ticker:  "Future Mode · DICH · Encrypted Couture",
     items: [
-      { id: "01", name: "Capsule 01", caption: "Shift the vision",  image: "/assets/hero/character.png" },
-      { id: "02", name: "Capsule 02", caption: "Evolve",            image: "/assets/hero/extra.png" },
-      { id: "03", name: "Capsule 03", caption: "Touch the void",    image: "/assets/hero/character.png" },
-      { id: "04", name: "Capsule 04", caption: "Decrypted",          image: "/assets/hero/extra.png" },
+      { id: "01", name: "Capsule 01", caption: "Shift the vision",  image: "/assets/hero/character.webp" },
+      { id: "02", name: "Capsule 02", caption: "Evolve",            image: "/assets/hero/extra.webp" },
+      { id: "03", name: "Capsule 03", caption: "Touch the void",    image: "/assets/hero/character.webp" },
+      { id: "04", name: "Capsule 04", caption: "Decrypted",          image: "/assets/hero/extra.webp" },
     ],
   },
 
@@ -75,7 +75,7 @@ export const site = {
       name:        "Sirius",
       season:      "AW / 02",
       coordinates: "06h 45m 08.9s · −16° 42′ 58″",
-      image:       "/assets/hero/extra.png",
+      image:       "/assets/hero/extra.webp",
       copy:        "Archive release. Read-only. Documented from origin to thread.",
     },
     badgeCount: 12,    /* cantidad de badges en el grid */

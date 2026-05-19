@@ -116,7 +116,7 @@ export default function Hero() {
         }}
       >
         <MarqueeBanner
-          image="/assets/marquee/whynot-text.png"
+          image="/assets/marquee/whynot-text.webp"
           imageHeight="clamp(9rem, 38vw, 32rem)"
         />
       </div>

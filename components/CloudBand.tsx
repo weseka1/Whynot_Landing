@@ -68,7 +68,7 @@ export default function CloudBand() {
       >
         {/* lateral izquierdo */}
         <img
-          src="/nuves/cloud-center.png"
+          src="/nuves/cloud-center.webp"
           alt=""
           style={{
             position: "absolute",
@@ -84,7 +84,7 @@ export default function CloudBand() {
 
         {/* back central wide */}
         <img
-          src="/nuves/cloud-center.png"
+          src="/nuves/cloud-center.webp"
           alt=""
           style={{
             position: "absolute",
@@ -100,7 +100,7 @@ export default function CloudBand() {
 
         {/* lateral derecho */}
         <img
-          src="/nuves/cloud-2.png"
+          src="/nuves/cloud-2.webp"
           alt=""
           style={{
             position: "absolute",
@@ -116,7 +116,7 @@ export default function CloudBand() {
 
         {/* refuerzo central plano */}
         <img
-          src="/nuves/cloud-center-bottom.png"
+          src="/nuves/cloud-center-bottom.webp"
           alt=""
           style={{
             position: "absolute",
