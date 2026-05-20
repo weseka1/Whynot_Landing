@@ -85,7 +85,12 @@ function ensureDir(p) {
 
 function run(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: "inherit", ...opts });
+    // shell:true wraps en cmd.exe lo que evita issues con stdout pipe de rife-ncnn-vulkan
+    // (que crashea con exit 3221225477 si los pipes no estan disponibles correctamente).
+    // Comillas dobles alrededor de cada arg para que paths con espacios anden.
+    const quote = (s) => /[ \t]/.test(s) ? `"${s}"` : s;
+    const fullCmd = [quote(cmd), ...args.map(quote)].join(" ");
+    const child = spawn(fullCmd, [], { stdio: "inherit", shell: true, ...opts });
     child.on("error", reject);
     child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`${path.basename(cmd)} exit ${code}`))));
   });
@@ -94,41 +99,102 @@ function run(cmd, args, opts = {}) {
 /* -------- main -------- */
 
 async function main() {
-  // 1) Renombrar a secuencia limpia (00000001.png ...)
-  console.log("[1/3] renombrando frames a secuencia limpia...");
-  ensureDir(NUMBERED);
+  // 1) Renombrar + SPLITEAR RGBA → 2 secuencias (RGB premul + alpha grayscale).
+  //    RIFE no soporta PNG con alpha (crashea). Truco: interpolar las 2 secuencias
+  //    por separado y combinar al final. El RGB ya viene premultiplied (compose_rgba
+  //    del v7) → los bordes interpolan suave sin halo.
+  console.log("[1/4] renombrando + spliteando RGBA → RGB + alpha...");
+  const NUMBERED_RGB   = path.join(TMP_DIR, "numbered-rgb");
+  const NUMBERED_ALPHA = path.join(TMP_DIR, "numbered-alpha");
+  ensureDir(NUMBERED_RGB);
+  ensureDir(NUMBERED_ALPHA);
+
   const inputFrames = readdirSync(INPUT_DIR)
     .filter((f) => f.toLowerCase().endsWith(".png"))
     .sort();
   if (inputFrames.length === 0) {
     throw new Error(`no hay PNGs en ${INPUT_DIR}`);
   }
-  inputFrames.forEach((f, i) => {
-    copyFileSync(
-      path.join(INPUT_DIR, f),
-      path.join(NUMBERED, `${String(i + 1).padStart(8, "0")}.png`)
-    );
-  });
-  console.log(`[1/3] OK — ${inputFrames.length} frames\n`);
 
-  // 2) RIFE interpolacion
-  // rife-ncnn-vulkan -i input_dir -o output_dir -m model -n target_count
-  // target_count = (n - 1) * multiplier + 1
+  // Usar sharp para splittear cada PNG RGBA en 2 archivos PNG sin alpha
+  const sharp = (await import("sharp")).default;
+  for (let i = 0; i < inputFrames.length; i++) {
+    const src = path.join(INPUT_DIR, inputFrames[i]);
+    const name = String(i + 1).padStart(8, "0") + ".png";
+
+    // RGB sin alpha (premultiplied ya viene del v7)
+    await sharp(src).removeAlpha().toFile(path.join(NUMBERED_RGB, name));
+
+    // Alpha → grayscale 3-canal (RIFE necesita 3 canales). Replico el alpha
+    // en R, G y B.
+    const alphaRaw = await sharp(src).extractChannel("alpha").raw().toBuffer({ resolveWithObject: true });
+    const { width, height } = alphaRaw.info;
+    const rgb3 = Buffer.alloc(width * height * 3);
+    for (let p = 0; p < width * height; p++) {
+      const a = alphaRaw.data[p];
+      rgb3[p * 3] = a;
+      rgb3[p * 3 + 1] = a;
+      rgb3[p * 3 + 2] = a;
+    }
+    await sharp(rgb3, { raw: { width, height, channels: 3 } })
+      .png({ compressionLevel: 6 })
+      .toFile(path.join(NUMBERED_ALPHA, name));
+  }
+  console.log(`[1/4] OK — ${inputFrames.length} frames spliteados\n`);
+
+  // 2) RIFE interpolacion en AMBAS secuencias
   const targetCount = (inputFrames.length - 1) * multiplier + 1;
-  console.log(`[2/3] RIFE interpolando con ${model} → ${targetCount} frames...`);
-  ensureDir(INTERPOLATED);
+  const INTERP_RGB   = path.join(TMP_DIR, "interp-rgb");
+  const INTERP_ALPHA = path.join(TMP_DIR, "interp-alpha");
+  ensureDir(INTERP_RGB);
+  ensureDir(INTERP_ALPHA);
+  const modelDir = path.join(PROJECT_ROOT, "tools", "rife", model);
+
+  console.log(`[2/4] RIFE en RGB con ${model} → ${targetCount} frames...`);
   await run(RIFE_BIN, [
-    "-i", NUMBERED,
-    "-o", INTERPOLATED,
-    "-m", path.join(PROJECT_ROOT, "tools", "rife", model),
-    "-n", String(targetCount),
+    "-i", NUMBERED_RGB, "-o", INTERP_RGB,
+    "-m", modelDir, "-n", String(targetCount),
+    "-g", "-1", "-j", "1:1:1",
     "-f", "%08d.png",
   ]);
-  const interpolatedFrames = readdirSync(INTERPOLATED).filter((f) => f.endsWith(".png")).length;
-  console.log(`[2/3] OK — ${interpolatedFrames} frames interpolados\n`);
 
-  // 3) ffmpeg encode → WebM VP9 yuva420p (alpha real)
-  console.log(`[3/3] ffmpeg encode → WebM VP9 yuva420p @ ${fps}fps...`);
+  console.log(`[3/4] RIFE en alpha con ${model} → ${targetCount} frames...`);
+  await run(RIFE_BIN, [
+    "-i", NUMBERED_ALPHA, "-o", INTERP_ALPHA,
+    "-m", modelDir, "-n", String(targetCount),
+    "-g", "-1", "-j", "1:1:1",
+    "-f", "%08d.png",
+  ]);
+
+  // 3) Recombinar RGB + alpha frame por frame
+  console.log("[3.5/4] recombinando RGB + alpha → RGBA...");
+  ensureDir(INTERPOLATED);
+  const interpRgbFrames = readdirSync(INTERP_RGB).filter((f) => f.endsWith(".png")).sort();
+  for (const f of interpRgbFrames) {
+    const rgbPath = path.join(INTERP_RGB, f);
+    const alphaPath = path.join(INTERP_ALPHA, f);
+    if (!existsSync(alphaPath)) continue;
+    const rgbBuf = await sharp(rgbPath).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const alphaBuf = await sharp(alphaPath).extractChannel(0).raw().toBuffer();
+    // Combinar: RGB (3 canales) + alpha (1 canal) → RGBA (4 canales)
+    const out = path.join(INTERPOLATED, f);
+    const { width, height } = rgbBuf.info;
+    const rgba = Buffer.alloc(width * height * 4);
+    for (let p = 0; p < width * height; p++) {
+      rgba[p * 4]     = rgbBuf.data[p * 3];
+      rgba[p * 4 + 1] = rgbBuf.data[p * 3 + 1];
+      rgba[p * 4 + 2] = rgbBuf.data[p * 3 + 2];
+      rgba[p * 4 + 3] = alphaBuf[p];
+    }
+    await sharp(rgba, { raw: { width, height, channels: 4 } })
+      .png({ compressionLevel: 6 })
+      .toFile(out);
+  }
+  const interpolatedFrames = readdirSync(INTERPOLATED).filter((f) => f.endsWith(".png")).length;
+  console.log(`[3.5/4] OK — ${interpolatedFrames} frames RGBA recombinados\n`);
+
+  // 4) ffmpeg encode → WebM VP9 yuva420p (alpha real)
+  console.log(`[4/4] ffmpeg encode → WebM VP9 yuva420p @ ${fps}fps...`);
   mkdirSync(path.dirname(OUTPUT_WEBM), { recursive: true });
   await run(ffmpegStatic, [
     "-y",
