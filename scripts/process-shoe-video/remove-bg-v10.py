@@ -35,9 +35,9 @@ SUPPORTED_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 REALESRGAN_BIN = PROJECT_ROOT / "tools" / "realesrgan" / "realesrgan-ncnn-vulkan.exe"
 
-# Tiling config
-TILE_SIZE = 512
-OVERLAP = 96  # banda de blending entre tiles
+# Tiling config — tile grande + overlap grande → menos seams visibles
+TILE_SIZE = 1024
+OVERLAP = 256  # banda de blending bien ancha
 
 _VITMATTE_MODEL = None
 _VITMATTE_PROCESSOR = None
@@ -48,9 +48,10 @@ def load_vitmatte():
     global _VITMATTE_MODEL, _VITMATTE_PROCESSOR
     if _VITMATTE_MODEL is not None:
         return _VITMATTE_MODEL, _VITMATTE_PROCESSOR
-    print("[INFO] cargando VITMatte-small...", flush=True)
-    _VITMATTE_PROCESSOR = VitMatteImageProcessor.from_pretrained("hustvl/vitmatte-small-composition-1k")
-    _VITMATTE_MODEL = VitMatteForImageMatting.from_pretrained("hustvl/vitmatte-small-composition-1k")
+    print("[INFO] cargando VITMatte-base (mejor que small, ~400MB)...", flush=True)
+    # vitmatte-base: ~4x mas parametros que small → refina mejor bordes finos
+    _VITMATTE_PROCESSOR = VitMatteImageProcessor.from_pretrained("hustvl/vitmatte-base-composition-1k")
+    _VITMATTE_MODEL = VitMatteForImageMatting.from_pretrained("hustvl/vitmatte-base-composition-1k")
     _VITMATTE_MODEL.eval()
     return _VITMATTE_MODEL, _VITMATTE_PROCESSOR
 
@@ -211,8 +212,9 @@ def process_one(in_path: Path, out_path: Path, tmp_dir: Path, verbose: bool = Fa
     del up_pil, cutout_up
     gc.collect()
 
-    # 4) Trimap 4x — banda 8/8 px (en escala 4x = ~32 px = sutil)
-    trimap_4x = mask_to_trimap(alpha_isnet_4x, erode_size=8, dilate_size=8)
+    # 4) Trimap 4x — banda 12/12 px (mas ancha → VITMatte-base tiene mas
+    #    margen para refinar bordes finos como cordones y costuras)
+    trimap_4x = mask_to_trimap(alpha_isnet_4x, erode_size=12, dilate_size=12)
     del alpha_isnet_4x
 
     # 5) VITMatte CON TILING sobre 4x
