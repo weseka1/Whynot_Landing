@@ -3,27 +3,24 @@
 /* ============================================================================
    GLASS ORB 3D — Esfera de vidrio REAL con WebGL (R3F + Three.js)
    --------------------------------------------------------------------------
-   - Sphere geometry + MeshTransmissionMaterial (vidrio refractante real)
-   - Environment preset (HDR) para reflejos del cristal
-   - 3 luces (key warm + fill cool + point fill)
-   - <Float> para flotacion sutil del producto
-   - <ContactShadows> sombra de contacto bajo la esfera
-   - frameloop condicional por viewport
+   Renderiza una esfera transparente con material refractante real y el
+   producto adentro como plano texturizado, flotando.
 
-   IMAGEN DEL PRODUCTO:
-     Recomendado: PNG TRANSPARENTE (sin fondo). El plano texturizado dentro
-     de la esfera solo muestra los pixeles no-transparentes → producto se
-     ve flotando, sin rectangulo.
+   FUENTES DE CONTENIDO SOPORTADAS:
+     - .webm con alpha real (VP9 yuva420p) — preferido. Sin chroma key.
+       Generado offline con `npm run bg:process`. Safari NO soporta VP9
+       alpha → fallback automatico a PNG sequence si se pasa pngSequence.
+     - .mp4/.mov con fondo (chroma key opcional via shader) — fallback
+       backward-compat para videos sin pre-procesar.
+     - .png/.webp/.jpg — imagen estatica, con chroma key opcional
+       (offscreen canvas, una sola vez al cargar).
+     - PNG sequence — fallback para Safari cuando no soporta WebM alpha.
 
-     Si la imagen tiene fondo (blanco u otro): pasar prop `chromaKey="#fff"`
-     (o el color que sea). Se procesa en runtime con un offscreen canvas:
-     todos los pixeles cercanos al color clave se vuelven transparentes
-     con feathering en el edge → simula PNG transparente sin necesidad de
-     editar el asset.
+   El switcher decide qué subcomponente usar segun la URL + capability.
    ============================================================================ */
 
 import { useEffect, useState, useMemo, useRef } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import {
   MeshTransmissionMaterial,
   Environment,
@@ -33,13 +30,9 @@ import {
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
 
-const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov"];
-function isVideoUrl(url: string): boolean {
-  const lower = url.toLowerCase();
-  return VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext));
-}
-
-/* ---------------- helpers ---------------- */
+/* ============================================================================
+   Helpers
+   ============================================================================ */
 
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "").padStart(6, "0");
@@ -50,12 +43,27 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 
-/* useProcessedTexture
-   Carga `url` y devuelve un THREE.Texture. Si `chromaKey` es null usa la
-   imagen tal cual. Si tiene color, procesa en un offscreen canvas
-   eliminando los pixeles cercanos a ese color (con feather suave).
-   Retorna {texture, aspect}. aspect = naturalWidth / naturalHeight para
-   dimensionar el plane proporcional al producto.                        */
+function getExt(url: string): string {
+  const m = url.toLowerCase().match(/\.([a-z0-9]+)(?:\?|#|$)/);
+  return m ? m[1] : "";
+}
+
+/* Detecta si el browser soporta VP9 con alpha en WebM (Chrome/Firefox/Edge
+   YES, Safari NO). Devuelve true conservadoramente cuando canPlayType
+   indica al menos "maybe".                                              */
+function supportsWebMAlpha(): boolean {
+  if (typeof window === "undefined") return false;
+  const v = document.createElement("video");
+  const canVP9 = v.canPlayType('video/webm; codecs="vp9"');
+  // Safari devuelve "" para VP9 webm. Resto: "probably" o "maybe".
+  return canVP9 !== "";
+}
+
+/* ============================================================================
+   ProductImagePlane — imagen estatica (.png/.webp/.jpg)
+   Si tiene chromaKey, procesa con offscreen canvas (una sola vez).
+   ============================================================================ */
+
 function useProcessedTexture(
   url: string,
   chromaKey: string | null,
@@ -75,7 +83,6 @@ function useProcessedTexture(
       const h = img.naturalHeight;
       const aspect = w / h;
 
-      // Sin chroma key: usar la imagen directa (PNG transparente, idealmente)
       if (!chromaKey) {
         const t = new THREE.Texture(img);
         t.needsUpdate = true;
@@ -84,7 +91,6 @@ function useProcessedTexture(
         return;
       }
 
-      // Con chroma key: procesar offscreen
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
@@ -103,12 +109,9 @@ function useProcessedTexture(
         const dg = px[i + 1] - kg;
         const db = px[i + 2] - kb;
         const dSq = dr * dr + dg * dg + db * db;
-
         if (dSq < tolSq) {
-          // Bajo tolerancia: pixel totalmente transparente
           px[i + 3] = 0;
         } else if (dSq < featSq) {
-          // En la franja de feather: alpha proporcional (edge suave)
           const d = Math.sqrt(dSq);
           const t = (d - tolerance) / feather;
           px[i + 3] = Math.round(px[i + 3] * t);
@@ -120,19 +123,13 @@ function useProcessedTexture(
       t.colorSpace = THREE.SRGBColorSpace;
       setData({ texture: t, aspect });
     };
-
-    img.onerror = () => {
-      console.warn(`GlassOrb3D: no pude cargar ${url}`);
-    };
+    img.onerror = () => console.warn(`GlassOrb3D: cannot load ${url}`);
     img.src = url;
-
     return () => { cancelled = true; };
   }, [url, chromaKey, tolerance, feather]);
 
   return data;
 }
-
-/* ---------------- Plane del producto: imagen (offscreen canvas chroma) -- */
 
 function ProductImagePlane({
   url,
@@ -143,14 +140,10 @@ function ProductImagePlane({
 }) {
   const data = useProcessedTexture(url, chromaKey);
   if (!data) return null;
-
   const SCALE = 1.4;
-  const w = SCALE * data.aspect;
-  const h = SCALE;
-
   return (
     <mesh>
-      <planeGeometry args={[w, h]} />
+      <planeGeometry args={[SCALE * data.aspect, SCALE]} />
       <meshBasicMaterial
         map={data.texture}
         transparent
@@ -162,24 +155,15 @@ function ProductImagePlane({
   );
 }
 
-/* ---------------- Plane del producto: video (chroma key en shader) ------
-   El chroma key se hace por frame en GPU (fragment shader) con
-   onBeforeCompile + smoothstep para feather. Casi 0 costo CPU.        */
+/* ============================================================================
+   ProductVideoAlphaPlane — video .webm VP9 con alpha real (sin shader chroma)
+   El asset ya tiene alpha horneado (preprocesado con rembg). Solo VideoTexture
+   + meshBasicMaterial transparent. Costo: cero.
+   ============================================================================ */
 
-function ProductVideoPlane({
-  url,
-  chromaKey,
-  tolerance = 0.34,
-  feather = 0.08,
-}: {
-  url: string;
-  chromaKey: string | null;
-  tolerance?: number;
-  feather?: number;
-}) {
+function ProductVideoAlphaPlane({ url }: { url: string }) {
   const [texture, setTexture] = useState<THREE.VideoTexture | null>(null);
   const [aspect, setAspect] = useState(1);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const video = document.createElement("video");
@@ -189,10 +173,7 @@ function ProductVideoPlane({
     video.muted = true;
     video.playsInline = true;
     video.autoplay = true;
-    // @ts-ignore disablePictureInPicture no esta en types pero browsers lo respetan
-    video.disablePictureInPicture = true;
     video.preload = "auto";
-    videoRef.current = video;
 
     const onLoaded = () => {
       setAspect(video.videoWidth / video.videoHeight || 1);
@@ -205,10 +186,7 @@ function ProductVideoPlane({
     };
 
     video.addEventListener("loadedmetadata", onLoaded);
-    video.play().catch(() => {
-      /* autoplay puede ser bloqueado en algunos browsers — el video
-         queda cargado pero no reproduciendose. Igual seteamos textura. */
-    });
+    video.play().catch(() => {});
 
     return () => {
       video.removeEventListener("loadedmetadata", onLoaded);
@@ -218,21 +196,80 @@ function ProductVideoPlane({
     };
   }, [url]);
 
-  /* Shader inject: chroma key + feather en el fragment del meshBasicMaterial.
-     Usamos onBeforeCompile para inyectar 3 uniforms + logica despues del
-     `<map_fragment>` chunk de three.js.                                 */
+  if (!texture) return null;
+  const SCALE = 1.4;
+  return (
+    <mesh>
+      <planeGeometry args={[SCALE * aspect, SCALE]} />
+      <meshBasicMaterial
+        map={texture}
+        transparent
+        alphaTest={0.02}
+        toneMapped={false}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+/* ============================================================================
+   ProductVideoChromaPlane — video .mp4/.mov con fondo (chroma key en shader)
+   Backward compat para videos sin pre-procesar (silver, gold).
+   ============================================================================ */
+
+function ProductVideoChromaPlane({
+  url,
+  chromaKey,
+  tolerance = 0.34,
+  feather = 0.08,
+}: {
+  url: string;
+  chromaKey: string;
+  tolerance?: number;
+  feather?: number;
+}) {
+  const [texture, setTexture] = useState<THREE.VideoTexture | null>(null);
+  const [aspect, setAspect] = useState(1);
+
+  useEffect(() => {
+    const video = document.createElement("video");
+    video.src = url;
+    video.crossOrigin = "anonymous";
+    video.loop = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.preload = "auto";
+
+    const onLoaded = () => {
+      setAspect(video.videoWidth / video.videoHeight || 1);
+      const tex = new THREE.VideoTexture(video);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+      setTexture(tex);
+    };
+
+    video.addEventListener("loadedmetadata", onLoaded);
+    video.play().catch(() => {});
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [url]);
+
   const uniformsRef = useRef({
     uChromaKey: { value: new THREE.Vector3(1, 1, 1) },
     uTolerance: { value: tolerance },
     uFeather:   { value: feather },
   });
 
-  /* Update uniforms si cambian los props */
   useEffect(() => {
-    if (chromaKey) {
-      const [r, g, b] = hexToRgb(chromaKey);
-      uniformsRef.current.uChromaKey.value.set(r / 255, g / 255, b / 255);
-    }
+    const [r, g, b] = hexToRgb(chromaKey);
+    uniformsRef.current.uChromaKey.value.set(r / 255, g / 255, b / 255);
     uniformsRef.current.uTolerance.value = tolerance;
     uniformsRef.current.uFeather.value = feather;
   }, [chromaKey, tolerance, feather]);
@@ -242,51 +279,26 @@ function ProductVideoPlane({
       shader.uniforms.uChromaKey = uniformsRef.current.uChromaKey;
       shader.uniforms.uTolerance = uniformsRef.current.uTolerance;
       shader.uniforms.uFeather   = uniformsRef.current.uFeather;
-
       shader.fragmentShader = shader.fragmentShader
-        .replace(
-          "#include <common>",
-          `
-            #include <common>
-            uniform vec3 uChromaKey;
-            uniform float uTolerance;
-            uniform float uFeather;
-          `
-        )
-        // Despues de aplicar el map, evaluamos distancia al chroma key
-        // y modulamos el alpha. smoothstep da feather suave.
-        .replace(
-          "#include <map_fragment>",
-          `
-            #include <map_fragment>
-            #ifdef USE_MAP
-              float chromaDist = distance(diffuseColor.rgb, uChromaKey);
-              float chromaAlpha = smoothstep(uTolerance, uTolerance + uFeather, chromaDist);
-              diffuseColor.a *= chromaAlpha;
-              if (diffuseColor.a < 0.02) discard;
-            #endif
-          `
-        );
+        .replace("#include <common>", `
+          #include <common>
+          uniform vec3 uChromaKey;
+          uniform float uTolerance;
+          uniform float uFeather;
+        `)
+        .replace("#include <map_fragment>", `
+          #include <map_fragment>
+          #ifdef USE_MAP
+            float chromaDist = distance(diffuseColor.rgb, uChromaKey);
+            float chromaAlpha = smoothstep(uTolerance, uTolerance + uFeather, chromaDist);
+            diffuseColor.a *= chromaAlpha;
+            if (diffuseColor.a < 0.02) discard;
+          #endif
+        `);
     };
   }, []);
 
-  if (!texture || !chromaKey) {
-    if (!texture) return null;
-    // Sin chroma key: render directo
-    const SCALE = 1.4;
-    return (
-      <mesh>
-        <planeGeometry args={[SCALE * aspect, SCALE]} />
-        <meshBasicMaterial
-          map={texture}
-          transparent
-          toneMapped={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    );
-  }
-
+  if (!texture) return null;
   const SCALE = 1.4;
   return (
     <mesh>
@@ -302,30 +314,142 @@ function ProductVideoPlane({
   );
 }
 
-/* ---------------- Switcher: decide imagen vs video segun extension ---- */
+/* ============================================================================
+   ProductPngSequencePlane — anima PNG sequence con alpha real (Safari fallback)
+   Carga N frames .png, los precachea como Texture y los cicla por frame
+   a fps configurado. Cada texture tiene alpha horneado del rembg.
+   ============================================================================ */
 
-function ProductPlane({
-  url,
-  chromaKey,
+function ProductPngSequencePlane({
+  base,
+  count,
+  fps = 24,
 }: {
+  base: string;      // ej: "/assets/hero/golden-goose-frames/"
+  count: number;     // cantidad de PNGs disponibles
+  fps?: number;
+}) {
+  const [textures, setTextures] = useState<THREE.Texture[] | null>(null);
+  const [aspect, setAspect] = useState(1);
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  const frameRef = useRef(0);
+  const timeRef = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loader = new THREE.TextureLoader();
+    loader.crossOrigin = "anonymous";
+
+    const urls = Array.from({ length: count }, (_, i) => {
+      const padded = String(i).padStart(4, "0");
+      return `${base.replace(/\/?$/, "/")}frame_${padded}.png`;
+    });
+
+    Promise.all(
+      urls.map(
+        (u) =>
+          new Promise<THREE.Texture | null>((resolve) => {
+            loader.load(
+              u,
+              (t) => {
+                t.colorSpace = THREE.SRGBColorSpace;
+                t.minFilter = THREE.LinearFilter;
+                t.magFilter = THREE.LinearFilter;
+                t.generateMipmaps = false;
+                resolve(t);
+              },
+              undefined,
+              () => resolve(null)
+            );
+          })
+      )
+    ).then((loaded) => {
+      if (cancelled) return;
+      const valid = loaded.filter((t): t is THREE.Texture => t !== null);
+      if (valid.length > 0 && valid[0].image) {
+        const img = valid[0].image as { width: number; height: number };
+        setAspect(img.width / img.height);
+      }
+      setTextures(valid);
+    });
+
+    return () => { cancelled = true; };
+  }, [base, count]);
+
+  /* Avance del frame index segun fps + delta time del rAF de R3F */
+  useFrame((_, dt) => {
+    if (!textures || textures.length === 0 || !matRef.current) return;
+    timeRef.current += dt;
+    const target = Math.floor(timeRef.current * fps) % textures.length;
+    if (target !== frameRef.current) {
+      frameRef.current = target;
+      matRef.current.map = textures[target];
+      matRef.current.needsUpdate = true;
+    }
+  });
+
+  if (!textures || textures.length === 0) return null;
+  const SCALE = 1.4;
+  return (
+    <mesh>
+      <planeGeometry args={[SCALE * aspect, SCALE]} />
+      <meshBasicMaterial
+        ref={matRef}
+        map={textures[0]}
+        transparent
+        alphaTest={0.02}
+        toneMapped={false}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+/* ============================================================================
+   ProductPlane — switcher segun URL + capability del browser
+   ============================================================================ */
+
+interface ProductPlaneProps {
   url: string;
   chromaKey: string | null;
-}) {
-  if (isVideoUrl(url)) {
-    return <ProductVideoPlane url={url} chromaKey={chromaKey} />;
+  pngSequence?: { base: string; count: number; fps?: number };
+}
+
+function ProductPlane({ url, chromaKey, pngSequence }: ProductPlaneProps) {
+  const ext = getExt(url);
+  const [webmAlphaSupported, setWebmAlphaSupported] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setWebmAlphaSupported(supportsWebMAlpha());
+  }, []);
+
+  // Evitamos render en SSR / antes de la deteccion
+  if (webmAlphaSupported === null) return null;
+
+  // .webm: alpha real horneado. Si el browser soporta -> usar. Sino, fallback.
+  if (ext === "webm") {
+    if (webmAlphaSupported) return <ProductVideoAlphaPlane url={url} />;
+    if (pngSequence) {
+      return <ProductPngSequencePlane base={pngSequence.base} count={pngSequence.count} fps={pngSequence.fps ?? 24} />;
+    }
+    // Sin fallback: intenta cargarlo igual (Safari mostrara el primer frame)
+    return <ProductVideoAlphaPlane url={url} />;
   }
+
+  // .mp4/.mov: backward compat con shader chroma key (silver, gold)
+  if (ext === "mp4" || ext === "mov") {
+    return <ProductVideoChromaPlane url={url} chromaKey={chromaKey || "#ffffff"} />;
+  }
+
+  // Imagen estatica
   return <ProductImagePlane url={url} chromaKey={chromaKey} />;
 }
 
-/* ---------------- Esfera de cristal ---------------- */
+/* ============================================================================
+   GlassSphere — la esfera de cristal en si
+   ============================================================================ */
 
 function GlassSphere({ isMobile }: { isMobile: boolean }) {
-  /* Parametros ajustados para que el cristal NO deforme la zapatilla:
-     - transmission alto pero thickness y ior muy bajos → casi sin
-       refraccion (la zapatilla se ve nitida, no como pez ojo)
-     - chromaticAberration y distortion en cero → sin fringes RGB
-     - clearcoat alto → reflejos pulidos en la superficie
-     - envMapIntensity baja → el HDR no domina visualmente            */
   return (
     <mesh>
       <sphereGeometry args={[1.2, isMobile ? 48 : 96, isMobile ? 48 : 96]} />
@@ -352,24 +476,30 @@ function GlassSphere({ isMobile }: { isMobile: boolean }) {
   );
 }
 
-/* ---------------- Componente principal ---------------- */
+/* ============================================================================
+   Componente principal
+   ============================================================================ */
 
 interface Props {
   productImage: string;
   chromaKey?: string | null;
+  /* Fallback Safari: secuencia PNG decimada del mismo producto que tiene
+     .webm con alpha. Si no se pasa y el browser no soporta WebM alpha,
+     el componente intenta cargar el .webm igual (degradacion silenciosa).  */
+  pngSequence?: { base: string; count: number; fps?: number };
   isInView?: boolean;
 }
 
 export default function GlassOrb3D({
   productImage,
   chromaKey = null,
+  pngSequence,
   isInView = true,
 }: Props) {
   const isMobile = useIsMobile();
 
   return (
     <Canvas
-      /* Pausa render cuando sale del viewport → 0 CPU/GPU */
       frameloop={isInView ? "always" : "never"}
       camera={{ position: [0, 0, 3.6], fov: 36 }}
       dpr={isMobile ? 1 : [1, 1.5]}
@@ -385,20 +515,13 @@ export default function GlassOrb3D({
         pointerEvents: "none",
       }}
     >
-      {/* Luces */}
       <ambientLight intensity={0.5} />
       <directionalLight position={[-2.5, 3, 4]} intensity={1.4} color="#fff5e8" />
       <directionalLight position={[3, 1, -2]} intensity={0.6} color="#d4e2ff" />
       <pointLight position={[0, 0, 4]} intensity={0.35} color="#ffffff" />
 
-      {/* HDR environment SOLO para reflejos del cristal — no como background.
-          "apartment" es un HDR interior claro / neutro: el cristal refleja
-          tonos blancos/grises calidos en vez de rascacielos.            */}
       {!isMobile && <Environment preset="apartment" background={false} />}
 
-      {/* Producto adentro del cristal: posicionado en z=-0.3 (atras del
-          centro) para que la sphere tenga "aire" delante y el producto
-          se sienta dentro de la burbuja, no pegado al vidrio frontal. */}
       <Float
         speed={1.3}
         rotationIntensity={0.12}
@@ -406,14 +529,12 @@ export default function GlassOrb3D({
         floatingRange={[-0.06, 0.06]}
       >
         <group position={[0, 0, -0.3]}>
-          <ProductPlane url={productImage} chromaKey={chromaKey} />
+          <ProductPlane url={productImage} chromaKey={chromaKey} pngSequence={pngSequence} />
         </group>
       </Float>
 
-      {/* Esfera de cristal envolviendo al producto */}
       <GlassSphere isMobile={isMobile} />
 
-      {/* Sombra de contacto bajo la esfera (skipped en mobile) */}
       {!isMobile && (
         <ContactShadows
           position={[0, -1.35, 0]}

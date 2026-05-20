@@ -16,9 +16,13 @@ const GlassOrb3D = dynamic(() => import("./GlassOrb3D"), {
 interface Props {
   productImage: string;
   chromaKey?: string | null;
+  /* PNG sequence fallback para Safari cuando productImage es .webm con
+     alpha (Safari no soporta VP9 alpha). El GlassOrb3D detecta capability
+     y switchea automatico.                                              */
+  pngSequence?: { base: string; count: number; fps?: number };
 }
 
-export default function GlassOrb3DClient({ productImage, chromaKey = null }: Props) {
+export default function GlassOrb3DClient({ productImage, chromaKey = null, pngSequence }: Props) {
   const { ref, hasBeenInView, isInView } = useInViewport<HTMLDivElement>({
     rootMargin: "300px",
   });
@@ -36,6 +40,7 @@ export default function GlassOrb3DClient({ productImage, chromaKey = null }: Pro
         <GlassOrb3D
           productImage={productImage}
           chromaKey={chromaKey}
+          pngSequence={pngSequence}
           isInView={isInView}
         />
       )}
