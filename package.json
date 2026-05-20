@@ -9,7 +9,8 @@
     "lint": "next lint",
     "optimize:assets": "node scripts/optimize-assets.mjs",
     "bg:setup": "node scripts/process-shoe-video/verify.mjs",
-    "bg:process": "node scripts/process-shoe-video/index.mjs"
+    "bg:process": "node scripts/process-shoe-video/index.mjs",
+    "interp:encode": "node scripts/process-shoe-video/interpolate-and-encode.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.0",

@@ -44,6 +44,10 @@ MIAMI_IMPORT.zip
 
 # Pipeline de bg-removal — frames intermedios
 scripts/process-shoe-video/tmp/
+scripts/process-shoe-video/tmp-interp/
+
+# Tools (RIFE binary ~600MB, no commiteable)
+/tools/
 
 # GLBs duplicados en root (las copias activas están en public/assets/3d/)
 /Mono 3d.glb
