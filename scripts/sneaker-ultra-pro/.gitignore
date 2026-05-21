@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+models/*.pt
+models/*.bin
+models/*.safetensors
+.venv/
+.env
