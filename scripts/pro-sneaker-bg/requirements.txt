@@ -1,0 +1,28 @@
+# Pro Sneaker BG Removal — Python 3.11 recomendado
+# CUDA opcional: si tenes NVIDIA, reinstalar torch desde https://pytorch.org/get-started/locally/
+
+# Core
+numpy>=1.26,<3
+Pillow>=10.3
+opencv-contrib-python>=4.10        # incluye ximgproc (guided filter)
+tqdm>=4.66
+
+# Deep learning
+torch>=2.4
+torchvision>=0.19
+transformers>=4.45                  # VITMatte (hustvl/vitmatte-base)
+
+# Segmentacion primaria
+rembg>=2.0.65                       # wrapper BiRefNet/ISNet ONNX
+onnxruntime>=1.18                   # CPU. Para GPU NVIDIA: onnxruntime-gpu
+huggingface_hub>=0.24
+
+# SAM2 (opcional — refinamiento extra). Instalar con install.ps1
+# git+https://github.com/facebookresearch/sam2.git
+
+# Alpha matting clasico (fallback)
+pymatting>=1.1.12
+
+# Utilidades
+scipy>=1.13
+scikit-image>=0.24
