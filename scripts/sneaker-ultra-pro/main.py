@@ -72,6 +72,14 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--no-uncertainty", action="store_true", help="Saltar uncertainty refinement")
     ap.add_argument("--no-decontaminate", action="store_true", help="Saltar anti-halo")
 
+    # Super-resolution avanzada
+    ap.add_argument("--swinir", action="store_true",
+                    help="Activa SwinIR (segundo paso SR sobre Real-ESRGAN, mas detalle, +20-40s/img)")
+    ap.add_argument("--sam2-multiscale", action="store_true",
+                    help="Multi-scale SAM2 (predice full + 0.5x, consensus). +30-60s/img")
+    ap.add_argument("--birefnet-alpha-matting", action="store_true",
+                    help="Activa alpha_matting interno de rembg (mejor calidad pero requiere 2GB+ RAM)")
+
     # Modelos
     ap.add_argument("--sam2-variant", default="large",
                     choices=["tiny", "small", "base", "large"],
@@ -128,6 +136,11 @@ def apply_preset(cfg: UltraConfig, args: argparse.Namespace) -> None:
         cfg.vitmatte_passes = 2
         cfg.uncertainty_enabled = True
         cfg.guided_passes = 2
+        cfg.sam2_multiscale = True
+        cfg.swinir_enabled = True
+        # Solo subir alpha_matting si el hardware lo aguanta
+        # (en RAM holgada NVIDIA discrete o similar)
+        # Lo dejamos OFF por seguridad, el usuario lo prende explicito si quiere
 
 
 def build_config(args: argparse.Namespace) -> UltraConfig:
@@ -149,6 +162,11 @@ def build_config(args: argparse.Namespace) -> UltraConfig:
     cfg.vitmatte_enabled = not args.no_vitmatte
     cfg.uncertainty_enabled = not args.no_uncertainty
     cfg.decontaminate_halo = not args.no_decontaminate
+
+    cfg.swinir_enabled = args.swinir
+    cfg.sam2_multiscale = args.sam2_multiscale
+    if args.birefnet_alpha_matting:
+        cfg.birefnet_alpha_matting = True
 
     # Modelos
     cfg.sam2_variant = args.sam2_variant

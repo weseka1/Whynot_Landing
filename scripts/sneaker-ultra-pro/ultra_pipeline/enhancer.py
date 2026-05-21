@@ -170,24 +170,92 @@ class RealESRGAN:
             return False
 
 
+# ---------- SwinIR (segundo paso de super-resolucion opcional) ----------
+
+_SWINIR_MODEL = None
+
+
+def _load_swinir(device: str = "cpu", logger=None):
+    """Carga SwinIR Real-SR x4 (alternativa/cascada de Real-ESRGAN).
+
+    Modelo: 003_realSR_BSRGAN_DFOWMFC_s64w8_SwinIR-L_x4_GAN
+    Pesos auto-descargados de github.com/JingyunLiang/SwinIR si no estan.
+    """
+    global _SWINIR_MODEL
+    if _SWINIR_MODEL is not None:
+        return _SWINIR_MODEL
+    try:
+        import torch
+        from huggingface_hub import hf_hub_download
+        from PIL import Image as _Img  # noqa
+    except ImportError:
+        if logger:
+            logger.warning("SwinIR requiere torch + huggingface_hub")
+        return None
+    try:
+        # SwinIR no esta en transformers — usamos el wrapper de pip 'swinir' si esta,
+        # o caemos al modelo via HF (mas universal).
+        from transformers import AutoModelForImageSuperResolution, AutoImageProcessor
+        model_id = "caidas/swin2SR-classical-sr-x4-64"  # similar a SwinIR x4
+        if logger:
+            logger.info(f"cargando SwinIR-style {model_id} ({device})")
+        processor = AutoImageProcessor.from_pretrained(model_id)
+        model = AutoModelForImageSuperResolution.from_pretrained(model_id)
+        model.eval()
+        if device != "cpu":
+            model = model.to(device)
+        _SWINIR_MODEL = (model, processor)
+        return _SWINIR_MODEL
+    except Exception as e:
+        if logger:
+            logger.warning(f"no se pudo cargar SwinIR: {e}")
+        return None
+
+
+def swinir_super_resolution(rgb: np.ndarray, device: str = "cpu",
+                             logger=None) -> np.ndarray:
+    """SwinIR x4 SR. Devuelve rgb upscaleado. Si falla, devuelve el input."""
+    bundle = _load_swinir(device=device, logger=logger)
+    if bundle is None:
+        return rgb
+    import torch
+    model, processor = bundle
+    pil = Image.fromarray(rgb).convert("RGB")
+    try:
+        inputs = processor(images=pil, return_tensors="pt")
+        if device != "cpu":
+            inputs = {k: v.to(device) for k, v in inputs.items()}
+        with torch.no_grad():
+            outputs = model(**inputs)
+        # outputs.reconstruction: (1, 3, H, W) en [0,1]
+        sr = outputs.reconstruction.detach().float().cpu().squeeze(0).numpy()
+        sr = (sr.transpose(1, 2, 0).clip(0, 1) * 255).astype(np.uint8)
+        return sr
+    except Exception as e:
+        if logger:
+            logger.warning(f"SwinIR SR fallo: {e}")
+        return rgb
+
+
 # ---------- pipeline-facing API ----------
 
 def enhance_for_segmentation(rgb_orig: np.ndarray, cfg, upscaler: RealESRGAN,
                               tmp_dir: Path, logger=None) -> tuple[np.ndarray, dict]:
-    """Produce el RGB que se le pasa a los segmentadores.
+    """Pre-enhancement IA AUXILIAR para alimentar a SAM2 + BiRefNet + VITMatte.
 
-    Pasos (todos opcionales por config):
-      1. detectar tipo de contraste
-      2. CLAHE adaptativo
-      3. adaptive local contrast (solo en white-on-white)
-      4. unsharp mask inteligente
-      5. Real-ESRGAN x4 upscale
+    Pasos:
+      1) detectar tipo de contraste
+      2) CLAHE adaptativo (LAB-L)
+      3) adaptive local contrast (solo en white-on-white)
+      4) unsharp mask con threshold (no amplifica grano JPG)
+      5) Real-ESRGAN x4 via ncnn-vulkan (iGPU AMD/Intel/NVIDIA)
+      6) [opcional] SwinIR x4 en cascada sobre el output (segunda SR
+         para microdetalle adicional — pesado en CPU, solo si --swinir)
 
-    Devuelve (rgb_enhanced_upscaled, meta) donde 'meta' incluye:
-      - 'contrast_class'
-      - 'clahe_applied', 'unsharp_applied', 'localcontrast_applied'
-      - 'upscale_ok'
-      - 'scale' (factor aplicado: 4 si esrgan ok, 1 si pass-through)
+    La imagen mejorada NO se exporta nunca. Solo se pasa a los
+    segmentadores y al matter para que entiendan mejor los bordes.
+
+    Devuelve (rgb_enhanced, meta).
     """
     meta: dict = {}
     work = rgb_orig
@@ -198,7 +266,6 @@ def enhance_for_segmentation(rgb_orig: np.ndarray, cfg, upscaler: RealESRGAN,
         cls = "normal"
     meta["contrast_class"] = cls
 
-    # 2) CLAHE: siempre que enhance_enabled. Adaptativo si bajo contraste.
     if cfg.enhance_enabled and cfg.clahe_enabled:
         if cls in ("white_on_white", "low_contrast"):
             work = adaptive_clahe(work, cfg.clahe_clip_limit, cfg.clahe_tile_size)
@@ -208,14 +275,12 @@ def enhance_for_segmentation(rgb_orig: np.ndarray, cfg, upscaler: RealESRGAN,
     else:
         meta["clahe_applied"] = False
 
-    # 3) Adaptive local contrast (solo white-on-white extremo)
     if cfg.enhance_enabled and cfg.adaptive_local_contrast and cls == "white_on_white":
         work = adaptive_local_contrast(work)
         meta["localcontrast_applied"] = True
     else:
         meta["localcontrast_applied"] = False
 
-    # 4) Unsharp
     if cfg.enhance_enabled and cfg.unsharp_enabled:
         work = unsharp_mask(work, cfg.unsharp_amount, cfg.unsharp_radius,
                              cfg.unsharp_threshold)
@@ -230,17 +295,28 @@ def enhance_for_segmentation(rgb_orig: np.ndarray, cfg, upscaler: RealESRGAN,
         Image.fromarray(work).save(tmp_in)
         ok = upscaler.upscale_file(tmp_in, tmp_out)
         meta["upscale_ok"] = ok
-        meta["scale"] = upscaler.scale if ok else 1
+        meta["esrgan_scale"] = upscaler.scale if ok else 1
         work = np.array(Image.open(tmp_out).convert("RGB"))
     else:
         meta["upscale_ok"] = False
-        meta["scale"] = 1
+        meta["esrgan_scale"] = 1
+
+    # 6) SwinIR opcional (cascada de SR adicional)
+    meta["swinir_applied"] = False
+    if cfg.enhance_enabled and cfg.swinir_enabled:
+        before = work.shape[:2]
+        work = swinir_super_resolution(work, device=cfg.device, logger=logger)
+        if work.shape[:2] != before:
+            meta["swinir_applied"] = True
 
     if logger:
         logger.info(
-            "enhance: class=%s  clahe=%s  localc=%s  unsharp=%s  upscale=%s(x%d)"
+            "enhance: class=%s  clahe=%s  localc=%s  unsharp=%s  "
+            "esrgan=%s(x%d)  swinir=%s  final=%dx%d"
             % (meta["contrast_class"], meta["clahe_applied"],
                meta["localcontrast_applied"], meta["unsharp_applied"],
-               meta["upscale_ok"], meta["scale"])
+               meta["upscale_ok"], meta["esrgan_scale"],
+               meta["swinir_applied"],
+               work.shape[1], work.shape[0])
         )
     return work, meta

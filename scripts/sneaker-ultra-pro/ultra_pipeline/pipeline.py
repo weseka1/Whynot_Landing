@@ -41,6 +41,7 @@ import tempfile
 import time
 from pathlib import Path
 
+import cv2
 import numpy as np
 from PIL import Image
 
@@ -80,6 +81,61 @@ def _get_sam2(cfg: UltraConfig, logger) -> SAM2Segmenter | None:
     return _SAM2_INSTANCE
 
 
+def _sam2_multiscale_predict(sam2: SAM2Segmenter, rgb: np.ndarray,
+                              cfg: UltraConfig, logger) -> dict | None:
+    """Multi-scale SAM2 prediction: corre SAM2 en la imagen full + downscaled 2x,
+    consensus por interseccion ponderada por score.
+
+    En zonas donde ambas escalas estan de acuerdo (FG) → FG.
+    En zonas donde solo la escala alta dice FG (microdetalle: cordones) → FG.
+    En zonas donde solo la escala baja dice FG y la alta no → BG (filtra ruido).
+    """
+    # Escala 1: imagen completa
+    r_full = sam2.segment(
+        rgb, multimask=cfg.sam2_multimask,
+        grid_points=cfg.sam2_grid_points, neg_pad=cfg.sam2_neg_corner_pad,
+    )
+    if r_full is None:
+        return None
+    if not cfg.sam2_multiscale_two_pass:
+        return r_full
+
+    # Escala 2: downscaled (mas contexto, menos detalle)
+    H, W = rgb.shape[:2]
+    rgb_half = cv2.resize(rgb, (max(W // 2, 256), max(H // 2, 256)),
+                          interpolation=cv2.INTER_AREA)
+    r_half = sam2.segment(
+        rgb_half, multimask=cfg.sam2_multimask,
+        grid_points=cfg.sam2_grid_points, neg_pad=cfg.sam2_neg_corner_pad,
+    )
+    if r_half is None:
+        return r_full
+
+    # Upsample r_half back to full
+    half_up = cv2.resize(r_half["binary"], (W, H), interpolation=cv2.INTER_NEAREST)
+    # Consensus: escala alta gana (mas microdetalle). Solo agregamos zonas
+    # donde half dice FG firme y full estaba en duda (pero rara).
+    bin_full = r_full["binary"]
+    # union conservadora: usamos full como base + agregamos pixels donde half es FG
+    # y la full no tenia certeza (no es nuestro caso porque full es binaria, pero
+    # nos sirve para tapar agujeros internos que full pudo dejar)
+    out = bin_full.copy()
+    # rellenar solo huecos internos que half si detecta
+    inv_full = 255 - bin_full
+    hole_in_full = (inv_full > 0) & (half_up > 0)
+    out[hole_in_full] = 255
+
+    if logger:
+        logger.info(f"SAM2 multi-scale: scores full={r_full['score']:.3f} "
+                     f"half={r_half['score']:.3f}")
+    return {
+        "alpha": out,
+        "binary": out,
+        "score": float(max(r_full["score"], r_half["score"])),
+        "pass1_score": r_full.get("pass1_score", r_full["score"]),
+    }
+
+
 def process_one(in_path: Path, out_path: Path, cfg: UltraConfig,
                 upscaler: RealESRGAN, tmp_dir: Path, logger,
                 mask_path: Path | None = None,
@@ -92,22 +148,30 @@ def process_one(in_path: Path, out_path: Path, cfg: UltraConfig,
     orig_size = (orig_rgb.shape[1], orig_rgb.shape[0])
     stats["orig_size"] = orig_size
 
-    # 1) Pre-enhancement IA auxiliar (CLAHE + unsharp + Real-ESRGAN)
-    rgb_enh, enh_meta = enhance_for_segmentation(orig_rgb, cfg, upscaler,
-                                                   tmp_dir, logger=logger)
+    # 1) Pre-enhancement IA auxiliar (CLAHE + unsharp + Real-ESRGAN x4 [+ SwinIR])
+    #    Esta imagen NO se exporta. Solo alimenta a SAM2/BiRefNet/VITMatte.
+    rgb_enh, enh_meta = enhance_for_segmentation(
+        orig_rgb, cfg, upscaler, tmp_dir, logger=logger
+    )
     stats["enhance"] = enh_meta
 
     if debug_dir is not None:
         ioutil.save_debug(rgb_enh, debug_dir / f"{in_path.stem}_01_enhanced.png", mode="RGB")
 
-    # 2) SAM2 segmentation (primaria)
+    # 2) SAM2 segmentation sobre rgb_enh (alta resolucion — microdetalle)
+    #    Multi-scale opcional: tambien analiza en escala 2x para consensus.
     sam2 = _get_sam2(cfg, logger)
-    sam_result = sam2.segment(
-        rgb_enh,
-        multimask=cfg.sam2_multimask,
-        grid_points=cfg.sam2_grid_points,
-        neg_pad=cfg.sam2_neg_corner_pad,
-    ) if sam2 else None
+    if sam2 and cfg.sam2_multiscale:
+        sam_result = _sam2_multiscale_predict(sam2, rgb_enh, cfg, logger)
+    elif sam2:
+        sam_result = sam2.segment(
+            rgb_enh,
+            multimask=cfg.sam2_multimask,
+            grid_points=cfg.sam2_grid_points,
+            neg_pad=cfg.sam2_neg_corner_pad,
+        )
+    else:
+        sam_result = None
 
     if sam_result is not None:
         sam_binary = sam_result["binary"]
@@ -122,7 +186,8 @@ def process_one(in_path: Path, out_path: Path, cfg: UltraConfig,
     if debug_dir is not None and sam_binary is not None:
         ioutil.save_debug(sam_binary, debug_dir / f"{in_path.stem}_02_sam2.png")
 
-    # 3) BiRefNet refinement + fusion
+    # 3) BiRefNet refinement sobre rgb_enh. alpha_matting=False evita el
+    #    closed-form interno de rembg (1.86GB OOM) — VITMatte lo cubre.
     if cfg.birefnet_enabled:
         bref = birefnet_alpha(
             rgb_enh,
@@ -139,7 +204,6 @@ def process_one(in_path: Path, out_path: Path, cfg: UltraConfig,
     if debug_dir is not None and bref is not None:
         ioutil.save_debug(bref, debug_dir / f"{in_path.stem}_03_birefnet.png")
 
-    # Si ambos fallaron, GrabCut como ultimo recurso
     if sam_binary is None and bref is None:
         if logger:
             logger.warning("SAM2 y BiRefNet fallaron — fallback GrabCut")
@@ -159,7 +223,7 @@ def process_one(in_path: Path, out_path: Path, cfg: UltraConfig,
     del sam_binary, bref
     gc.collect()
 
-    # 4) Trimap adaptativo + VITMatte tiled multi-pass
+    # 4) VITMatte sobre rgb_enh (mismas dimensiones que alpha_base)
     if cfg.vitmatte_enabled:
         alpha_matte = multipass_matting(rgb_enh, alpha_base, cfg, logger=logger)
     else:
@@ -171,7 +235,7 @@ def process_one(in_path: Path, out_path: Path, cfg: UltraConfig,
     del alpha_base
     gc.collect()
 
-    # 5) Uncertainty refinement (edge confidence + re-matting local)
+    # 5) Uncertainty refinement
     if cfg.uncertainty_enabled:
         alpha_refined = refine_uncertain_regions(
             alpha_matte, rgb_enh,

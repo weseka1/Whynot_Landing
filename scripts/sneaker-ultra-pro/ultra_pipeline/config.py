@@ -54,6 +54,8 @@ class UltraConfig:
     upscale_model: str = "realesrgan-x4plus-anime"  # mejor para textiles/cuero
     upscale_factor: int = 4
     realesrgan_bin: Path | None = None
+    # SwinIR opcional como cascada de SR (transformer-based, mas lento en CPU)
+    swinir_enabled: bool = False
     # deteccion de fondo claro / bajo contraste (white-on-white)
     detect_low_contrast: bool = True
     low_contrast_brightness: int = 200
@@ -72,11 +74,17 @@ class UltraConfig:
     sam2_use_grid_prompt: bool = True
     sam2_grid_points: int = 5                    # n positivos interiores
     sam2_neg_corner_pad: int = 12                # px desde corner para neg points
+    sam2_multiscale: bool = False                # consensus 1x + 0.5x
+    sam2_multiscale_two_pass: bool = True        # si False, multiscale=solo full
 
     # ---------------- Etapa 3: BiRefNet refinement ----------------
     birefnet_enabled: bool = True
     birefnet_model: str = "birefnet-general"     # via rembg
-    birefnet_alpha_matting: bool = True
+    # alpha_matting=False por default: el closed-form interno de rembg
+    # pide ~1.86 GiB en imagenes 2K+ (OOM en CPU/iGPU). VITMatte multi-pass
+    # ya hace alpha matting state-of-the-art, asi que es redundante.
+    # Subir a True solo en NVIDIA discrete con RAM holgada.
+    birefnet_alpha_matting: bool = False
     birefnet_fg_threshold: int = 200             # perdonador (no come suela blanca)
     birefnet_bg_threshold: int = 5
     birefnet_erode_size: int = 1
