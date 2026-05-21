@@ -176,31 +176,28 @@ _SWINIR_MODEL = None
 
 
 def _load_swinir(device: str = "cpu", logger=None):
-    """Carga SwinIR Real-SR x4 (alternativa/cascada de Real-ESRGAN).
+    """Carga Swin2SR x4 (similar arquitectura a SwinIR, transformer-based SR).
 
-    Modelo: 003_realSR_BSRGAN_DFOWMFC_s64w8_SwinIR-L_x4_GAN
-    Pesos auto-descargados de github.com/JingyunLiang/SwinIR si no estan.
+    Modelo: caidas/swin2SR-classical-sr-x4-64 (~30MB)
+    HuggingFace, lazy-downloaded la primera vez.
     """
     global _SWINIR_MODEL
     if _SWINIR_MODEL is not None:
         return _SWINIR_MODEL
     try:
-        import torch
-        from huggingface_hub import hf_hub_download
-        from PIL import Image as _Img  # noqa
-    except ImportError:
+        import torch  # noqa
+        # En transformers >= 4.34: Swin2SRForImageSuperResolution + Swin2SRImageProcessor
+        from transformers import Swin2SRForImageSuperResolution, Swin2SRImageProcessor
+    except ImportError as e:
         if logger:
-            logger.warning("SwinIR requiere torch + huggingface_hub")
+            logger.warning(f"SwinIR/Swin2SR requiere transformers>=4.34: {e}")
         return None
     try:
-        # SwinIR no esta en transformers — usamos el wrapper de pip 'swinir' si esta,
-        # o caemos al modelo via HF (mas universal).
-        from transformers import AutoModelForImageSuperResolution, AutoImageProcessor
-        model_id = "caidas/swin2SR-classical-sr-x4-64"  # similar a SwinIR x4
+        model_id = "caidas/swin2SR-classical-sr-x4-64"
         if logger:
-            logger.info(f"cargando SwinIR-style {model_id} ({device})")
-        processor = AutoImageProcessor.from_pretrained(model_id)
-        model = AutoModelForImageSuperResolution.from_pretrained(model_id)
+            logger.info(f"cargando Swin2SR x4 ({model_id}) en {device}")
+        processor = Swin2SRImageProcessor.from_pretrained(model_id)
+        model = Swin2SRForImageSuperResolution.from_pretrained(model_id)
         model.eval()
         if device != "cpu":
             model = model.to(device)
@@ -208,7 +205,7 @@ def _load_swinir(device: str = "cpu", logger=None):
         return _SWINIR_MODEL
     except Exception as e:
         if logger:
-            logger.warning(f"no se pudo cargar SwinIR: {e}")
+            logger.warning(f"no se pudo cargar Swin2SR: {e}")
         return None
 
 
@@ -288,26 +285,72 @@ def enhance_for_segmentation(rgb_orig: np.ndarray, cfg, upscaler: RealESRGAN,
     else:
         meta["unsharp_applied"] = False
 
-    # 5) Real-ESRGAN x4
-    if cfg.enhance_enabled and cfg.upscale_enabled:
-        tmp_in = tmp_dir / "enh_in.png"
-        tmp_out = tmp_dir / "enh_up.png"
-        Image.fromarray(work).save(tmp_in)
-        ok = upscaler.upscale_file(tmp_in, tmp_out)
-        meta["upscale_ok"] = ok
-        meta["esrgan_scale"] = upscaler.scale if ok else 1
-        work = np.array(Image.open(tmp_out).convert("RGB"))
-    else:
-        meta["upscale_ok"] = False
-        meta["esrgan_scale"] = 1
+    # 5) Super-resolution IA:
+    #    Si swinir_enabled + swinir_replace_esrgan: SwinIR reemplaza a ESRGAN.
+    #    (mejor calidad para cuero/textiles, mantiene x4 = 2-4K manejable)
+    #    Si solo ESRGAN: x4 ncnn-vulkan (rapido en Vega 8).
+    #    Si ESRGAN + SwinIR cascada: x16 explota RAM con SAM2 large, NO recomendado.
+    use_swinir_replace = (cfg.enhance_enabled and cfg.swinir_enabled
+                          and cfg.swinir_replace_esrgan)
 
-    # 6) SwinIR opcional (cascada de SR adicional)
-    meta["swinir_applied"] = False
-    if cfg.enhance_enabled and cfg.swinir_enabled:
+    if use_swinir_replace:
+        if logger:
+            logger.info("SR: intentando Swin2SR x4 (reemplaza Real-ESRGAN)")
         before = work.shape[:2]
-        work = swinir_super_resolution(work, device=cfg.device, logger=logger)
-        if work.shape[:2] != before:
+        sr_work = swinir_super_resolution(work, device=cfg.device, logger=logger)
+        if sr_work.shape[:2] != before:
+            # Swin2SR OK
+            work = sr_work
             meta["swinir_applied"] = True
+            meta["esrgan_scale"] = 4
+            meta["upscale_ok"] = False
+        else:
+            # Swin2SR fallo o no cambio — FALLBACK a Real-ESRGAN
+            if logger:
+                logger.warning("Swin2SR no produjo SR — fallback a Real-ESRGAN")
+            meta["swinir_applied"] = False
+            if cfg.upscale_enabled:
+                tmp_in = tmp_dir / "enh_in.png"
+                tmp_out = tmp_dir / "enh_up.png"
+                Image.fromarray(work).save(tmp_in)
+                ok = upscaler.upscale_file(tmp_in, tmp_out)
+                meta["upscale_ok"] = ok
+                meta["esrgan_scale"] = upscaler.scale if ok else 1
+                if ok:
+                    work = np.array(Image.open(tmp_out).convert("RGB"))
+            else:
+                meta["upscale_ok"] = False
+                meta["esrgan_scale"] = 1
+    else:
+        # Real-ESRGAN x4
+        if cfg.enhance_enabled and cfg.upscale_enabled:
+            tmp_in = tmp_dir / "enh_in.png"
+            tmp_out = tmp_dir / "enh_up.png"
+            Image.fromarray(work).save(tmp_in)
+            ok = upscaler.upscale_file(tmp_in, tmp_out)
+            meta["upscale_ok"] = ok
+            meta["esrgan_scale"] = upscaler.scale if ok else 1
+            work = np.array(Image.open(tmp_out).convert("RGB"))
+        else:
+            meta["upscale_ok"] = False
+            meta["esrgan_scale"] = 1
+
+        # SwinIR como cascada (x16) — solo con suficiente RAM
+        meta["swinir_applied"] = False
+        if cfg.enhance_enabled and cfg.swinir_enabled and not cfg.swinir_replace_esrgan:
+            H, W = work.shape[:2]
+            # Limit: si ya es > 2500 px de lado mayor, NO aplicar SwinIR cascada
+            if max(H, W) > 2500:
+                if logger:
+                    logger.warning(
+                        f"SwinIR cascada saltada — input ya es {W}x{H} (>2500px). "
+                        "Usar --swinir-replace para SwinIR sin cascada."
+                    )
+            else:
+                before = work.shape[:2]
+                work = swinir_super_resolution(work, device=cfg.device, logger=logger)
+                if work.shape[:2] != before:
+                    meta["swinir_applied"] = True
 
     if logger:
         logger.info(

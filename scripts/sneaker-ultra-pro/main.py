@@ -137,10 +137,15 @@ def apply_preset(cfg: UltraConfig, args: argparse.Namespace) -> None:
         cfg.uncertainty_enabled = True
         cfg.guided_passes = 2
         cfg.sam2_multiscale = True
-        cfg.swinir_enabled = True
+        # SwinIR opt-in: activar solo si el usuario pasa --swinir explicito
+        # (con Real-ESRGAN ya en x4 + Vega 8 + SAM2 large, SwinIR extra es
+        # marginalmente mejor en algunos casos pero +30-60s/img en CPU)
+        cfg.swinir_enabled = bool(args.swinir)
         # Con SAM2 large + multiscale la mascara SAM2 es precisa →
-        # podemos usar edge_aware para que SAM2 sume detalle
+        # edge_aware para que SAM2 sume detalle (cordones, costuras)
         cfg.fusion_strategy = "edge_aware"
+        # Trimap mas ancho en zonas de cordones/microdetalle
+        cfg.trimap_max_band = 36
 
 
 def build_config(args: argparse.Namespace) -> UltraConfig:

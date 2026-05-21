@@ -51,11 +51,16 @@ class UltraConfig:
     unsharp_radius: float = 1.2
     unsharp_threshold: int = 3
     upscale_enabled: bool = True
-    upscale_model: str = "realesrgan-x4plus-anime"  # mejor para textiles/cuero
+    # 'realesrgan-x4plus' = modelo general (fotos reales: cuero, suelas, costuras)
+    # 'realesrgan-x4plus-anime' = optimizado para anime, NO ideal para sneakers reales
+    upscale_model: str = "realesrgan-x4plus"
     upscale_factor: int = 4
     realesrgan_bin: Path | None = None
-    # SwinIR opcional como cascada de SR (transformer-based, mas lento en CPU)
+    # SwinIR transformer-based SR (Swin2SR). Mas lento que Real-ESRGAN
+    # pero mejor calidad en cuero/textiles. Por default REEMPLAZA a Real-ESRGAN
+    # cuando se activa (no cascada, para evitar x16 que explota RAM).
     swinir_enabled: bool = False
+    swinir_replace_esrgan: bool = True   # True = reemplaza; False = cascada x16
     # deteccion de fondo claro / bajo contraste (white-on-white)
     detect_low_contrast: bool = True
     low_contrast_brightness: int = 200
