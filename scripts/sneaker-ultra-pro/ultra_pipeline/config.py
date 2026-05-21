@@ -38,7 +38,7 @@ class UltraConfig:
 
     # ---------------- Device ----------------
     device: str = field(default_factory=_detect_device)
-    use_fp16: bool = True   # True en CUDA con buena VRAM; auto-disabled en CPU
+    use_fp16: bool = False  # True solo en CUDA con buena VRAM; auto-disabled en CPU
 
     # ---------------- Etapa 1: pre-enhancement IA (auxiliar) ----------------
     # OBJETIVO: mejorar el INPUT del segmentador. NUNCA se exporta.
@@ -65,7 +65,9 @@ class UltraConfig:
     sam2_enabled: bool = True
     sam2_checkpoint: Path | None = None
     sam2_config: str = "configs/sam2.1/sam2.1_hiera_l.yaml"
-    sam2_variant: str = "large"                  # tiny|small|base|large
+    # Default 'small': mejor compromiso calidad/velocidad en CPU/iGPU.
+    # En NVIDIA discrete con CUDA conviene 'large' (--quality o /sam2-large).
+    sam2_variant: str = "small"                  # tiny|small|base|large
     sam2_multimask: bool = True
     sam2_use_grid_prompt: bool = True
     sam2_grid_points: int = 5                    # n positivos interiores
@@ -94,7 +96,9 @@ class UltraConfig:
     vitmatte_model_id: str = "hustvl/vitmatte-base-composition-1k"
     vitmatte_tile_size: int = 1024
     vitmatte_overlap: int = 256
-    vitmatte_passes: int = 2                      # multi-pass (segundo pass usa alpha refinado)
+    # vitmatte_passes 1 por default — el segundo pass es 2x el tiempo y aporta poco
+    # en sneakers con bordes ya bien definidos. Subir a 2 con --quality.
+    vitmatte_passes: int = 1                      # multi-pass (segundo pass usa alpha refinado)
 
     # Closed-form fallback (CPU-friendly, robusto)
     closedform_fallback: bool = True

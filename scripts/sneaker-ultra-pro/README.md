@@ -110,15 +110,26 @@ sneaker-ultra-pro/
 winget install Python.Python.3.11
 ```
 
-### 2. Instalar todo
+### 2. Instalar segun tu hardware
 
 ```cmd
 cd scripts\sneaker-ultra-pro
-install.bat               REM  CPU + Vulkan (AMD/Intel/NVIDIA)
-install.bat /cuda         REM  CUDA 12.1 (solo NVIDIA)
-install.bat /sam2         REM  + SAM2 + checkpoint large
-install.bat /cuda /sam2   REM  combinables
+
+REM  --- AMD / Intel iGPU (Ryzen + Vega, etc) ---
+install.bat /directml /sam2
+
+REM  --- NVIDIA discrete ---
+install.bat /cuda /sam2-large
+
+REM  --- Cualquier hardware (CPU base) ---
+install.bat /sam2
 ```
+
+Variantes de SAM2 para `/sam2`:
+- `/sam2-tiny`   — 40MB, mas rapido, calidad aceptable
+- `/sam2-small`  — 180MB, **default** (mejor compromiso en CPU/iGPU)
+- `/sam2-base`   — 320MB, mejor mascara
+- `/sam2-large`  — 900MB, maxima calidad (lento en CPU)
 
 ### 3. Real-ESRGAN (opcional pero recomendado)
 
@@ -210,15 +221,30 @@ El pipeline degrada con elegancia:
 
 ## Performance esperada
 
-| Hardware                  | 1080x810 | 2048x1536 |
-|---------------------------|----------|-----------|
-| CPU AMD + Vulkan          | 60-90 s  | 120-200 s |
-| NVIDIA RTX 3060+ CUDA     | 12-20 s  | 30-50 s   |
-| NVIDIA RTX 4090 CUDA FP16 | 5-9 s    | 15-25 s   |
+| Hardware                              | Preset      | 1080x810  | 2048x1536 |
+|---------------------------------------|-------------|-----------|-----------|
+| Ryzen 5700U + Vega 8 + DirectML       | `/fast`     | 35-60 s   | 80-130 s  |
+| Ryzen 5700U + Vega 8 + DirectML       | default     | 70-110 s  | 150-260 s |
+| Ryzen 5700U + Vega 8 + DirectML       | `/quality`  | 150-240 s | 300-500 s |
+| NVIDIA RTX 3060+ (CUDA)               | default     | 12-20 s   | 30-50 s   |
+| NVIDIA RTX 4090 (CUDA FP16)           | `/quality`  | 5-9 s     | 15-25 s   |
+
+### En tu hardware (Ryzen 5700U + Vega 8) — recomendaciones
+
+1. **Primera vez**: ejecuta `run.bat /fast /debug` con 1-2 imagenes para validar.
+2. **Producción**: `run.bat` (default) — buen balance calidad/tiempo.
+3. **Solo cuando el default no alcance**: `run.bat /quality` (sube SAM2 a large
+   y agrega segundo pass VITMatte — 2-3x mas lento).
+
+Lo que ya esta acelerado en tu hardware:
+- **Real-ESRGAN x4** → ncnn-vulkan en Vega 8 (no usa CPU)
+- **BiRefNet (rembg ONNX)** → DirectML en Vega 8 si instalaste `/directml`
+- **VITMatte** → CPU (PyTorch). Cuello de botella principal.
+- **SAM2** → CPU (PyTorch). Por eso default es `small`, no `large`.
 
 > SAM2 + BiRefNet + VITMatte multi-pass es el cuello de botella. El default
-> prioriza **calidad** sobre velocidad. Para acelerar usa `/nosam` (saca
-> SAM2) o `--vitmatte-passes 1`.
+> ya esta tuneado para CPU/iGPU. Para mas velocidad usa `/fast` (SAM2 small,
+> 1 pass, sin uncertainty refinement, calidad ~95%).
 
 ## Formato de salida
 

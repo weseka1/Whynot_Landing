@@ -103,7 +103,31 @@ def parse_args() -> argparse.Namespace:
                     help="Activar FP16 en GPU (mas rapido, mismas calidad en VITMatte/SAM2)")
     ap.add_argument("--no-fp16", action="store_true", help="Forzar FP32")
 
+    # Presets
+    ap.add_argument("--fast", action="store_true",
+                    help="Preset rapido para CPU/iGPU: SAM2 small, VITMatte 1 pass, "
+                         "sin uncertainty refinement (4-8x mas rapido, ~95%% calidad)")
+    ap.add_argument("--quality", action="store_true",
+                    help="Preset maxima calidad: SAM2 large, VITMatte 2 pass, "
+                         "uncertainty ON (default - explicito)")
+
     return ap.parse_args()
+
+
+def apply_preset(cfg: UltraConfig, args: argparse.Namespace) -> None:
+    """Aplica presets sobre el config base."""
+    if args.fast:
+        # SAM2 small es ~3x mas rapido que large en CPU, calidad muy similar
+        cfg.sam2_variant = "small"
+        cfg.vitmatte_passes = 1
+        cfg.uncertainty_enabled = False
+        cfg.guided_passes = 1
+        cfg.vitmatte_tile_size = 768   # tiles mas chicos -> menos RAM, mas rapido
+    if args.quality:
+        cfg.sam2_variant = "large"
+        cfg.vitmatte_passes = 2
+        cfg.uncertainty_enabled = True
+        cfg.guided_passes = 2
 
 
 def build_config(args: argparse.Namespace) -> UltraConfig:
@@ -151,6 +175,12 @@ def build_config(args: argparse.Namespace) -> UltraConfig:
     elif args.fp16:
         cfg.use_fp16 = True
 
+    # Si estamos en CPU, FP16 no aplica
+    if cfg.device == "cpu":
+        cfg.use_fp16 = False
+
+    # Aplicar presets (after config base, before return)
+    apply_preset(cfg, args)
     return cfg
 
 

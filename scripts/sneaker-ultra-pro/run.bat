@@ -5,12 +5,14 @@ REM
 REM  Uso:
 REM    run.bat                          (input default + opts default)
 REM    run.bat "C:\ruta\carpeta"        (carpeta custom)
+REM    run.bat /fast                    (preset rapido CPU/iGPU AMD)
+REM    run.bat /quality                 (preset maxima calidad NVIDIA)
 REM    run.bat /debug                   (guarda intermedios)
 REM    run.bat /force                   (reprocesar todo)
 REM    run.bat /nosam                   (sin SAM2, solo BiRefNet)
 REM    run.bat /nofp16                  (FP32 en GPU)
 REM    run.bat /cpu                     (forzar CPU)
-REM    run.bat "C:\ruta" /debug /force  (combinables)
+REM    run.bat "C:\ruta" /fast /debug   (combinables)
 REM ============================================================
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
@@ -22,6 +24,16 @@ set "EXTRA="
 :parse
 if "%~1"=="" goto run
 set "ARG=%~1"
+if /I "!ARG!"=="/fast" (
+    set "EXTRA=!EXTRA! --fast"
+    shift
+    goto parse
+)
+if /I "!ARG!"=="/quality" (
+    set "EXTRA=!EXTRA! --quality"
+    shift
+    goto parse
+)
 if /I "!ARG!"=="/debug" (
     set "EXTRA=!EXTRA! --debug"
     shift

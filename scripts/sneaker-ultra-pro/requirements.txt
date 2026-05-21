@@ -1,6 +1,9 @@
 # sneaker-ultra-pro — Python 3.11 recomendado
-# CUDA opcional. Para NVIDIA reinstalar torch con:
-#   pip install --upgrade --force-reinstall torch torchvision --index-url https://download.pytorch.org/whl/cu121
+#
+# Aceleracion por hardware:
+#   - AMD/Intel iGPU       : install.bat /directml  (BiRefNet acelerado via DirectML)
+#   - NVIDIA discrete      : install.bat /cuda
+#   - default              : CPU + Vulkan (Real-ESRGAN). Funciona en cualquier hardware.
 
 # ---------- Core ----------
 numpy>=1.26,<3
@@ -18,7 +21,10 @@ accelerate>=0.30                    # auto device-map para HF
 
 # ---------- Segmentacion primaria + refinement ----------
 rembg>=2.0.65                       # wrapper BiRefNet/ISNet/U2Net ONNX
-onnxruntime>=1.18                   # CPU. Para GPU NVIDIA: onnxruntime-gpu
+onnxruntime>=1.18                   # CPU baseline.
+# Aceleracion ONNX (instalar UNA sola en lugar de onnxruntime base):
+#   onnxruntime-directml             # AMD/Intel iGPU (Windows) — recomendado AMD
+#   onnxruntime-gpu                  # NVIDIA discrete (CUDA)
 huggingface_hub>=0.24
 
 # ---------- SAM2 (instalar con install.bat -WithSam2) ----------
