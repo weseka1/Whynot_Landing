@@ -90,9 +90,13 @@ class UltraConfig:
     birefnet_erode_size: int = 1
 
     # Fusion SAM2 + BiRefNet
-    fusion_strategy: str = "edge_aware"          # edge_aware | conservative | trust_birefnet
-    fusion_birefnet_strong_threshold: int = 230  # alpha >= -> trust BiRefNet
-    fusion_sam_ambiguous_band: tuple = (30, 230) # banda donde SAM puede mover BiRefNet
+    # 'trust_birefnet' (DEFAULT): BiRefNet manda. SAM2 solo puede quitar BG,
+    # nunca agregar FG. Evita halos cuando SAM2 small es ruidoso.
+    # 'edge_aware': SAM2 puede subir BiRefNet en ambiguous. Solo con SAM2
+    # large + CUDA donde SAM2 es preciso.
+    fusion_strategy: str = "trust_birefnet"
+    fusion_birefnet_strong_threshold: int = 230
+    fusion_sam_ambiguous_band: tuple = (30, 230)
 
     # ---------------- Etapa 4: trimap adaptativo + VITMatte ----------------
     trimap_min_band: int = 6

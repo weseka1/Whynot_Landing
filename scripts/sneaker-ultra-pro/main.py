@@ -138,9 +138,9 @@ def apply_preset(cfg: UltraConfig, args: argparse.Namespace) -> None:
         cfg.guided_passes = 2
         cfg.sam2_multiscale = True
         cfg.swinir_enabled = True
-        # Solo subir alpha_matting si el hardware lo aguanta
-        # (en RAM holgada NVIDIA discrete o similar)
-        # Lo dejamos OFF por seguridad, el usuario lo prende explicito si quiere
+        # Con SAM2 large + multiscale la mascara SAM2 es precisa →
+        # podemos usar edge_aware para que SAM2 sume detalle
+        cfg.fusion_strategy = "edge_aware"
 
 
 def build_config(args: argparse.Namespace) -> UltraConfig:

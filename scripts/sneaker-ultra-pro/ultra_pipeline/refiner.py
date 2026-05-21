@@ -68,17 +68,27 @@ def birefnet_alpha(rgb: np.ndarray, model: str = "birefnet-general",
 
 def fuse_sam2_birefnet(sam_binary: Optional[np.ndarray],
                        birefnet: Optional[np.ndarray],
-                       strategy: str = "edge_aware",
+                       strategy: str = "trust_birefnet",
                        birefnet_strong: int = 230,
                        sam_band: tuple = (30, 230),
                        logger=None) -> np.ndarray:
-    """Fusion edge-aware. Devuelve alpha base lista para trimap+matting.
+    """Fusion de la mascara base.
+
+    Estrategias:
+      - 'trust_birefnet' (DEFAULT): BiRefNet manda; SAM2 actua SOLO como
+        filtro de BG (puede QUITAR alpha en zonas claramente fondo, nunca
+        AGREGAR alpha donde BiRefNet no la puso). Esto evita que una
+        mascara SAM2 ruidosa (typical en variants small en CPU) inyecte
+        halos en el FG.
+      - 'edge_aware': SAM2 puede subir BiRefNet en zonas ambiguas. Util
+        SOLO con SAM2 large + CUDA donde SAM2 es muy preciso. Riesgoso
+        en CPU/iGPU.
+      - 'conservative': AND blando, ambos deben coincidir.
 
     Inputs:
         sam_binary: mascara binaria 0/255 de SAM2 (o None)
         birefnet : alpha continua de BiRefNet (o None)
     """
-    # casos degenerados
     if birefnet is None and sam_binary is None:
         raise RuntimeError("ni SAM2 ni BiRefNet produjeron mascara — todo fallo")
     if birefnet is None:
@@ -86,11 +96,8 @@ def fuse_sam2_birefnet(sam_binary: Optional[np.ndarray],
             logger.warning("BiRefNet no disponible — usando SAM2 binaria como base")
         return sam_binary.astype(np.uint8)
     if sam_binary is None:
-        if logger:
-            logger.warning("SAM2 no disponible — usando BiRefNet directo")
         return birefnet.astype(np.uint8)
 
-    # resize si shapes difieren (debería ser igual, paranoico)
     if sam_binary.shape != birefnet.shape:
         sam_binary = cv2.resize(sam_binary, (birefnet.shape[1], birefnet.shape[0]),
                                  interpolation=cv2.INTER_NEAREST)
@@ -99,31 +106,45 @@ def fuse_sam2_birefnet(sam_binary: Optional[np.ndarray],
     s = (sam_binary > 127).astype(np.float32) * 255.0
     lo, hi = sam_band
 
-    if strategy == "trust_birefnet":
-        return birefnet
-
     if strategy == "conservative":
-        # AND blando: ambos deben coincidir
         out = a.copy()
         out[s == 0] = 0
         return out.clip(0, 255).astype(np.uint8)
 
-    # edge_aware (default) — mejor para sneakers
+    if strategy == "edge_aware":
+        # NOTA: solo conviene con SAM2 large + CUDA.
+        out = a.copy()
+        ambiguous_fg = (a > lo) & (a < hi) & (s > 0)
+        out[ambiguous_fg] = np.maximum(out[ambiguous_fg], 220)
+        weak_bg = (a < 80) & (s == 0)
+        out[weak_bg] = 0
+        sam_only_fg = (a < 30) & (s > 0)
+        out[sam_only_fg] = 200
+        return out.clip(0, 255).astype(np.uint8)
+
+    # trust_birefnet (default) — SAM2 solo como filtro de BG
     out = a.copy()
-    # 1) Donde BiRefNet ya es alpha fuerte (cordones blancos en alpha > 230) → trust
-    #    no tocar (out[strong] = a[strong] ya esta)
 
-    # 2) SAM dice FG fuerte + BiRefNet ambigua → push up
-    ambiguous_fg = (a > lo) & (a < hi) & (s > 0)
-    out[ambiguous_fg] = np.maximum(out[ambiguous_fg], 220)
+    # Verificar coherencia global. Si SAM2 cubre mucho menos area que
+    # BiRefNet (mascara SAM2 deficiente) ignorar SAM2 completamente.
+    bref_fg_area = float((a > 80).sum())
+    sam_fg_area = float((s > 0).sum())
+    if bref_fg_area > 0:
+        sam_coverage_ratio = sam_fg_area / bref_fg_area
+        if logger:
+            logger.info(f"fusion: SAM2/BiRefNet area ratio = {sam_coverage_ratio:.2f}")
+        # Si SAM2 cubre menos del 50% del area de BiRefNet, descartar SAM2
+        # (mascara SAM2 con muchos huecos internos, perderia FG legitimo)
+        if sam_coverage_ratio < 0.5:
+            if logger:
+                logger.warning(
+                    "SAM2 mascara incompleta (cobertura < 50%% vs BiRefNet) — ignoro SAM2"
+                )
+            return out.clip(0, 255).astype(np.uint8)
 
-    # 3) SAM dice BG + BiRefNet debil → 0 (limpia islas falsas)
-    weak_bg = (a < 80) & (s == 0)
-    out[weak_bg] = 0
-
-    # 4) SAM dice FG + BiRefNet basicamente 0 (raro: BiRefNet no detecto)
-    #    confiar en SAM y dar alpha 200 ahí para que VITMatte refine
-    sam_only_fg = (a < 30) & (s > 0)
-    out[sam_only_fg] = 200
+    # Solo quitar alpha donde SAM2 dice claramente BG y BiRefNet duda (< 100)
+    # NUNCA subir alpha de BiRefNet.
+    very_weak_bref_and_sam_bg = (a < 100) & (s == 0)
+    out[very_weak_bref_and_sam_bg] = 0
 
     return out.clip(0, 255).astype(np.uint8)
