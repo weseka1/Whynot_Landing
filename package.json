@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "optimize:assets": "node scripts/optimize-assets.mjs",
+    "optimize:glb": "node scripts/optimize-glb.mjs",
     "bg:setup": "node scripts/process-shoe-video/verify.mjs",
     "bg:process": "node scripts/process-shoe-video/index.mjs",
     "interp:encode": "node scripts/process-shoe-video/interpolate-and-encode.mjs"
@@ -23,11 +24,16 @@
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.3.0",
+    "@gltf-transform/core": "^4.3.0",
+    "@gltf-transform/extensions": "^4.3.0",
+    "@gltf-transform/functions": "^4.3.0",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
     "ffmpeg-static": "^5.3.0",
+    "gltf-pipeline": "^4.3.1",
     "postcss": "^8.4.39",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.7",
