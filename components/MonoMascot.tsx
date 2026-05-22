@@ -20,8 +20,12 @@ import { useEffect, useRef, useState } from "react";
 const GLB_SRC = "/assets/3d/mono-cuerpo-completo.glb";
 
 type Props = {
-  /** Diámetro del visor (cuadrado). Default 240px. */
+  /** Diámetro del visor (cuadrado). Default 240px. Si pasás width/height, ignora. */
   size?: number;
+  /** Ancho del visor en px. Override del size. */
+  width?: number;
+  /** Alto del visor en px. Override del size. Permite contenedores portrait/landscape. */
+  height?: number;
   /** Ángulo vertical fijo (90 ≈ horizontal directo, mirando de frente). */
   basePolar?: number;
   /** Distancia de cámara — para body completo necesita más zoom-out. */
@@ -38,6 +42,8 @@ type Props = {
 
 export default function MonoMascot({
   size = 240,
+  width,
+  height,
   basePolar = 90,
   radius = "120%",
   cameraTarget = "0m 0.9m 0m",
@@ -45,6 +51,8 @@ export default function MonoMascot({
   maxAngle = 55,
   lerp = 0.08,
 }: Props) {
+  const w = width ?? size;
+  const h = height ?? size;
   const modelRef = useRef<HTMLElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -146,8 +154,8 @@ export default function MonoMascot({
     <div
       ref={wrapperRef}
       style={{
-        width: size,
-        height: size,
+        width: w,
+        height: h,
         flexShrink: 0,
         position: "relative",
         pointerEvents: "none",
