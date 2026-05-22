@@ -1,13 +1,17 @@
 "use client";
 
 /* ============================================================================
-   PAST DROP — Anillo 3D horizontal de zapatillas (videos 360)
-   - Carrusel circular tipo "calesita vista de frente"
-   - N círculos distribuidos a 360° / N alrededor de un eje vertical (Y)
-   - Rotación combinada: scroll-driven (mientras la sección está pinned) + drag
-   - Solo el círculo del frente reproduce el video; los demás muestran un
-     frame estático (currentTime ≈ 0.05) para que se vean igual.
-   - CSS 3D transforms (perspective + transform-style: preserve-3d) — sin R3F.
+   PAST DROP — Carrusel horizontal de zapatillas (videos 360)
+   - NO es anillo 3D: los círculos no rotan, mantienen forma circular siempre.
+   - Cada item tiene una posición continua respecto al centro (offset).
+     · offset = 0  → centro, más grande, video reproduce
+     · offset = ±1 → vecinos, un poco más chicos
+     · offset = ±2 → siguientes, aún más chicos, fade
+     · |offset| > 2.5 → fuera de pantalla (opacity 0)
+   - Loop infinito: el offset se "envuelve" usando módulo N.
+   - Rotación combinada: scroll-driven (mientras la sección está pinned) + drag.
+   - Solo el círculo del frente reproduce su video; los demás muestran el
+     primer frame (currentTime ≈ 0.05).
    ============================================================================ */
 
 import { useRef, useEffect, useState, useCallback } from "react";
@@ -22,8 +26,7 @@ import {
 import { site } from "@/data/site";
 import XDecoration from "./XDecoration";
 
-/* Lista de videos 360 servidos desde /public/videos-360 */
-const VIDEOS = [
+const VIDEO_FILES = [
   "LUISVOUITTON.mp4",
   "adidasbape.mp4",
   "amiri.mp4",
@@ -39,60 +42,83 @@ const VIDEOS = [
   "pumared.mp4",
   "sbdunkverdy.mp4",
   "timberland6-InchBoot.mp4",
-].map((f) => {
-  const base = f.replace(/\.mp4$/i, "").replace(/-RIFE.*$/, "");
-  return {
-    src: `/videos-360/${f}`,
-    label: base.toUpperCase(),
-  };
-});
+];
+
+const VIDEOS = VIDEO_FILES.map((f) => ({
+  src: `/videos-360/${f}`,
+  label: f.replace(/\.mp4$/i, "").replace(/-RIFE.*$/, "").toUpperCase(),
+}));
 
 const N = VIDEOS.length;
-const STEP = 360 / N;       // ángulo entre círculos
-const RADIUS = 520;         // radio del anillo (px)
-const SIZE = 200;           // diámetro base de cada círculo (px)
-const ACTIVE_SCALE = 1.4;   // qué tanto crece el del centro
-const PERSPECTIVE = 2000;   // mayor = menos magnificación de los cercanos
+const SIZE = 300;        // diámetro base (el del centro, scale 1)
+const SPACING = 290;     // separación horizontal entre centros (px)
+const SIDE_SCALE = 0.78; // tamaño de los vecinos (off = ±1)
+const OUTER_SCALE = 0.6; // tamaño de los que están más afuera (off = ±2)
+const FADE_START = 2;    // a partir de qué |offset| empezar a desvanecer
+const FADE_END = 2.7;    // |offset| al que llega a opacity 0
+
+/* Wrap del offset a [-N/2, N/2) para que el carrusel sea infinito y cada
+   item tome el camino corto (no se "teletransporte" cuando hace loop). */
+function wrapOffset(raw: number, total: number) {
+  let o = raw % total;
+  if (o > total / 2) o -= total;
+  if (o < -total / 2) o += total;
+  return o;
+}
+
+/* Escala por offset: 1 en el centro, SIDE_SCALE en ±1, OUTER_SCALE en ±2,
+   interpola linealmente entre esos puntos.                                  */
+function scaleForOffset(off: number) {
+  const a = Math.abs(off);
+  if (a <= 1) return 1 - (1 - SIDE_SCALE) * a;
+  if (a <= 2) return SIDE_SCALE - (SIDE_SCALE - OUTER_SCALE) * (a - 1);
+  return OUTER_SCALE;
+}
+
+/* Opacity: 1 hasta FADE_START, fade lineal hasta FADE_END, 0 más allá. */
+function opacityForOffset(off: number) {
+  const a = Math.abs(off);
+  if (a <= FADE_START) return 1;
+  if (a >= FADE_END) return 0;
+  return 1 - (a - FADE_START) / (FADE_END - FADE_START);
+}
 
 export default function PastDrop() {
   const sectionRef = useRef<HTMLElement>(null);
 
-  /* ---------- Scroll → rotación base ---------- */
-  /* offset start/start → end/end = mientras la sección está "pinned" por el
-     sticky child, el progreso va de 0→1. Una revolución completa en ese rango. */
+  /* ---------- Scroll → posición base ----------
+     Una "posición" entera = un item al frente. Scroll 0→1 avanza N items
+     (1 ciclo completo del carrusel) mientras la sección está pinned.       */
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
   });
-  const scrollRotation = useTransform(scrollYProgress, [0, 1], [0, 360]);
+  const scrollPosition = useTransform(scrollYProgress, [0, 1], [0, N]);
 
-  /* ---------- Drag offset (aditivo) ---------- */
+  /* ---------- Drag offset (aditivo, mismas unidades: "items") ---------- */
   const dragOffset = useMotionValue(0);
 
-  /* ---------- Rotación combinada ---------- */
-  const targetRotation = useMotionValue(0);
-  useMotionValueEvent(scrollRotation, "change", (v) => {
-    targetRotation.set(v + dragOffset.get());
+  /* ---------- Posición combinada (scroll + drag) ---------- */
+  const targetPosition = useMotionValue(0);
+  useMotionValueEvent(scrollPosition, "change", (v) => {
+    targetPosition.set(v + dragOffset.get());
   });
   useMotionValueEvent(dragOffset, "change", (v) => {
-    targetRotation.set(scrollRotation.get() + v);
+    targetPosition.set(scrollPosition.get() + v);
   });
 
-  const rotation = useSpring(targetRotation, {
-    stiffness: 65,
-    damping: 22,
-    mass: 1,
+  const position = useSpring(targetPosition, {
+    stiffness: 80,
+    damping: 24,
+    mass: 0.9,
   });
 
-  /* ---------- Índice activo (círculo del frente) ---------- */
+  /* ---------- Índice activo ---------- */
   const [activeIndex, setActiveIndex] = useState(0);
   const lastIdxRef = useRef(0);
 
-  useMotionValueEvent(rotation, "change", (v) => {
-    /* circulo i tiene angulo base = i*STEP; tras rotar el anillo por v,
-       su ángulo efectivo es (i*STEP + v) mod 360. Buscamos el i cuyo
-       ángulo efectivo está más cerca de 0 → i ≈ -v/STEP                */
-    const idx = ((Math.round(-v / STEP) % N) + N) % N;
+  useMotionValueEvent(position, "change", (v) => {
+    const idx = ((Math.round(v) % N) + N) % N;
     if (idx !== lastIdxRef.current) {
       lastIdxRef.current = idx;
       setActiveIndex(idx);
@@ -114,8 +140,9 @@ export default function PastDrop() {
     (e: React.PointerEvent) => {
       if (!dragRef.current) return;
       const dx = e.clientX - dragRef.current.startX;
-      // sensibilidad: 0.4° por pixel arrastrado
-      dragOffset.set(dragRef.current.baseOffset + dx * 0.4);
+      // sensibilidad: arrastrar SPACING px = avanzar 1 item, con factor -1
+      // para que arrastrar a la derecha traiga el item de la izquierda al centro.
+      dragOffset.set(dragRef.current.baseOffset - dx / SPACING);
     },
     [dragOffset]
   );
@@ -128,7 +155,7 @@ export default function PastDrop() {
     dragRef.current = null;
   }, []);
 
-  /* ---------- Video play / pause según activeIndex ---------- */
+  /* ---------- Video play/pause según activeIndex ---------- */
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   useEffect(() => {
@@ -142,18 +169,17 @@ export default function PastDrop() {
     });
   }, [activeIndex]);
 
-  /* Frame inicial visible aunque el video esté pausado */
   const onLoadedMetadata = (el: HTMLVideoElement | null) => {
     if (el && el.currentTime === 0) el.currentTime = 0.05;
   };
 
-  /* ---------- HUD coordenadas que reaccionan a la rotación ---------- */
-  const coordX = useTransform(rotation, (v) => {
-    const n = Math.abs(Math.round(v * 10)) % 10000;
+  /* ---------- HUD coords reactivas ---------- */
+  const coordX = useTransform(position, (p) => {
+    const n = Math.abs(Math.round(p * 137)) % 10000;
     return `X.${String(n).padStart(4, "0")}`;
   });
-  const coordY = useTransform(rotation, (v) => {
-    const n = Math.abs(Math.round(v * 7 + 353)) % 10000;
+  const coordY = useTransform(position, (p) => {
+    const n = Math.abs(Math.round(p * 89 + 353)) % 10000;
     return `Y.${String(n).padStart(4, "0")}`;
   });
 
@@ -164,7 +190,7 @@ export default function PastDrop() {
       className="bg-dich-peach-flat"
       style={{
         position: "relative",
-        minHeight: "260vh", // ~160vh de scroll pinned para 1 revolución
+        minHeight: "260vh", // ~160vh de scroll pinned para 1 ciclo completo
       }}
     >
       <XDecoration seed={11} count={18} color="var(--color-peach-line)" />
@@ -188,6 +214,7 @@ export default function PastDrop() {
             alignItems: "center",
             padding: "var(--space-md) var(--container-pad) 0",
             color: "var(--color-peach-fg)",
+            zIndex: 3,
           }}
         >
           <span className="system-text">{site.pastDrop.eyebrow}</span>
@@ -220,12 +247,11 @@ export default function PastDrop() {
           </h2>
         </div>
 
-        {/* ----- CARRUSEL 3D ----- */}
+        {/* ----- CARRUSEL HORIZONTAL ----- */}
         <div
           style={{
             flex: 1,
             position: "relative",
-            perspective: `${PERSPECTIVE}px`,
             cursor: "grab",
             touchAction: "none",
             userSelect: "none",
@@ -235,91 +261,18 @@ export default function PastDrop() {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <motion.div
-            style={{
-              position: "absolute",
-              inset: 0,
-              transformStyle: "preserve-3d",
-              rotateY: rotation,
-              willChange: "transform",
-            }}
-          >
-            {VIDEOS.map((v, i) => {
-              const angle = i * STEP;
-              const isActive = i === activeIndex;
-              return (
-                <div
-                  key={v.src}
-                  style={{
-                    position: "absolute",
-                    left: "50%",
-                    top: "50%",
-                    width: SIZE,
-                    height: SIZE,
-                    marginLeft: -SIZE / 2,
-                    marginTop: -SIZE / 2,
-                    transform: `rotateY(${angle}deg) translateZ(${RADIUS}px)`,
-                    transformStyle: "preserve-3d",
-                  }}
-                >
-                  {/* Contra-rota para que el video siempre encare la cámara
-                      al pasar por adelante (sin esto los videos quedarían
-                      "tangentes" al anillo y verías el costado). */}
-                  <motion.div
-                    animate={{ scale: isActive ? ACTIVE_SCALE : 1 }}
-                    transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      borderRadius: "50%",
-                      overflow: "hidden",
-                      border: "2px solid var(--color-peach-fg)",
-                      background: "#0a0a0a",
-                      boxShadow: isActive
-                        ? "0 40px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,84,54,0.6)"
-                        : "0 10px 24px rgba(0,0,0,0.18)",
-                      position: "relative",
-                    }}
-                  >
-                    <video
-                      ref={(el) => {
-                        videoRefs.current[i] = el;
-                      }}
-                      src={v.src}
-                      muted
-                      loop
-                      playsInline
-                      preload="metadata"
-                      onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        pointerEvents: "none",
-                        display: "block",
-                      }}
-                    />
-
-                    {/* Marker activo: pequeño punto amarillo arriba a la izq */}
-                    {isActive && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 10,
-                          left: 10,
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: "var(--color-peach-accent)",
-                          boxShadow: "0 0 12px var(--color-peach-accent)",
-                        }}
-                      />
-                    )}
-                  </motion.div>
-                </div>
-              );
-            })}
-          </motion.div>
+          {VIDEOS.map((v, i) => (
+            <CarouselItem
+              key={v.src}
+              index={i}
+              position={position}
+              src={v.src}
+              registerRef={(el) => {
+                videoRefs.current[i] = el;
+              }}
+              onLoadedMetadata={onLoadedMetadata}
+            />
+          ))}
         </div>
 
         {/* ----- BOTTOM HUD ----- */}
@@ -347,5 +300,75 @@ export default function PastDrop() {
         </div>
       </div>
     </section>
+  );
+}
+
+/* ============================================================================
+   CarouselItem — un círculo del carrusel.
+   Calcula su transform en cada frame a partir de su posición continua
+   relativa al centro (offset). Usa motion values (sin re-render React).
+   ============================================================================ */
+function CarouselItem({
+  index,
+  position,
+  src,
+  registerRef,
+  onLoadedMetadata,
+}: {
+  index: number;
+  position: ReturnType<typeof useMotionValue<number>> | any;
+  src: string;
+  registerRef: (el: HTMLVideoElement | null) => void;
+  onLoadedMetadata: (el: HTMLVideoElement | null) => void;
+}) {
+  /* offset del item respecto al centro del carrusel (continuo, con wrap). */
+  const offset = useTransform(position, (p: number) =>
+    wrapOffset(index - p, N)
+  );
+  const x = useTransform(offset, (o) => o * SPACING);
+  const scale = useTransform(offset, scaleForOffset);
+  const opacity = useTransform(offset, opacityForOffset);
+  /* zIndex: el del centro arriba, los de afuera abajo */
+  const zIndex = useTransform(offset, (o) => Math.round(100 - Math.abs(o) * 10));
+
+  return (
+    <motion.div
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        width: SIZE,
+        height: SIZE,
+        marginLeft: -SIZE / 2,
+        marginTop: -SIZE / 2,
+        x,
+        scale,
+        opacity,
+        zIndex,
+        borderRadius: "50%",
+        overflow: "hidden",
+        border: "2px solid var(--color-peach-fg)",
+        background: "#0a0a0a",
+        boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
+        willChange: "transform, opacity",
+      }}
+    >
+      <video
+        ref={registerRef}
+        src={src}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          pointerEvents: "none",
+          display: "block",
+        }}
+      />
+    </motion.div>
   );
 }
