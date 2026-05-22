@@ -42,7 +42,8 @@ const BASE_SCALE = 0.50;        // scale base de cada caja (modelos GLB son gran
 const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva isométrica
 const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
-const ORBIT_RATE = 0.30;        // rad/s — las 4 cajas orbitan juntas alrededor del eje central (Z del grupo tiltado)
+const ORBIT_RATE = 0.30;        // rad/s — las 4 cajas orbitan juntas alrededor del eje central
+const ORBIT_TILT = 0.65;        // rad — inclinacion del plano orbital respecto al plano de pantalla (0 = orbita plana frente a camara, mas alto = mas perspectiva 3D)
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
@@ -170,20 +171,26 @@ function Box({ src, index, progressRef }: BoxProps) {
     if (index < currentPillar) {
       /* ===== Caja ya ANCLADA — la posición sigue calculada para
          reversibilidad (scroll up reintegra la caja a la formación).
-         Aplicamos la misma órbita conjunta para que al volver a entrar
-         a cuadro la caja esté ya alineada con el resto. ===== */
+         Misma orbita inclinada que en el branch activo. ===== */
       const base = posOnPillar(index, index);
       const scrollSince = activeIndex - (index + 1);
 
       const orbitAngle = state.clock.elapsedTime * ORBIT_RATE;
       const cosO = Math.cos(orbitAngle);
       const sinO = Math.sin(orbitAngle);
-      const rx = base[0] * cosO - base[1] * sinO;
-      const ry = base[0] * sinO + base[1] * cosO;
+      const ox = base[0] * cosO - base[1] * sinO;
+      const oy = base[0] * sinO + base[1] * cosO;
+      const oz = base[2];
+
+      const cosT = Math.cos(ORBIT_TILT);
+      const sinT = Math.sin(ORBIT_TILT);
+      const rx = ox;
+      const ry = oy * cosT - oz * sinT;
+      const rz = oy * sinT + oz * cosT;
 
       targetX = rx + pillarSign(index) * offsetMagnitude;
       targetY = ry + Math.max(scrollSince, 0) * ANCHOR_RISE;
-      targetZ = base[2];
+      targetZ = rz;
     } else {
       /* ===== Caja ACTIVA (en formación o transicionando) ===== */
       const posNow = posOnPillar(currentPillar, index);
@@ -212,16 +219,29 @@ function Box({ src, index, progressRef }: BoxProps) {
 
       const formX = THREE.MathUtils.lerp(posNow[0], posTarget[0], transitionT);
       const formY = THREE.MathUtils.lerp(posNow[1], posTarget[1], transitionT);
-      targetZ      = THREE.MathUtils.lerp(posNow[2], posTarget[2], transitionT);
+      const formZ = THREE.MathUtils.lerp(posNow[2], posTarget[2], transitionT);
 
-      /* Órbita conjunta: las 4 cajas giran a la vez alrededor del eje central
-         de la formación. Rotamos la posición de formación, NO el offset lateral
-         (que mueve toda la composición a izq/der según el pilar). */
+      /* Órbita conjunta inclinada: las 4 cajas giran a la vez alrededor del
+         eje central de la formación. Aplicamos dos rotaciones:
+         1) rotacion alrededor del eje Z local (giro en XY) → orbita
+         2) rotacion alrededor del eje X (inclinacion ORBIT_TILT) → el plano
+            de la orbita se inclina hacia atras, generando perspectiva: las
+            cajas se acercan/alejan en Z mientras giran (no quedan planas
+            frente a la camara).
+         El offset lateral izq/der se suma DESPUES de las rotaciones para que
+         la composicion entera se mueva sin distorsionar la orbita. */
       const orbitAngle = state.clock.elapsedTime * ORBIT_RATE;
       const cosO = Math.cos(orbitAngle);
       const sinO = Math.sin(orbitAngle);
-      targetX = formX * cosO - formY * sinO;
-      targetY = formX * sinO + formY * cosO;
+      const ox = formX * cosO - formY * sinO;
+      const oy = formX * sinO + formY * cosO;
+      const oz = formZ;
+
+      const cosT = Math.cos(ORBIT_TILT);
+      const sinT = Math.sin(ORBIT_TILT);
+      targetX = ox;
+      targetY = oy * cosT - oz * sinT;
+      targetZ = oy * sinT + oz * cosT;
 
       const signLerped = THREE.MathUtils.lerp(signNow, signTarget, transitionT);
       targetX += signLerped * offsetMagnitude;
