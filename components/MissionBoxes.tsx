@@ -50,8 +50,8 @@ const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi h
    visible como elipse desde la camara — el conjunto forma una jaula
    wireframe esferica que enmarca la formacion compacta de cajas en el
    centro (como un atomo: nucleo + orbitales). Pose estatica. */
-const RING_RADIUS = 1.45;                      // radio de cada anillo. Cajas a radio 0.65 → margen comodo
-const RING_TUBE = 0.022;
+const RING_RADIUS = 2.20;                      // radio de cada anillo. Cajas a orbit radius 0.65 + tamaño visual ~0.7 = extent maximo ~1.35 → 2.20 da margen 0.85 unidades, las cajas quedan claramente dentro de la jaula
+const RING_TUBE = 0.026;
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
 
