@@ -242,6 +242,45 @@ export default function PastDrop() {
     [router]
   );
 
+  /* ---------- Advance by ±1 specimen ----------
+     Calcula el TARGET DESEADO (round(current) + delta), y ajusta dragOffset
+     para que targetPosition se mueva ahí. El spring se encarga de la
+     animación smooth y los capsule transforms reaccionan vía useTransform. */
+  const advance = useCallback(
+    (delta: 1 | -1) => {
+      const currentTarget = targetPosition.get();
+      const newTarget = Math.round(currentTarget) + delta;
+      dragOffset.set(newTarget - scrollPosition.get());
+    },
+    [targetPosition, dragOffset, scrollPosition]
+  );
+
+  /* ---------- Keyboard ← → ----------
+     Listener global; ignora si el foco está en un input/textarea/contentEditable.
+     PastDrop solo se monta en la home; la colorway page tiene su propio
+     listener (en Frame360Viewer) — no se pisan porque son rutas distintas. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.isContentEditable)
+      )
+        return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        advance(-1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        advance(1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [advance]);
+
   /* ---------- Video play/pause ---------- */
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   useEffect(() => {
@@ -399,6 +438,10 @@ export default function PastDrop() {
             />
           ))}
         </div>
+
+        {/* ----- NAV ARROWS (hermanas del stage para no pisar el drag) ----- */}
+        <NavArrow direction="left" onClick={() => advance(-1)} />
+        <NavArrow direction="right" onClick={() => advance(1)} />
 
         {/* ----- METADATA PANEL (left) ----- */}
         <MetadataPanel active={active} activeIndex={activeIndex} luminosity={luminosity} />
@@ -1196,4 +1239,92 @@ function CornerMarker({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
     br: { bottom: -2, right: -2, borderBottom: stroke, borderRight: stroke },
   };
   return <div aria-hidden style={{ ...base, ...styleByPos[pos] }} />;
+}
+
+/* ============================================================================
+   NavArrow — botón futurista para avanzar/retroceder el carrusel
+   ----------------------------------------------------------------------------
+   - Glass blur background + borde ámbar + glow ámbar exterior
+   - Chevron SVG con stroke fino (1.5px) estilo techwear
+   - PREV/NEXT label microtipografía mono debajo del botón
+   - Posicionado como hermano del stage (no dentro) → no pisa el drag handler
+   - hover: scale 1.06 + glow más fuerte; tap: scale 0.94
+   ============================================================================ */
+function NavArrow({
+  direction,
+  onClick,
+}: {
+  direction: "left" | "right";
+  onClick: () => void;
+}) {
+  const isLeft = direction === "left";
+  return (
+    <motion.button
+      onClick={onClick}
+      whileHover={{ scale: 1.06 }}
+      whileTap={{ scale: 0.92 }}
+      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+      aria-label={isLeft ? "Previous specimen" : "Next specimen"}
+      style={{
+        position: "absolute",
+        top: "50%",
+        [isLeft ? "left" : "right"]: "2.5rem",
+        transform: "translateY(-50%)",
+        width: 60,
+        height: 60,
+        borderRadius: "50%",
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        border: "1px solid rgba(232,196,104,0.4)",
+        boxShadow:
+          "0 0 30px rgba(232,196,104,0.2), 0 12px 30px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(0,0,0,0.4)",
+        cursor: "pointer",
+        color: GOLD,
+        display: "grid",
+        placeItems: "center",
+        zIndex: 8,
+        pointerEvents: "auto",
+        padding: 0,
+      }}
+    >
+      <svg
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden
+        style={{
+          filter: "drop-shadow(0 0 6px rgba(232,196,104,0.4))",
+        }}
+      >
+        <path
+          d={isLeft ? "M15 5 L8 12 L15 19" : "M9 5 L16 12 L9 19"}
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+
+      {/* Micro-tipo abajo del botón */}
+      <span
+        style={{
+          position: "absolute",
+          top: "calc(100% + 10px)",
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: "0.55rem",
+          letterSpacing: "0.35em",
+          color: GOLD_DIM,
+          whiteSpace: "nowrap",
+          pointerEvents: "none",
+        }}
+      >
+        {isLeft ? "PREV" : "NEXT"}
+      </span>
+    </motion.button>
+  );
 }
