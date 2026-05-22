@@ -42,7 +42,7 @@ const BASE_SCALE = 0.50;        // scale base de cada caja (modelos GLB son gran
 const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva isométrica
 const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
-const SPIN_RATE = 0.20;         // rad/s — giro propio de cada caja (lento → conserva el vértice visible)
+const ORBIT_RATE = 0.30;        // rad/s — las 4 cajas orbitan juntas alrededor del eje central (Z del grupo tiltado)
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
@@ -169,11 +169,20 @@ function Box({ src, index, progressRef }: BoxProps) {
 
     if (index < currentPillar) {
       /* ===== Caja ya ANCLADA — la posición sigue calculada para
-         reversibilidad (scroll up reintegra la caja a la formación). ===== */
+         reversibilidad (scroll up reintegra la caja a la formación).
+         Aplicamos la misma órbita conjunta para que al volver a entrar
+         a cuadro la caja esté ya alineada con el resto. ===== */
       const base = posOnPillar(index, index);
       const scrollSince = activeIndex - (index + 1);
-      targetX = base[0] + pillarSign(index) * offsetMagnitude;
-      targetY = base[1] + Math.max(scrollSince, 0) * ANCHOR_RISE;
+
+      const orbitAngle = state.clock.elapsedTime * ORBIT_RATE;
+      const cosO = Math.cos(orbitAngle);
+      const sinO = Math.sin(orbitAngle);
+      const rx = base[0] * cosO - base[1] * sinO;
+      const ry = base[0] * sinO + base[1] * cosO;
+
+      targetX = rx + pillarSign(index) * offsetMagnitude;
+      targetY = ry + Math.max(scrollSince, 0) * ANCHOR_RISE;
       targetZ = base[2];
     } else {
       /* ===== Caja ACTIVA (en formación o transicionando) ===== */
@@ -201,9 +210,18 @@ function Box({ src, index, progressRef }: BoxProps) {
         transitionT = THREE.MathUtils.smoothstep(tInPillar, TRANSITION_START, TRANSITION_END);
       }
 
-      targetX = THREE.MathUtils.lerp(posNow[0], posTarget[0], transitionT);
-      targetY = THREE.MathUtils.lerp(posNow[1], posTarget[1], transitionT);
-      targetZ = THREE.MathUtils.lerp(posNow[2], posTarget[2], transitionT);
+      const formX = THREE.MathUtils.lerp(posNow[0], posTarget[0], transitionT);
+      const formY = THREE.MathUtils.lerp(posNow[1], posTarget[1], transitionT);
+      targetZ      = THREE.MathUtils.lerp(posNow[2], posTarget[2], transitionT);
+
+      /* Órbita conjunta: las 4 cajas giran a la vez alrededor del eje central
+         de la formación. Rotamos la posición de formación, NO el offset lateral
+         (que mueve toda la composición a izq/der según el pilar). */
+      const orbitAngle = state.clock.elapsedTime * ORBIT_RATE;
+      const cosO = Math.cos(orbitAngle);
+      const sinO = Math.sin(orbitAngle);
+      targetX = formX * cosO - formY * sinO;
+      targetY = formX * sinO + formY * cosO;
 
       const signLerped = THREE.MathUtils.lerp(signNow, signTarget, transitionT);
       targetX += signLerped * offsetMagnitude;
@@ -220,13 +238,13 @@ function Box({ src, index, progressRef }: BoxProps) {
     /* Scale base fijo (modelos GLB son grandes en su unidad nativa) */
     obj.scale.setScalar(BASE_SCALE);
 
-    /* Spin continuo basado en clock → no acumula drift en pausas.
-       Y_VERTEX_OFFSET = 45° → la caja siempre muestra un vértice al frente
-       (cara plana queda en diagonal); con SPIN_RATE bajo el vértice
-       persiste casi todo el tiempo, dando silueta de "punta de estrella". */
-    const t0 = state.clock.elapsedTime;
-    obj.rotation.y = Y_VERTEX_OFFSET + t0 * SPIN_RATE + phaseOffset;
-    obj.rotation.x = Math.sin(t0 * SPIN_RATE * 0.6 + phaseOffset) * 0.18;
+    /* Orientación fija — la caja no gira sobre su propio eje.
+       Y_VERTEX_OFFSET = 45° → muestra un vértice al frente. El movimiento
+       rotacional lo aplica el grupo padre (todas orbitan juntas en el mismo
+       eje concéntrico). phaseOffset desfasa la orientación inicial para que
+       no luzcan idénticas. */
+    obj.rotation.y = Y_VERTEX_OFFSET + phaseOffset;
+    obj.rotation.x = 0;
 
     /* Opacity también con damp para fade fluido */
     const kOp = 1 - Math.exp(-dt * OPACITY_DAMP);
@@ -247,7 +265,10 @@ function BoxStar({ progressRef }: BoxStarProps) {
   /* Tilt en X del grupo + offset Y negativo:
      - tilt inclina la estrella hacia atrás (efecto isométrico).
      - GROUP_Y_OFFSET baja toda la composición para que no se solape
-       con el texto del pilar (que vive en la mitad superior del viewport). */
+       con el texto del pilar (que vive en la mitad superior del viewport).
+     La órbita conjunta de las 4 cajas se calcula dentro de cada Box rotando
+     la posición de la formación alrededor del eje central — el offset lateral
+     izq/der NO se ve afectado por la rotación (queda como traslación pura). */
   return (
     <group position={[0, GROUP_Y_OFFSET, 0]} rotation={[GROUP_TILT_X, 0, 0]}>
       {BOX_SOURCES.map((src, i) => (
