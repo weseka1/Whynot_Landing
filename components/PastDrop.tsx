@@ -187,13 +187,17 @@ export default function PastDrop() {
     <section
       id="section-past-drop"
       ref={sectionRef}
-      className="bg-dich-peach-flat"
       style={{
         position: "relative",
         minHeight: "260vh", // ~160vh de scroll pinned para 1 ciclo completo
+        background: "#050505",
+        backgroundImage:
+          "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
+        backgroundSize: "26px 26px",
+        color: "#f6dd8e",
       }}
     >
-      <XDecoration seed={11} count={18} color="var(--color-peach-line)" />
+      <XDecoration seed={11} count={22} color="rgba(244,215,116,0.18)" />
 
       {/* ============ STAGE STICKY ============ */}
       <div
@@ -213,12 +217,20 @@ export default function PastDrop() {
             justifyContent: "space-between",
             alignItems: "center",
             padding: "var(--space-md) var(--container-pad) 0",
-            color: "var(--color-peach-fg)",
+            color: "rgba(246,221,142,0.85)",
             zIndex: 3,
           }}
         >
-          <span className="system-text">{site.pastDrop.eyebrow}</span>
-          <span className="system-text" style={{ letterSpacing: "0.15em" }}>
+          <span className="system-text" style={{ color: "rgba(246,221,142,0.7)" }}>
+            {site.pastDrop.eyebrow}
+          </span>
+          <span
+            className="system-text"
+            style={{
+              letterSpacing: "0.15em",
+              color: "rgba(246,221,142,0.7)",
+            }}
+          >
             PAST_DROP · {String(activeIndex + 1).padStart(2, "0")} /{" "}
             {String(N).padStart(2, "0")}
           </span>
@@ -236,11 +248,21 @@ export default function PastDrop() {
           <h2
             className="display"
             style={{
-              fontSize: "clamp(2.2rem, 6vw, 5rem)",
+              fontSize: "clamp(3rem, 8vw, 7rem)",
               lineHeight: 0.95,
               letterSpacing: "-0.02em",
-              color: "var(--color-peach-fg)",
               margin: 0,
+              /* Dorado metalizado: gradiente con bandas claro→oscuro→claro
+                 que simula el reflejo de luz sobre metal pulido. */
+              background:
+                "linear-gradient(180deg, #fde79a 0%, #e9c45c 30%, #b78023 52%, #e9c45c 74%, #fde79a 100%)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+              WebkitTextFillColor: "transparent",
+              /* Halo ámbar suave alrededor del texto */
+              filter:
+                "drop-shadow(0 0 24px rgba(255,200,60,0.45)) drop-shadow(0 2px 12px rgba(0,0,0,0.6))",
             }}
           >
             {site.pastDrop.title}
@@ -261,6 +283,24 @@ export default function PastDrop() {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
+          {/* Floor glow: halo dorado debajo de los círculos que simula
+              que están "apoyados" sobre una superficie reflectante. */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: "8%",
+              transform: "translateX(-50%)",
+              width: "70%",
+              height: "18%",
+              background:
+                "radial-gradient(ellipse at center, rgba(255,200,60,0.22) 0%, rgba(255,200,60,0.06) 40%, transparent 70%)",
+              filter: "blur(8px)",
+              pointerEvents: "none",
+              zIndex: 0,
+            }}
+          />
           {VIDEOS.map((v, i) => (
             <CarouselItem
               key={v.src}
@@ -282,16 +322,26 @@ export default function PastDrop() {
             justifyContent: "space-between",
             alignItems: "center",
             padding: "0 var(--container-pad) var(--space-md)",
-            color: "var(--color-peach-fg)",
             zIndex: 3,
           }}
         >
-          <span className="system-text" style={{ letterSpacing: "0.15em" }}>
+          <span
+            className="system-text"
+            style={{
+              letterSpacing: "0.18em",
+              color: "#f6dd8e",
+              textShadow: "0 0 12px rgba(255,200,60,0.4)",
+            }}
+          >
             ▸ {VIDEOS[activeIndex].label}
           </span>
           <span
             className="system-text"
-            style={{ display: "flex", gap: "1rem", opacity: 0.8 }}
+            style={{
+              display: "flex",
+              gap: "1rem",
+              color: "rgba(246,221,142,0.55)",
+            }}
           >
             <motion.span>{coordX}</motion.span>
             <span>//</span>
@@ -343,7 +393,7 @@ function CarouselItem({
            el scale los achique HACIA ABAJO (queda fijo el borde inferior),
            entonces los más chicos no quedan "flotando" arriba — siguen
            apoyados en la misma línea base. Eso elimina el efecto arco/anillo. */
-        bottom: "12%",
+        bottom: "14%",
         width: SIZE,
         height: SIZE,
         aspectRatio: "1 / 1",
@@ -354,34 +404,51 @@ function CarouselItem({
         opacity,
         zIndex,
         borderRadius: "50%",
-        overflow: "hidden",
-        border: "2px solid var(--color-peach-fg)",
-        background: "#ffffff",
-        boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
+        /* Anillo dorado metalizado: gradiente vertical con bandas claro→oscuro→claro
+           que simula reflejo de luz sobre metal pulido. El padding es el grosor
+           del anillo; el inner circle (blanco) va adentro. */
+        background:
+          "linear-gradient(180deg, #fce791 0%, #e0b94a 24%, #a07614 50%, #d2a23b 76%, #fce791 100%)",
+        padding: 14,
+        boxSizing: "border-box",
+        /* Glow ámbar exterior + sombra inferior para apoyar visualmente sobre piso */
+        boxShadow:
+          "0 0 36px rgba(255,200,60,0.28), 0 22px 50px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.45), inset 0 -1px 1px rgba(0,0,0,0.4)",
         willChange: "transform, opacity",
         transformOrigin: "50% 100%",
       }}
     >
-      <video
-        ref={registerRef}
-        src={src}
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
+      <div
         style={{
           width: "100%",
           height: "100%",
-          /* contain: el video entra entero (sin recortes); scale: aire
-             extra alrededor para que no toque el borde del círculo. */
-          objectFit: "contain",
-          transform: "scale(0.85)",
-          transformOrigin: "center",
-          pointerEvents: "none",
-          display: "block",
+          borderRadius: "50%",
+          background: "#ffffff",
+          overflow: "hidden",
+          position: "relative",
+          /* Sombra interna sutil para dar profundidad entre el anillo y el contenido */
+          boxShadow: "inset 0 0 20px rgba(0,0,0,0.15)",
         }}
-      />
+      >
+        <video
+          ref={registerRef}
+          src={src}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            transform: "scale(0.88)",
+            transformOrigin: "center",
+            pointerEvents: "none",
+            display: "block",
+          }}
+        />
+      </div>
     </motion.div>
   );
 }
