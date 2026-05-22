@@ -35,7 +35,7 @@ const PILLAR_COUNT  = BOX_SOURCES.length; // 4
 const PROGRESS_IN   = 0.08;
 const PROGRESS_OUT  = 0.92;
 
-const R = 1.05;                 // radio de las formaciones — más chico = cajas más juntas
+const R = 0.65;                 // radio de las formaciones — más chico = cajas más juntas (compacto, tipo nucleo del atomo)
 const SQRT2_2 = 0.7071068;      // sin/cos(45°) — vértices diagonales (estrella ×)
 const SQRT3_2 = 0.8660254;      // sin(60°) — triángulo
 const BASE_SCALE = 0.50;        // scale base de cada caja (modelos GLB son grandes)
@@ -45,22 +45,27 @@ const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja mu
 const ORBIT_RATE = 0.50;        // rad/s — velocidad de la orbita conjunta de las cajas (un poco mas rapido que el SPIN propio anterior)
 const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
 
-/* ANILLOS DORADOS — dos orbitas cruzadas tipo atomo, en pose estatica.
-   Vista desde el frente (plano X,Y de la camara), los ejes mayores de los
-   anillos quedan sobre las rectas:
-       y = +(1/2) x   → anillo 1 (sube a la derecha)
-       y = -(1/2) x   → anillo 2 (baja a la derecha)
-   Cada anillo se "despliega" sobre Z (inclinacion frontal RING_DEPTH_TILT),
-   por eso se ve eliptico y no como una linea fina. El par cruza en el
-   centro formando una X clara, sin animacion (un torus es simetrico
-   sobre su normal asi que cualquier rotacion global se ve rara). */
-const RING_RADIUS = 2.20;                      // longitud de cada brazo de la X (desde el centro). Cajas a radio ±1.05 + tamaño visual ~0.3 → 2.20 las contiene comodas
-const RING_TUBE = 0.024;
+/* ANILLOS DORADOS — sistema atomico clasico de 3 anillos en planos
+   mutuamente perpendiculares (XY, XZ, YZ). Cada anillo es un toro 3D
+   visible como elipse desde la camara — el conjunto forma una jaula
+   wireframe esferica que enmarca la formacion compacta de cajas en el
+   centro (como un atomo: nucleo + orbitales). Pose estatica. */
+const RING_RADIUS = 1.45;                      // radio de cada anillo. Cajas a radio 0.65 → margen comodo
+const RING_TUBE = 0.022;
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
-const RING_SLOPE = 1.0;                        // pendiente de cada linea de la X en pantalla. 1.0 = lineas a 45° (X perpendicular como la referencia roja)
-const RING_AXIS_ANGLE = Math.atan(RING_SLOPE); // = π/4 (45°) — angulo de cada brazo respecto al horizontal
-const RING_DEPTH_TILT = Math.PI / 2;           // π/2 = anillos EDGE-ON respecto a la camara → se proyectan como lineas rectas (no como elipses). La X queda dibujada plana en el plano XY de pantalla. Los toros tienen su grosor (tubo) → las "lineas" tienen ancho RING_TUBE pero no se ven como ovalos
+
+/* RING_CONFIGS — rotaciones Euler [x, y, z] de cada anillo respecto a su
+   pose default (toro en plano XY con normal Z). Los tres planos canonicos
+   forman la jaula 3D mutuamente perpendicular:
+   - [0, 0, 0]:       plano XY → frente a camara (normal Z)
+   - [π/2, 0, 0]:     plano XZ → horizontal (normal Y)
+   - [0, π/2, 0]:     plano YZ → lateral (normal X) */
+const RING_CONFIGS: { rotation: [number, number, number] }[] = [
+  { rotation: [0, 0, 0] },
+  { rotation: [Math.PI / 2, 0, 0] },
+  { rotation: [0, Math.PI / 2, 0] },
+];
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
@@ -284,24 +289,16 @@ interface BoxStarProps {
   progressRef: React.MutableRefObject<number>;
 }
 
-/* ANILLOS — dos toros dorados que dibujan una X plana en el plano XY de
-   la camara. Construccion (cada anillo):
-   1) Mesh local rotation [π/2, 0, 0] (RING_DEPTH_TILT = π/2):
-      rota el toro 90° sobre X → su plano pasa de XY (frente a camara)
-      a XZ (perpendicular a camara, edge-on). Desde la camara se ve
-      como una linea horizontal en pantalla (el alto del toro va hacia
-      adentro/atras en Z, no se ve).
-   2) Grupo exterior rotation [0, 0, ±RING_AXIS_ANGLE] (= ±π/4):
-      rota la linea alrededor del eje Z del mundo (perpendicular a la
-      pantalla). La linea horizontal pasa a tener pendiente tan(α) = ±1.
-      Las dos lineas se cruzan en el origen formando una X perpendicular
-      como la X roja de referencia. */
+/* ANILLOS — 3 toros dorados en planos mutuamente perpendiculares (XY,
+   XZ, YZ) formando una jaula wireframe esferica alrededor del centro,
+   tipo simbolo atomico clasico. Cada uno se renderiza con la rotacion
+   definida en RING_CONFIGS — ningun anillo gira (pose estatica).
+   El sentido de movimiento lo aportan las cajas orbitando en el nucleo. */
 function PlanetRings() {
   return (
     <group>
-      {/* Anillo 1 — eje visible: y = +(1/2) x */}
-      <group rotation={[0, 0, RING_AXIS_ANGLE]}>
-        <mesh rotation={[RING_DEPTH_TILT, 0, 0]}>
+      {RING_CONFIGS.map((cfg, i) => (
+        <mesh key={i} rotation={cfg.rotation}>
           <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
           <meshStandardMaterial
             color={RING_COLOR}
@@ -314,23 +311,7 @@ function PlanetRings() {
             depthWrite={false}
           />
         </mesh>
-      </group>
-      {/* Anillo 2 — eje visible: y = -(1/2) x */}
-      <group rotation={[0, 0, -RING_AXIS_ANGLE]}>
-        <mesh rotation={[RING_DEPTH_TILT, 0, 0]}>
-          <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
-          <meshStandardMaterial
-            color={RING_COLOR}
-            emissive={RING_EMISSIVE}
-            emissiveIntensity={0.65}
-            metalness={0.9}
-            roughness={0.35}
-            transparent
-            opacity={0.92}
-            depthWrite={false}
-          />
-        </mesh>
-      </group>
+      ))}
     </group>
   );
 }
