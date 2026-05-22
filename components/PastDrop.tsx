@@ -375,7 +375,11 @@ function CarouselItem({
         style={{
           width: "100%",
           height: "100%",
-          objectFit: "cover",
+          /* contain: el video entra entero (sin recortes); scale: aire
+             extra alrededor para que no toque el borde del círculo. */
+          objectFit: "contain",
+          transform: "scale(0.85)",
+          transformOrigin: "center",
           pointerEvents: "none",
           display: "block",
         }}
