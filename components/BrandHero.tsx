@@ -2,13 +2,14 @@
 
 /* ============================================================================
    BRAND HERO — encabezado editorial gigante de la brand page
-   Marca como título gigante en serif italic + counters técnicos.
+   Marca como título italic gigante + counters técnicos en lila DICH.
    ============================================================================ */
 
 import { motion } from "framer-motion";
 
-const GOLD = "#e8c468";
-const GOLD_DIM = "rgba(232,196,104,0.55)";
+const DARK = "#0a0a14";
+const DARK_DIM = "rgba(10,10,20,0.65)";
+const YELLOW = "#f4dc3f";
 
 type Props = {
   brandName: string;
@@ -27,7 +28,7 @@ export default function BrandHero({
     <div
       style={{
         position: "relative",
-        padding: "5rem 2rem 3rem",
+        padding: "5rem 2.5rem 3rem",
         zIndex: 5,
       }}
     >
@@ -37,11 +38,11 @@ export default function BrandHero({
         style={{
           position: "absolute",
           top: "5rem",
-          left: "2rem",
+          left: "2.5rem",
           width: 1,
           height: 48,
           background:
-            "linear-gradient(to bottom, transparent, rgba(232,196,104,0.7))",
+            "linear-gradient(to bottom, transparent, rgba(10,10,20,0.7))",
         }}
       />
 
@@ -55,9 +56,10 @@ export default function BrandHero({
           fontSize: "0.7rem",
           letterSpacing: "0.3em",
           textTransform: "uppercase",
-          color: GOLD_DIM,
+          color: DARK_DIM,
           marginBottom: "0.8rem",
           marginLeft: "1.5rem",
+          fontWeight: 600,
         }}
       >
         BRAND_ARCHIVE · {String(totalModels).padStart(2, "0")} MODELS ·{" "}
@@ -75,10 +77,8 @@ export default function BrandHero({
           fontSize: "clamp(3rem, 11vw, 11rem)",
           lineHeight: 0.88,
           letterSpacing: "-0.04em",
-          color: "#fff",
+          color: DARK,
           margin: 0,
-          textShadow:
-            "0 4px 40px rgba(0,0,0,0.8), 0 0 80px rgba(232,196,104,0.12)",
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -95,12 +95,12 @@ export default function BrandHero({
         style={{
           marginTop: "1.4rem",
           display: "flex",
-          gap: "2rem",
+          gap: "2.2rem",
           fontFamily: "var(--font-mono, monospace)",
           fontSize: "0.66rem",
           letterSpacing: "0.22em",
           textTransform: "uppercase",
-          color: GOLD_DIM,
+          color: DARK_DIM,
         }}
       >
         <StatBlock label="SPECIMENS" value={String(totalColorways).padStart(3, "0")} accent />
@@ -126,9 +126,11 @@ function StatBlock({
       <span>{label}</span>
       <span
         style={{
-          color: accent ? GOLD : "#e9e2d4",
-          fontSize: "1rem",
+          color: DARK,
+          fontSize: "1.1rem",
           letterSpacing: "0.1em",
+          fontWeight: accent ? 700 : 600,
+          textShadow: accent ? `0 0 12px ${YELLOW}50` : "none",
         }}
       >
         {value}

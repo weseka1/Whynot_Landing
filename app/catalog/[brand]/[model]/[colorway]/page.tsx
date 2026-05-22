@@ -3,12 +3,23 @@
    ----------------------------------------------------------------------------
    Server-rendered: layout + metadata + bg layers (server component).
    Client: <Frame360Viewer> (interacciones drag/wheel/keyboard).
+   Estética: lilac DICH + atmósfera ultra-futurista (scanlines, brackets, glow).
    ============================================================================ */
 
 import { notFound } from "next/navigation";
 import { getAllEntries, getEntryBySlug } from "@/data/catalog";
 import Frame360Viewer from "@/components/Frame360Viewer";
 import BackButton from "@/components/BackButton";
+import {
+  BgLayers,
+  Scanlines,
+  CornerBrackets,
+  CursorGlow,
+  LILAC,
+  DARK,
+  DARK_DIM,
+  YELLOW,
+} from "@/components/CatalogAtmosphere";
 
 type Params = {
   params: Promise<{
@@ -37,9 +48,6 @@ export async function generateMetadata({ params }: Params) {
   };
 }
 
-const GOLD = "#e8c468";
-const GOLD_DIM = "rgba(232,196,104,0.55)";
-
 export default async function CatalogProductPage({ params }: Params) {
   const { brand, model, colorway } = await params;
   const entry = getEntryBySlug(brand, model, colorway);
@@ -50,58 +58,21 @@ export default async function CatalogProductPage({ params }: Params) {
       style={{
         position: "relative",
         minHeight: "100vh",
-        background: "#050510",
-        color: "#e9e2d4",
+        background: LILAC,
+        color: DARK,
         overflow: "hidden",
       }}
     >
-      {/* ============ BACKGROUND LAYERS ============ */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: `
-            radial-gradient(ellipse 80% 60% at 18% 28%, rgba(120,40,180,0.40), transparent 60%),
-            radial-gradient(ellipse 70% 50% at 82% 72%, rgba(220,30,120,0.30), transparent 60%),
-            radial-gradient(ellipse 60% 50% at 50% 50%, rgba(40,15,80,0.50), transparent 70%),
-            linear-gradient(180deg, #0a0a14 0%, #1a0b2a 50%, #050510 100%)
-          `,
-        }}
-      />
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundImage: `
-            linear-gradient(rgba(232,196,104,0.045) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(232,196,104,0.045) 1px, transparent 1px)
-          `,
-          backgroundSize: "52px 52px",
-          WebkitMaskImage:
-            "radial-gradient(circle at center, black 25%, transparent 80%)",
-          maskImage:
-            "radial-gradient(circle at center, black 25%, transparent 80%)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.6) 100%)",
-          pointerEvents: "none",
-        }}
-      />
+      {/* ============ BACKGROUND ============ */}
+      <BgLayers fixed />
+      <CursorGlow />
+      <CornerBrackets />
 
       {/* ============ TOP HUD ============ */}
       <div
         style={{
           position: "relative",
-          padding: "1.5rem 2rem",
+          padding: "1.5rem 2.5rem",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -110,23 +81,29 @@ export default async function CatalogProductPage({ params }: Params) {
           fontSize: "0.7rem",
           letterSpacing: "0.22em",
           textTransform: "uppercase",
-          color: GOLD_DIM,
+          color: DARK_DIM,
         }}
       >
         <div style={{ display: "flex", gap: "1.2rem", alignItems: "center" }}>
-          <span style={{ color: "#ff5436", textShadow: "0 0 8px rgba(255,84,54,0.6)" }}>
+          <span
+            style={{
+              color: "#ff5436",
+              textShadow: "0 0 8px rgba(255,84,54,0.6)",
+              fontSize: "0.6rem",
+            }}
+          >
             ●
           </span>
           <span>D://DATA_CORE / ARCHIVE</span>
           <span style={{ opacity: 0.4 }}>•</span>
-          <span style={{ color: GOLD }}>{entry.brand}</span>
+          <span style={{ color: DARK, fontWeight: 600 }}>{entry.brand}</span>
           <span style={{ opacity: 0.4 }}>/</span>
-          <span style={{ color: "#e9e2d4" }}>{entry.model}</span>
+          <span style={{ color: DARK }}>{entry.model}</span>
         </div>
         <BackButton
           fallbackHref={`/catalog/${entry.slug.brand}`}
           label={`← BACK TO ${entry.brand}`}
-          style={{ color: GOLD_DIM }}
+          style={{ color: DARK_DIM, fontWeight: 600 }}
         />
       </div>
 
@@ -139,19 +116,33 @@ export default async function CatalogProductPage({ params }: Params) {
           gridTemplateColumns: "minmax(280px, 360px) 1fr minmax(280px, 360px)",
           gap: "2rem",
           alignItems: "center",
-          padding: "0 2rem 4rem",
+          padding: "0 2.5rem 4rem",
           minHeight: "78vh",
         }}
       >
         {/* ----- LEFT SIDEBAR: brand + huge editorial title ----- */}
         <div style={{ position: "relative" }}>
+          {/* Vertical accent line */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: -16,
+              left: -22,
+              width: 1,
+              height: 60,
+              background:
+                "linear-gradient(to bottom, transparent, rgba(10,10,20,0.7))",
+            }}
+          />
           <div
             className="system-text"
             style={{
-              color: GOLD_DIM,
+              color: DARK_DIM,
               marginBottom: "0.6rem",
               letterSpacing: "0.3em",
               fontSize: "0.7rem",
+              fontWeight: 600,
             }}
           >
             {entry.brand}
@@ -163,8 +154,7 @@ export default async function CatalogProductPage({ params }: Params) {
               lineHeight: 0.95,
               letterSpacing: "-0.02em",
               margin: "0 0 1.2rem",
-              color: "#fff",
-              textShadow: "0 4px 30px rgba(0,0,0,0.7)",
+              color: DARK,
             }}
           >
             {entry.model}
@@ -175,48 +165,42 @@ export default async function CatalogProductPage({ params }: Params) {
               fontSize: "0.78rem",
               letterSpacing: "0.15em",
               textTransform: "uppercase",
-              color: GOLD,
+              color: DARK,
+              fontWeight: 600,
             }}
           >
             ▸ {entry.colorway}
           </div>
-
-          {/* Vertical gold accent line */}
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              top: -16,
-              left: -22,
-              width: 1,
-              height: 60,
-              background:
-                "linear-gradient(to bottom, transparent, rgba(232,196,104,0.7))",
-            }}
-          />
         </div>
 
         {/* ----- CENTER: 360 VIEWER ----- */}
         <div style={{ position: "relative" }}>
-          {/* Breathing glow background */}
+          {/* Soft halo background */}
           <div
             aria-hidden
             style={{
               position: "absolute",
-              inset: -60,
+              inset: -50,
               background:
-                "radial-gradient(circle, rgba(232,196,104,0.18) 0%, rgba(160,40,200,0.12) 40%, transparent 70%)",
+                "radial-gradient(circle, rgba(255,255,255,0.45) 0%, rgba(244,220,63,0.10) 40%, transparent 70%)",
               filter: "blur(40px)",
               pointerEvents: "none",
               zIndex: 0,
             }}
           />
-          <div style={{ position: "relative", zIndex: 1, maxWidth: 720, margin: "0 auto" }}>
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              maxWidth: 720,
+              margin: "0 auto",
+            }}
+          >
             <Frame360Viewer entry={entry} />
           </div>
         </div>
 
-        {/* ----- RIGHT SIDEBAR: metadata + actions ----- */}
+        {/* ----- RIGHT SIDEBAR: metadata ----- */}
         <div>
           <div
             style={{
@@ -243,8 +227,8 @@ export default async function CatalogProductPage({ params }: Params) {
               style={{
                 marginTop: "1.5rem",
                 paddingTop: "1rem",
-                borderTop: "1px solid rgba(232,196,104,0.18)",
-                color: GOLD_DIM,
+                borderTop: `1px solid rgba(10,10,20,0.2)`,
+                color: DARK_DIM,
                 fontSize: "0.62rem",
                 letterSpacing: "0.2em",
                 lineHeight: 1.6,
@@ -252,7 +236,7 @@ export default async function CatalogProductPage({ params }: Params) {
             >
               SPECIMEN INDEXED FROM
               <br />
-              <span style={{ color: GOLD }}>
+              <span style={{ color: DARK, fontWeight: 600 }}>
                 BA1RES_FOOTWEAR/ARCHIVE_v01
               </span>
               <br />
@@ -267,7 +251,7 @@ export default async function CatalogProductPage({ params }: Params) {
         style={{
           position: "relative",
           zIndex: 10,
-          padding: "0 2rem 1.5rem",
+          padding: "0 2.5rem 1.5rem",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -275,21 +259,25 @@ export default async function CatalogProductPage({ params }: Params) {
           fontSize: "0.66rem",
           letterSpacing: "0.22em",
           textTransform: "uppercase",
-          color: GOLD_DIM,
+          color: DARK_DIM,
         }}
       >
         <div style={{ display: "flex", gap: "0.8rem", alignItems: "center" }}>
-          <span style={{ color: GOLD }}>▸</span>
-          <span style={{ color: "#e9e2d4" }}>
+          <span style={{ color: DARK }}>▸</span>
+          <span style={{ color: DARK, fontWeight: 600 }}>
             {entry.brand} · {entry.colorway}
           </span>
         </div>
         <div style={{ display: "flex", gap: "1rem" }}>
           <span>DRAG · WHEEL · ← →</span>
           <span style={{ opacity: 0.4 }}>//</span>
-          <span style={{ color: GOLD }}>360° INTERACTIVE</span>
+          <span style={{ color: DARK, fontWeight: 600 }}>
+            {entry.type === "360" ? "360° INTERACTIVE" : "STATIC"}
+          </span>
         </div>
       </div>
+
+      <Scanlines />
     </main>
   );
 }
@@ -314,13 +302,21 @@ function MetaRow({
       <span
         style={{
           width: 96,
-          color: GOLD_DIM,
+          color: DARK_DIM,
           whiteSpace: "nowrap",
         }}
       >
         {label}
       </span>
-      <span style={{ color: accent ? GOLD : "#e9e2d4" }}>{value}</span>
+      <span
+        style={{
+          color: accent ? DARK : DARK,
+          fontWeight: accent ? 700 : 500,
+          textShadow: accent ? `0 0 8px ${YELLOW}40` : "none",
+        }}
+      >
+        {value}
+      </span>
     </div>
   );
 }

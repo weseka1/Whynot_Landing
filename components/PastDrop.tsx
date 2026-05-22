@@ -32,6 +32,7 @@ import {
 import { useRouter } from "next/navigation";
 import { site } from "@/data/site";
 import { HERO_SPECS, resolveHeroSpec, type CatalogEntry } from "@/data/catalog";
+import { Scanlines, CursorGlow } from "@/components/CatalogAtmosphere";
 
 /* ---------------- METADATA ----------------
    Cada Spec se construye a partir de un HeroSpec (video + path canonico al
@@ -461,13 +462,17 @@ export default function PastDrop() {
             inset: 0,
             backgroundImage: NOISE_URL,
             backgroundRepeat: "repeat",
-            opacity: 0.05,
-            mixBlendMode: "overlay",
+            opacity: 0.04,
+            mixBlendMode: "multiply",
             pointerEvents: "none",
             zIndex: 12,
           }}
         />
       </div>
+
+      {/* Cursor-reactive glow + scanlines CRT (sobre toda la seccion sticky) */}
+      <CursorGlow />
+      <Scanlines />
     </section>
   );
 }

@@ -1,15 +1,12 @@
 "use client";
 
 /* ============================================================================
-   PaginatedColorways — grid paginado con URL hash sync
+   PaginatedColorways — grid paginado con URL hash sync (lilac DICH)
    ----------------------------------------------------------------------------
    - 24 cards por página (3 col × 8 rows en desktop; responsive abajo).
-   - Estado en URL hash (#page=N) para que sea bookmarkable y sobreviva el
-     back-button del browser (al volver, el hash sigue ahí → restauramos pág).
-   - Paginator futurista: PREV/NEXT botones + counter NN/NN + ticks scrubber.
-   - Cuando el usuario cambia de página manualmente, scroll suave al inicio
-     del grid (no al top del documento). Mount inicial NO hace scroll (para
-     preservar la posición restaurada por el browser).
+   - Estado en URL hash (#page=N) bookmarkable + sobrevive back/forward.
+   - Paginator futurista: PREV/NEXT botones glass blanco + counter + ticks.
+   - Scroll suave al inicio del grid en cambio manual de página.
    ============================================================================ */
 
 import { useEffect, useRef, useState } from "react";
@@ -17,9 +14,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import ColorwayCard from "./ColorwayCard";
 import type { CatalogEntry } from "@/data/catalog";
 
-const PAGE_SIZE = 24; // 3 cols × 8 rows
-const GOLD = "#e8c468";
-const GOLD_DIM = "rgba(232,196,104,0.55)";
+const PAGE_SIZE = 24;
+const DARK = "#0a0a14";
+const DARK_DIM = "rgba(10,10,20,0.65)";
+const YELLOW = "#f4dc3f";
 
 function readPageFromHash(): number {
   if (typeof window === "undefined") return 1;
@@ -46,7 +44,6 @@ export default function PaginatedColorways({
   const gridTopRef = useRef<HTMLDivElement>(null);
   const isFirstRenderRef = useRef(true);
 
-  /* Mount: leer hash y suscribir a cambios externos (back/forward) */
   useEffect(() => {
     setPage(readPageFromHash());
     const handler = () => setPage(readPageFromHash());
@@ -54,9 +51,6 @@ export default function PaginatedColorways({
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
-  /* Cambio de page → escribir hash. Si es interacción de usuario (no mount),
-     scroll al top del grid (no del documento) para que el HUD/hero queden
-     visibles. */
   useEffect(() => {
     writePageToHash(page);
     if (isFirstRenderRef.current) {
@@ -76,7 +70,6 @@ export default function PaginatedColorways({
 
   return (
     <div style={{ position: "relative" }}>
-      {/* Anchor para scroll al cambio de página */}
       <div
         ref={gridTopRef}
         style={{ position: "absolute", top: -100, left: 0, height: 1 }}
@@ -90,31 +83,31 @@ export default function PaginatedColorways({
           alignItems: "baseline",
           marginBottom: "1.5rem",
           paddingBottom: "0.8rem",
-          borderBottom: "1px solid rgba(232,196,104,0.18)",
+          borderBottom: `1px solid rgba(10,10,20,0.22)`,
           fontFamily: "var(--font-mono, monospace)",
           fontSize: "0.66rem",
           letterSpacing: "0.25em",
           textTransform: "uppercase",
-          color: GOLD_DIM,
+          color: DARK_DIM,
         }}
       >
         <span>
           PAGE{" "}
-          <span style={{ color: GOLD }}>
+          <span style={{ color: DARK, fontWeight: 700 }}>
             {String(safePage).padStart(2, "0")}
           </span>{" "}
           / {String(totalPages).padStart(2, "0")}
         </span>
         <span>
           DISPLAYING{" "}
-          <span style={{ color: "#e9e2d4" }}>
+          <span style={{ color: DARK, fontWeight: 600 }}>
             {start + 1}–{Math.min(start + PAGE_SIZE, entries.length)}
           </span>{" "}
           / {entries.length}
         </span>
       </div>
 
-      {/* Grid 3 cols × 8 rows (responsive) */}
+      {/* Grid 3 cols × 8 rows */}
       <AnimatePresence mode="wait">
         <motion.div
           key={safePage}
@@ -139,7 +132,6 @@ export default function PaginatedColorways({
         </motion.div>
       </AnimatePresence>
 
-      {/* Paginator */}
       {totalPages > 1 && (
         <Paginator
           page={safePage}
@@ -148,7 +140,6 @@ export default function PaginatedColorways({
         />
       )}
 
-      {/* Responsive override: en pantallas chicas pasar a 2 o 1 col */}
       <style jsx>{`
         @media (max-width: 1100px) {
           .paginated-grid {
@@ -165,9 +156,6 @@ export default function PaginatedColorways({
   );
 }
 
-/* ============================================================================
-   Paginator — controles futurista: PREV / counter / NEXT + ticks
-   ============================================================================ */
 function Paginator({
   page,
   totalPages,
@@ -185,14 +173,13 @@ function Paginator({
       style={{
         marginTop: "3rem",
         paddingTop: "2rem",
-        borderTop: "1px solid rgba(232,196,104,0.18)",
+        borderTop: `1px solid rgba(10,10,20,0.22)`,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: "1.4rem",
       }}
     >
-      {/* Prev | counter | Next */}
       <div
         style={{
           display: "flex",
@@ -210,7 +197,7 @@ function Paginator({
             <path
               d="M15 5 L8 12 L15 19"
               stroke="currentColor"
-              strokeWidth="1.5"
+              strokeWidth="1.7"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -220,6 +207,7 @@ function Paginator({
               fontSize: "0.6rem",
               letterSpacing: "0.35em",
               marginLeft: "0.4rem",
+              fontWeight: 600,
             }}
           >
             PREV
@@ -230,17 +218,17 @@ function Paginator({
           style={{
             fontSize: "1.1rem",
             letterSpacing: "0.3em",
-            color: "#e9e2d4",
+            color: DARK,
             display: "flex",
             alignItems: "baseline",
             gap: "0.4rem",
           }}
         >
-          <span style={{ color: GOLD }}>
+          <span style={{ fontWeight: 700, textShadow: `0 0 12px ${YELLOW}50` }}>
             {String(page).padStart(2, "0")}
           </span>
           <span style={{ opacity: 0.4 }}>/</span>
-          <span style={{ color: GOLD_DIM, fontSize: "0.85rem" }}>
+          <span style={{ color: DARK_DIM, fontSize: "0.85rem", fontWeight: 600 }}>
             {String(totalPages).padStart(2, "0")}
           </span>
         </div>
@@ -255,6 +243,7 @@ function Paginator({
               fontSize: "0.6rem",
               letterSpacing: "0.35em",
               marginRight: "0.4rem",
+              fontWeight: 600,
             }}
           >
             NEXT
@@ -263,7 +252,7 @@ function Paginator({
             <path
               d="M9 5 L16 12 L9 19"
               stroke="currentColor"
-              strokeWidth="1.5"
+              strokeWidth="1.7"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -271,7 +260,7 @@ function Paginator({
         </PagBtn>
       </div>
 
-      {/* Ticks scrubber (clickeable) */}
+      {/* Ticks scrubber clickeable */}
       <div
         style={{
           display: "flex",
@@ -290,10 +279,8 @@ function Paginator({
               style={{
                 width: 2,
                 height: active ? 16 : 6,
-                background: active ? GOLD : "rgba(232,196,104,0.28)",
-                boxShadow: active
-                  ? "0 0 10px rgba(232,196,104,0.55)"
-                  : "none",
+                background: active ? DARK : "rgba(10,10,20,0.32)",
+                boxShadow: active ? "0 0 10px rgba(244,220,63,0.6)" : "none",
                 border: "none",
                 padding: 0,
                 cursor: "pointer",
@@ -333,14 +320,14 @@ function PagBtn({
         padding: "0.7rem 1.2rem",
         borderRadius: 999,
         background:
-          "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-        border: `1px solid ${disabled ? "rgba(232,196,104,0.15)" : "rgba(232,196,104,0.4)"}`,
+          "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.4) 100%)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        border: `1.5px solid ${disabled ? "rgba(10,10,20,0.18)" : DARK}`,
         boxShadow: disabled
           ? "none"
-          : "0 0 24px rgba(232,196,104,0.15), 0 8px 20px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.15)",
-        color: disabled ? "rgba(232,196,104,0.25)" : GOLD,
+          : "0 0 24px rgba(255,255,255,0.45), 0 8px 20px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.85)",
+        color: disabled ? "rgba(10,10,20,0.25)" : DARK,
         cursor: disabled ? "not-allowed" : "pointer",
         fontFamily: "var(--font-mono, monospace)",
         textTransform: "uppercase",

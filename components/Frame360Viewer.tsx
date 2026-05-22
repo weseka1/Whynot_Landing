@@ -27,8 +27,9 @@ const AUTO_ROTATE_DELAY_MS = 2200;   // espera tras la última interacción
 const INERTIA_DECAY = 0.92;          // por tick (16ms)
 const INERTIA_MIN_VELOCITY = 0.3;    // px/ms
 
-const GOLD = "#e8c468";
-const GOLD_DIM = "rgba(232,196,104,0.55)";
+const DARK = "#0a0a14";
+const DARK_DIM = "rgba(10,10,20,0.65)";
+const YELLOW = "#f4dc3f";
 
 type Props = {
   entry: CatalogEntry;
@@ -265,12 +266,12 @@ export default function Frame360Viewer({
         cursor: is360 ? (draggingRef.current ? "grabbing" : "grab") : "default",
         touchAction: "none",
         userSelect: "none",
-        background: "#0a0a14",
+        background: "#ffffff",
         borderRadius: 16,
         overflow: "hidden",
-        border: "1px solid rgba(232,196,104,0.25)",
+        border: "2px solid #0a0a14",
         boxShadow:
-          "0 0 50px rgba(120,40,180,0.18), 0 30px 60px rgba(0,0,0,0.5)",
+          "0 0 60px rgba(255,255,255,0.5), 0 30px 60px rgba(0,0,0,0.28), inset 0 1px 1px rgba(255,255,255,0.8)",
       }}
     >
       {/* Frame actual */}
@@ -339,7 +340,7 @@ export default function Frame360Viewer({
             borderLeftWidth: p.borderLeft ? 1 : 0,
             borderRightWidth: p.borderRight ? 1 : 0,
             borderStyle: "solid",
-            borderColor: GOLD_DIM,
+            borderColor: DARK_DIM,
           }}
         />
       ))}
@@ -357,16 +358,21 @@ export default function Frame360Viewer({
           fontFamily: "var(--font-mono, monospace)",
           fontSize: "0.6rem",
           letterSpacing: "0.25em",
-          color: GOLD_DIM,
+          color: DARK_DIM,
           pointerEvents: "none",
           textTransform: "uppercase",
         }}
       >
-        <span style={{ color: isInteracting ? GOLD : GOLD_DIM }}>
+        <span
+          style={{
+            color: isInteracting ? DARK : DARK_DIM,
+            fontWeight: isInteracting ? 700 : 500,
+          }}
+        >
           {is360 ? "DRAG TO ROTATE" : "STATIC PREVIEW"}
         </span>
         {is360 && (
-          <span style={{ color: GOLD }}>
+          <span style={{ color: DARK, fontWeight: 700 }}>
             {String(angle).padStart(3, "0")}° · {currentFrame + 1}/{frames}
           </span>
         )}
@@ -378,7 +384,7 @@ export default function Frame360Viewer({
           style={{
             position: "absolute",
             inset: 0,
-            background: "rgba(10,10,20,0.9)",
+            background: "rgba(255,255,255,0.92)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -387,18 +393,18 @@ export default function Frame360Viewer({
             backdropFilter: "blur(4px)",
             zIndex: 10,
             fontFamily: "var(--font-mono, monospace)",
-            color: GOLD_DIM,
+            color: DARK_DIM,
             fontSize: "0.7rem",
             letterSpacing: "0.3em",
             textTransform: "uppercase",
           }}
         >
-          <div>LOADING SPECIMEN</div>
+          <div style={{ fontWeight: 600 }}>LOADING SPECIMEN</div>
           <div
             style={{
               width: 220,
               height: 2,
-              background: "rgba(232,196,104,0.15)",
+              background: "rgba(10,10,20,0.15)",
               position: "relative",
               overflow: "hidden",
             }}
@@ -409,13 +415,12 @@ export default function Frame360Viewer({
                 inset: 0,
                 width: `${Math.round(progress * 100)}%`,
                 background:
-                  "linear-gradient(90deg, rgba(232,196,104,0.6), #e8c468)",
+                  "linear-gradient(90deg, rgba(10,10,20,0.7), #0a0a14)",
                 transition: "width 0.2s linear",
-                boxShadow: "0 0 8px rgba(232,196,104,0.5)",
               }}
             />
           </div>
-          <div style={{ color: GOLD }}>
+          <div style={{ color: DARK, fontWeight: 600 }}>
             {loadedCount}/{frames} FRAMES
           </div>
         </div>

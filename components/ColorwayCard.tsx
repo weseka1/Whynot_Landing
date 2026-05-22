@@ -5,7 +5,7 @@
    ----------------------------------------------------------------------------
    - Preview: para 360 usa frame_01 (garantizado); para image intenta main.jpg
      y, si falla, cae a un placeholder técnico (SPECIMEN OFFLINE).
-   - Hover: scale + glow + scan line + bright border
+   - Hover: scale + IRIDESCENT HOLO BORDER (conic gradient animado) + scan line
    - Link a /catalog/[brand]/[model]/[colorway]
    ============================================================================ */
 
@@ -14,8 +14,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { frameUrl, mainUrl, type CatalogEntry } from "@/data/catalog";
 
-const GOLD = "#e8c468";
-const GOLD_DIM = "rgba(232,196,104,0.55)";
+const DARK = "#0a0a14";
+const DARK_DIM = "rgba(10,10,20,0.65)";
+const YELLOW = "#f4dc3f";
 
 type Props = {
   entry: CatalogEntry;
@@ -25,6 +26,7 @@ type Props = {
 export default function ColorwayCard({ entry, href }: Props) {
   const is360 = entry.type === "360";
   const [imgFailed, setImgFailed] = useState(false);
+  const [hover, setHover] = useState(false);
   const previewUrl = is360 ? frameUrl(entry, 1) : mainUrl(entry);
 
   return (
@@ -34,23 +36,54 @@ export default function ColorwayCard({ entry, href }: Props) {
         textDecoration: "none",
         color: "inherit",
         display: "block",
+        position: "relative",
       }}
     >
       <motion.article
-        whileHover={{ y: -6 }}
-        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        whileHover={{ y: -8 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        onHoverStart={() => setHover(true)}
+        onHoverEnd={() => setHover(false)}
         style={{
           position: "relative",
           borderRadius: 16,
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)",
-          border: "1px solid rgba(232,196,104,0.22)",
+          background: "#ffffff",
+          border: `2px solid ${DARK}`,
           overflow: "hidden",
           cursor: "pointer",
-          transition: "border-color 0.3s, box-shadow 0.3s",
+          boxShadow:
+            "0 14px 30px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.8)",
+          transition: "box-shadow 0.35s ease-out",
         }}
         className="colorway-card"
       >
+        {/* Iridescent holographic border ring que aparece en hover */}
+        {hover && (
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, rotate: 360 }}
+            transition={{
+              opacity: { duration: 0.3 },
+              rotate: { duration: 8, repeat: Infinity, ease: "linear" },
+            }}
+            style={{
+              position: "absolute",
+              inset: -3,
+              borderRadius: 18,
+              background:
+                "conic-gradient(from 0deg, #c2a3ff, #6ed5ff, #ffb3e6, #f4dc3f, #c2a3ff)",
+              padding: 3,
+              WebkitMask:
+                "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+              WebkitMaskComposite: "xor",
+              maskComposite: "exclude",
+              zIndex: 1,
+              pointerEvents: "none",
+            }}
+          />
+        )}
+
         {/* Preview area — white platform with shoe */}
         <div
           style={{
@@ -99,7 +132,7 @@ export default function ColorwayCard({ entry, href }: Props) {
             }}
           />
 
-          {/* Corner markers */}
+          {/* Corner markers — oscuros sobre el blanco */}
           <CornerL pos="tl" />
           <CornerL pos="tr" />
           <CornerL pos="bl" />
@@ -115,10 +148,11 @@ export default function ColorwayCard({ entry, href }: Props) {
                 fontFamily: "var(--font-mono, monospace)",
                 fontSize: "0.55rem",
                 letterSpacing: "0.25em",
-                color: GOLD,
+                color: DARK,
+                fontWeight: 700,
                 padding: "4px 8px",
-                background: "rgba(10,10,20,0.65)",
-                border: "1px solid rgba(232,196,104,0.4)",
+                background: "rgba(255,255,255,0.85)",
+                border: `1px solid ${DARK}`,
                 borderRadius: 4,
                 backdropFilter: "blur(4px)",
               }}
@@ -127,11 +161,11 @@ export default function ColorwayCard({ entry, href }: Props) {
             </div>
           )}
 
-          {/* Hover scan line */}
+          {/* Hover scan line vertical (sólo en hover) */}
           <motion.div
             aria-hidden
             initial={{ y: "-100%" }}
-            whileHover={{ y: "100%" }}
+            animate={hover ? { y: "100%" } : { y: "-100%" }}
             transition={{ duration: 1.2, ease: "linear" }}
             style={{
               position: "absolute",
@@ -140,7 +174,7 @@ export default function ColorwayCard({ entry, href }: Props) {
               top: 0,
               height: 50,
               background:
-                "linear-gradient(180deg, transparent, rgba(232,196,104,0.18), transparent)",
+                "linear-gradient(180deg, transparent, rgba(244,220,63,0.35), transparent)",
               pointerEvents: "none",
             }}
           />
@@ -150,7 +184,9 @@ export default function ColorwayCard({ entry, href }: Props) {
         <div
           style={{
             padding: "1rem 1.1rem 1.1rem",
-            background: "rgba(10,10,20,0.85)",
+            background: "rgba(10,10,20,0.92)",
+            position: "relative",
+            zIndex: 2,
           }}
         >
           <div
@@ -158,7 +194,7 @@ export default function ColorwayCard({ entry, href }: Props) {
               fontFamily: "var(--font-mono, monospace)",
               fontSize: "0.55rem",
               letterSpacing: "0.3em",
-              color: GOLD_DIM,
+              color: "rgba(244,220,63,0.7)",
               marginBottom: "0.4rem",
             }}
           >
@@ -167,7 +203,7 @@ export default function ColorwayCard({ entry, href }: Props) {
           <div
             style={{
               fontSize: "0.95rem",
-              fontWeight: 500,
+              fontWeight: 600,
               color: "#fff",
               letterSpacing: "0.02em",
               lineHeight: 1.25,
@@ -184,31 +220,22 @@ export default function ColorwayCard({ entry, href }: Props) {
               fontFamily: "var(--font-mono, monospace)",
               fontSize: "0.55rem",
               letterSpacing: "0.22em",
-              color: GOLD_DIM,
+              color: "rgba(255,255,255,0.55)",
             }}
           >
             <span>{entry.model}</span>
-            <span style={{ color: GOLD }}>
+            <span style={{ color: YELLOW, fontWeight: 700 }}>
               {is360 ? `${entry.frames} FR` : "STATIC"}
             </span>
           </div>
         </div>
-
-        {/* Hover glow ring */}
-        <style jsx>{`
-          .colorway-card:hover {
-            border-color: rgba(232, 196, 104, 0.6) !important;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5),
-              0 0 30px rgba(232, 196, 104, 0.18);
-          }
-        `}</style>
       </motion.article>
     </Link>
   );
 }
 
 function CornerL({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
-  const stroke = `1px solid ${GOLD_DIM}`;
+  const stroke = `1px solid ${DARK_DIM}`;
   const base: React.CSSProperties = {
     position: "absolute",
     width: 12,
@@ -240,7 +267,7 @@ function OfflinePlaceholder() {
         fontFamily: "var(--font-mono, monospace)",
         fontSize: "0.55rem",
         letterSpacing: "0.3em",
-        color: "rgba(0,0,0,0.4)",
+        color: "rgba(0,0,0,0.45)",
         textTransform: "uppercase",
       }}
     >
@@ -249,7 +276,7 @@ function OfflinePlaceholder() {
           width: 36,
           height: 36,
           borderRadius: "50%",
-          border: "1.5px dashed rgba(0,0,0,0.3)",
+          border: "1.5px dashed rgba(0,0,0,0.35)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -258,7 +285,7 @@ function OfflinePlaceholder() {
       >
         ⊘
       </div>
-      <div>SPECIMEN OFFLINE</div>
+      <div style={{ fontWeight: 600 }}>SPECIMEN OFFLINE</div>
     </div>
   );
 }
