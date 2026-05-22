@@ -89,9 +89,8 @@ export default function ColorwayCard({ entry, href }: Props) {
           style={{
             position: "relative",
             aspectRatio: "4/3",
-            background: "linear-gradient(180deg, #ffffff 0%, #f4f4f0 100%)",
+            background: "#ffffff",
             overflow: "hidden",
-            boxShadow: "inset 0 -25px 50px rgba(0,0,0,0.06)",
           }}
         >
           {!imgFailed ? (

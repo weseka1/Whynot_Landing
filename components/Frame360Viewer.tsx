@@ -280,9 +280,8 @@ export default function Frame360Viewer({
           position: "absolute",
           inset: 14,
           borderRadius: 12,
-          background: "linear-gradient(180deg, #ffffff 0%, #f4f4f0 100%)",
+          background: "#ffffff",
           overflow: "hidden",
-          boxShadow: "inset 0 -28px 60px rgba(0,0,0,0.06)",
         }}
       >
         {ready && (

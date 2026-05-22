@@ -1033,10 +1033,8 @@ function Capsule({
             position: "absolute",
             inset: 10,
             borderRadius: "50%",
-            background:
-              "linear-gradient(180deg, #ffffff 0%, #f4f4f0 100%)",
+            background: "#ffffff",
             overflow: "hidden",
-            boxShadow: "inset 0 -22px 45px rgba(0,0,0,0.06)",
           }}
         >
           <video
