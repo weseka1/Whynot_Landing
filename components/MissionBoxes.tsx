@@ -35,10 +35,10 @@ const PILLAR_COUNT  = BOX_SOURCES.length; // 4
 const PROGRESS_IN   = 0.08;
 const PROGRESS_OUT  = 0.92;
 
-const R = 0.65;                 // radio de las formaciones — más chico = cajas más juntas (compacto, tipo nucleo del atomo)
+const R = 0.55;                 // radio de las formaciones — calibrado para que las cajas (con TARGET_BOX_SIZE 0.50) caigan dentro del CIRCULO INSCRITO de la interseccion de las 3 elipses proyectadas en pantalla, NO solo dentro de la circunferencia 3D de los anillos
 const SQRT2_2 = 0.7071068;      // sin/cos(45°) — vértices diagonales (estrella ×)
 const SQRT3_2 = 0.8660254;      // sin(60°) — triángulo
-const TARGET_BOX_SIZE = 0.62;   // tamaño objetivo (dimension maxima) de cada caja en unidades de mundo. Cada GLB se auto-escala a esto sin importar su tamaño nativo → control deterministico del extent de la caja para que entre en el cage de anillos
+const TARGET_BOX_SIZE = 0.50;   // tamaño objetivo (dimension maxima) de cada caja en unidades de mundo. Calibrado para que el extent maximo en pantalla del cluster orbital (R + half_diag_XZ = 0.55 + 0.50*√2/2 = 0.904) caiga dentro del circulo inscrito del cage
 const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva isométrica
 const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
@@ -58,8 +58,19 @@ const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi h
    patron. CRITICO: rotar alrededor de Z (camera axis), NO Y (vertical) — el
    intento previo con rotacion Y producia un cage con un anillo casi horizontal
    y dos casi verticales (no es el icono atomico). */
-const RING_RADIUS = 1.45;                      // jaula ajustada: cajas a orbit radius 0.65 con TARGET_BOX_SIZE 0.62 (half-diag ~0.54) → extent maximo ~1.19. RING_RADIUS 1.45 da margen ~0.26 (cage tight como en la referencia)
-const RING_TUBE = 0.030;                       // tubo del toro: ligeramente mas grueso para presencia visual al radio menor
+/* DIMENSIONADO DEL CAGE — analisis geometrico:
+   Cada anillo proyectado en pantalla es una elipse de ejes [R_ring, R_ring·cos(RING_TILT_X)].
+   Con RING_TILT_X = 60°, la relacion ejes es 1:0.5. Las 3 elipses (rotadas 0°/60°/120°
+   en el eje Z) se intersectan: el CIRCULO INSCRITO maximo dentro de la interseccion
+   tiene radio R_ring·cos(RING_TILT_X) = 0.5 R_ring (el eje menor de cualquier elipse).
+   Una caja "se ve afuera" si su proyeccion en pantalla excede este circulo inscrito,
+   AUNQUE este geometricamente dentro de cada anillo en 3D — los anillos tiltados
+   son MUCHO mas angostos en su eje menor que el cluster orbital.
+   Box max screen extent = √((R + s√2)² + s²), s = TARGET/2. Con R=0.55, TARGET=0.50:
+   max screen extent = √(0.904² + 0.25²) = 0.939. Necesita inscribed >= 0.939.
+   RING_RADIUS = 2.0 → inscribed = 1.0 → margen 0.061. */
+const RING_RADIUS = 2.0;
+const RING_TUBE = 0.034;                       // tubo proporcionalmente mas grueso para radio mayor (manteniendo presencia visual)
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
 const RING_TILT_X = Math.PI / 3;               // 60° de inclinacion del toro alrededor de X → elipse pronunciada (eje menor = cos60° = 0.5 del eje mayor)
