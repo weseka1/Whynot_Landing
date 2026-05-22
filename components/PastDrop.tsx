@@ -81,9 +81,10 @@ function buildSpec(hs: typeof HERO_SPECS[number], i: number): Spec {
     .padEnd(3, "X");
   const code = `${codeShort}.${String(i + 1).padStart(3, "0")}`;
   const spec = `SPEC-${String(i + 1).padStart(3, "0")}-${codeShort}`;
-  const href = entry
-    ? `/catalog/${entry.slug.brand}/${entry.slug.model}/${entry.slug.colorway}`
-    : null;
+  /* Click en una cápsula del hero → abre el CATÁLOGO DE LA MARCA completa
+     (todos los modelos + colorways de esa marca). Para ver el colorway
+     individual con visor 360, el usuario clickea desde la brand page.       */
+  const href = entry ? `/catalog/${entry.slug.brand}` : null;
   return {
     src: hs.src,
     label: hs.label,
@@ -1119,7 +1120,7 @@ function Capsule({
           >
             ▸
           </motion.span>
-          ENTER ARCHIVE
+          OPEN {spec.brand} ARCHIVE
         </motion.div>
       )}
     </motion.div>

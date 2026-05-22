@@ -128,8 +128,39 @@ export function getEntriesByBrand(brand: string): CatalogEntry[] {
   return ENTRIES.filter((e) => e.brand === brand);
 }
 
+export function getEntriesByBrandSlug(brandSlug: string): CatalogEntry[] {
+  return ENTRIES.filter((e) => e.slug.brand === brandSlug);
+}
+
+/** Devuelve el nombre real de la marca a partir del slug (o null). */
+export function brandNameFromSlug(brandSlug: string): string | null {
+  const entry = ENTRIES.find((e) => e.slug.brand === brandSlug);
+  return entry?.brand ?? null;
+}
+
+/** Agrupa los entries por modelo, manteniendo el orden de aparición. */
+export function groupByModel(entries: CatalogEntry[]): {
+  model: string;
+  modelSlug: string;
+  colorways: CatalogEntry[];
+}[] {
+  const map = new Map<string, { model: string; modelSlug: string; colorways: CatalogEntry[] }>();
+  for (const e of entries) {
+    const key = e.slug.model;
+    if (!map.has(key)) {
+      map.set(key, { model: e.model, modelSlug: e.slug.model, colorways: [] });
+    }
+    map.get(key)!.colorways.push(e);
+  }
+  return Array.from(map.values());
+}
+
 export function getAllBrands(): string[] {
   return [...new Set(ENTRIES.map((e) => e.brand))].sort();
+}
+
+export function getAllBrandSlugs(): string[] {
+  return [...new Set(ENTRIES.map((e) => e.slug.brand))].sort();
 }
 
 export const CATALOG_STATS = {
