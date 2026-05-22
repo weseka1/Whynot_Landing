@@ -35,15 +35,15 @@ const PILLAR_COUNT  = BOX_SOURCES.length; // 4
 const PROGRESS_IN   = 0.08;
 const PROGRESS_OUT  = 0.92;
 
-const R = 0.55;                 // radio de las formaciones — calibrado para que las cajas (con TARGET_BOX_SIZE 0.50) caigan dentro del CIRCULO INSCRITO de la interseccion de las 3 elipses proyectadas en pantalla, NO solo dentro de la circunferencia 3D de los anillos
+const R = 0.40;                 // radio de las formaciones — cluster compacto en el centro del cage (antes 0.55: cajas iban demasiado lejos del origen y se proyectaban afuera del atomo en pantalla)
 const SQRT2_2 = 0.7071068;      // sin/cos(45°) — vértices diagonales (estrella ×)
 const SQRT3_2 = 0.8660254;      // sin(60°) — triángulo
-const TARGET_BOX_SIZE = 0.50;   // tamaño objetivo (dimension maxima) de cada caja en unidades de mundo. Calibrado para que el extent maximo en pantalla del cluster orbital (R + half_diag_XZ = 0.55 + 0.50*√2/2 = 0.904) caiga dentro del circulo inscrito del cage
+const TARGET_BOX_SIZE = 0.40;   // tamaño objetivo de cada caja (antes 0.50). Cajas mas chicas → cluster claramente contenido en el cage con margen visible en pantalla, no solo en 3D
 const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva isométrica
-const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
+const GROUP_Y_OFFSET = -0.45;   // bajar la composición un poco para no chocar con texto del pilar — antes -0.65, pero shift tan agresivo + orbita casi-horizontal proyectaba las cajas al fondo del atomo en pantalla
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
-const ORBIT_RATE = 0.50;        // rad/s — velocidad de la orbita conjunta de las cajas (un poco mas rapido que el SPIN propio anterior)
-const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
+const ORBIT_RATE = 0.30;        // rad/s — orbita lenta (antes 0.50). Menos drama de movimiento, mas como "atomo estatico con suave rotacion"
+const ORBIT_TILT = 0.85;        // rad (~49°) — orbita inclinada pero NO casi-horizontal (antes 1.30 ≈ 74°). Con la camara elevada (Y=2.5), un tilt tan grande proyectaba las cajas al fondo de la pantalla; un tilt moderado las mantiene cerca del centro del atomo
 
 /* ANILLOS DORADOS — icono atomico clasico: 3 elipses identicas en el plano
    de la pantalla, rotadas 60° una respecto de otra alrededor del eje
