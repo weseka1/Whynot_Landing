@@ -83,8 +83,8 @@ export default function BrandHero({
           margin: 0,
           /* paddingRight reserva espacio horizontal por si el título es muy
              largo (e.g. LOUIS VUITTON) y queremos que no se solape con el
-             mascot. ~460px = 416 ancho del mono + un poco de aire.         */
-          paddingRight: "clamp(0px, 28vw, 460px)",
+             mascot. ~880px = 832 ancho del mono + un poco de aire.         */
+          paddingRight: "clamp(0px, 48vw, 880px)",
           fontWeight: 700,
           textTransform: "uppercase",
           overflowWrap: "anywhere",
@@ -93,13 +93,10 @@ export default function BrandHero({
         {brandName}
       </motion.h1>
 
-      {/* Mono mascot 3D — portrait grande a la derecha, alineado al título.
-          Tamaño 416x650 (30% más grande que la versión anterior 320x500).
-          top negativo: el modelo dentro del frame queda en los 2/3 inferiores;
-          subir el container compensa para que el body alinee con la zona del
-          título. El espacio vacío del top queda detrás del TopHud sticky
-          (zIndex menor) — invisible al usuario.
-          En mobile pasa a position static (debajo de los stats) vía media.   */}
+      {/* Mono mascot 3D — portrait XL a la derecha (832x1300 = doble del previo).
+          top -22rem compensa el offset proporcional del body en el container.
+          El espacio vacío del top queda detrás del TopHud sticky.
+          En mobile pasa a position static + tamaño reducido vía media.        */}
       <motion.div
         className="brand-mascot"
         initial={{ opacity: 0, scale: 0.85, x: 24 }}
@@ -107,12 +104,12 @@ export default function BrandHero({
         transition={{ duration: 1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
         style={{
           position: "absolute",
-          top: "-10rem",
+          top: "-22rem",
           right: "2.5rem",
           zIndex: 6,
         }}
       >
-        <MonoMascot width={416} height={650} radius="110%" />
+        <MonoMascot width={832} height={1300} radius="110%" />
       </motion.div>
 
       <style jsx>{`
@@ -123,8 +120,8 @@ export default function BrandHero({
             display: block !important;
           }
           .brand-mascot > div {
-            width: 280px !important;
-            height: 420px !important;
+            width: 400px !important;
+            height: 600px !important;
           }
         }
       `}</style>
