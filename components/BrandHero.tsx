@@ -95,6 +95,10 @@ export default function BrandHero({
 
       {/* Mono mascot 3D — portrait grande a la derecha, alineado al título.
           Tamaño 416x650 (30% más grande que la versión anterior 320x500).
+          top negativo: el modelo dentro del frame queda en los 2/3 inferiores;
+          subir el container compensa para que el body alinee con la zona del
+          título. El espacio vacío del top queda detrás del TopHud sticky
+          (zIndex menor) — invisible al usuario.
           En mobile pasa a position static (debajo de los stats) vía media.   */}
       <motion.div
         className="brand-mascot"
@@ -103,7 +107,7 @@ export default function BrandHero({
         transition={{ duration: 1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
         style={{
           position: "absolute",
-          top: "2rem",
+          top: "-10rem",
           right: "2.5rem",
           zIndex: 6,
         }}
