@@ -51,8 +51,8 @@ const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi h
    (ORBIT_TILT - π/2). Estan a radio MAYOR que la orbita de las cajas (R=1.05)
    para no atravesarlas. Todo el sistema rota lento sobre el eje vertical Y
    para dar sensacion de orbita dinamica/atomica. */
-const RING_RADIUS = 1.55;
-const RING_TUBE = 0.022;
+const RING_RADIUS = 2.40;
+const RING_TUBE = 0.028;
 const RING_SPIN_RATE = 0.18; // rad/s — rotacion del par de anillos sobre Y
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
