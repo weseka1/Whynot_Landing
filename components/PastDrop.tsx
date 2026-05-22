@@ -50,7 +50,7 @@ const VIDEOS = VIDEO_FILES.map((f) => ({
 }));
 
 const N = VIDEOS.length;
-const SIZE = 340;        // diámetro base (el del centro, scale 1)
+const SIZE = 280;        // diámetro base (el del centro, scale 1)
 const SPACING = 360;     // separación horizontal entre centros (px)
 const SIDE_SCALE = 0.62; // tamaño de los vecinos (off = ±1) — bien más chicos
 const OUTER_SCALE = 0.35;// tamaño de los exteriores (off = ±2) — apenas se ven
