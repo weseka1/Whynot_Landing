@@ -54,8 +54,8 @@ const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi h
    por eso se ve eliptico y no como una linea fina. El par cruza en el
    centro formando una X clara, sin animacion (un torus es simetrico
    sobre su normal asi que cualquier rotacion global se ve rara). */
-const RING_RADIUS = 3.60;                      // mas grande → el "diamante interior" de la X envuelve toda la formacion de cajas
-const RING_TUBE = 0.030;
+const RING_RADIUS = 2.20;                      // ajustado para que los anillos abracen la formacion de cajas de cerca (compacto) — diamante interior de la X = ±1.84 vs cajas ±1.43
+const RING_TUBE = 0.024;
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
 const RING_SLOPE = 1.0;                        // pendiente del eje mayor en pantalla. 1.0 = ejes a 45° → X perpendicular (90° entre brazos), imita la X roja de referencia
