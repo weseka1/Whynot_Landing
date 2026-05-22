@@ -148,13 +148,15 @@ export default async function CatalogProductPage({ params }: Params) {
             {entry.brand}
           </div>
           <h1
-            className="display"
             style={{
+              fontFamily: "var(--font-marquee)",
               fontSize: "clamp(2.2rem, 4.5vw, 4rem)",
               lineHeight: 0.95,
-              letterSpacing: "-0.02em",
+              letterSpacing: "0.03em",
               margin: "0 0 1.2rem",
               color: DARK,
+              fontWeight: 700,
+              textTransform: "uppercase",
             }}
           >
             {entry.model}

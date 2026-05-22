@@ -74,7 +74,7 @@ export const site = {
   /* ---------------- PAST DROP (Sirius) ---------------- */
   pastDrop: {
     eyebrow: "D://DATA_CORE / ARCHIVE",
-    title:   "Past Drop",
+    title:   "drops",
     drop: {
       name:        "Sirius",
       season:      "AW / 02",

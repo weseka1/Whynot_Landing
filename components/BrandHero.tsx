@@ -66,22 +66,23 @@ export default function BrandHero({
         {String(totalColorways).padStart(2, "0")} COLORWAYS
       </motion.div>
 
-      {/* Brand title — huge editorial italic */}
+      {/* Brand title — huge marquee font (Orbitron / T-012) */}
       <motion.h1
         initial={{ opacity: 0, y: 30, filter: "blur(20px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-        className="display"
         style={{
-          fontStyle: "italic",
+          fontFamily: "var(--font-marquee)",
           fontSize: "clamp(3rem, 11vw, 11rem)",
           lineHeight: 0.88,
-          letterSpacing: "-0.04em",
+          letterSpacing: "0.02em",
           color: DARK,
           margin: 0,
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
+          fontWeight: 700,
+          textTransform: "uppercase",
         }}
       >
         {brandName}

@@ -352,16 +352,17 @@ export default function PastDrop() {
               left: 0, right: 0,
               top: "30%",
               textAlign: "center",
-              fontFamily: "var(--font-display, serif)",
-              fontStyle: "italic",
+              fontFamily: "var(--font-marquee)",
               fontSize: "clamp(6rem, 20vw, 20rem)",
-              letterSpacing: "-0.04em",
+              letterSpacing: "0.02em",
               lineHeight: 0.85,
               color: "#0a0a14",
               pointerEvents: "none",
               whiteSpace: "nowrap",
               zIndex: 1,
               userSelect: "none",
+              fontWeight: 700,
+              textTransform: "uppercase",
             }}
           >
             {active.brand}
@@ -395,13 +396,15 @@ export default function PastDrop() {
             {site.pastDrop.eyebrow}
           </div>
           <h2
-            className="display"
             style={{
+              fontFamily: "var(--font-marquee)",
               fontSize: "clamp(2.2rem, 5.5vw, 4.5rem)",
               lineHeight: 0.95,
-              letterSpacing: "-0.02em",
+              letterSpacing: "0.04em",
               color: "#0a0a14",
               margin: 0,
+              textTransform: "uppercase",
+              fontWeight: 700,
             }}
           >
             {site.pastDrop.title}
