@@ -340,12 +340,16 @@ function CarouselItem({
       style={{
         position: "absolute",
         left: "50%",
-        top: "50%",
+        /* Alineación por BASE: todos los círculos sientan su borde inferior
+           en la misma línea horizontal. transformOrigin "50% 100%" hace que
+           el scale los achique HACIA ABAJO (queda fijo el borde inferior),
+           entonces los más chicos no quedan "flotando" arriba — siguen
+           apoyados en la misma línea base. Eso elimina el efecto arco/anillo. */
+        bottom: "12%",
         width: SIZE,
         height: SIZE,
-        aspectRatio: "1 / 1",        // garantiza forma cuadrada → círculo
+        aspectRatio: "1 / 1",
         marginLeft: -SIZE / 2,
-        marginTop: -SIZE / 2,
         x,
         scaleX: s,
         scaleY: s,
@@ -357,7 +361,7 @@ function CarouselItem({
         background: "#0a0a0a",
         boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
         willChange: "transform, opacity",
-        transformOrigin: "center center",
+        transformOrigin: "50% 100%",
       }}
     >
       <video
