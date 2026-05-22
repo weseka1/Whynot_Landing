@@ -54,13 +54,13 @@ const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi h
    por eso se ve eliptico y no como una linea fina. El par cruza en el
    centro formando una X clara, sin animacion (un torus es simetrico
    sobre su normal asi que cualquier rotacion global se ve rara). */
-const RING_RADIUS = 2.40;
+const RING_RADIUS = 2.80;                      // mas grande → mas margen para que las cajas entren dentro
 const RING_TUBE = 0.028;
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
-const RING_SLOPE = 0.5;
-const RING_AXIS_ANGLE = Math.atan(RING_SLOPE); // ~26.57° — angulo del eje visible en pantalla
-const RING_DEPTH_TILT = 0.90;                  // rad (~52°) — tilt frontal: define cuanto se "ve" la X. Mas alto = ellipses mas planos (X mas marcada en pantalla). Mas bajo = ellipses redondos (X se pierde, parecen 2 circulos superpuestos). 0.90 = punto medio donde la X es clara y las cajas todavia entran
+const RING_SLOPE = 1.0;                        // pendiente del eje mayor en pantalla. 1.0 = ejes a 45° → X perpendicular (90° entre brazos), imita la X roja de referencia
+const RING_AXIS_ANGLE = Math.atan(RING_SLOPE); // = π/4 (45°)
+const RING_DEPTH_TILT = 0.90;                  // rad (~52°) — tilt frontal: cuanto se "abre" cada anillo en profundidad. Suficientemente eliptico para que la X se vea, no tanto para que sea linea
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
