@@ -50,12 +50,12 @@ const VIDEOS = VIDEO_FILES.map((f) => ({
 }));
 
 const N = VIDEOS.length;
-const SIZE = 280;        // diámetro base (el del centro, scale 1)
-const SPACING = 360;     // separación horizontal entre centros (px)
-const SIDE_SCALE = 0.62; // tamaño de los vecinos (off = ±1) — bien más chicos
-const OUTER_SCALE = 0.35;// tamaño de los exteriores (off = ±2) — apenas se ven
-const FADE_START = 1.2;  // empieza a desvanecer apenas pasa el lateral visible
-const FADE_END = 1.95;   // |offset| al que llega a opacity 0
+const SIZE = 420;        // diámetro base (el del centro, scale 1) — bien grande estilo DICH
+const SPACING = 340;     // separación horizontal entre centros (px) — MENOR a SIZE → overlap
+const SIDE_SCALE = 0.86; // tamaño de los vecinos (off = ±1) — apenas más chicos
+const OUTER_SCALE = 0.72;// tamaño de los exteriores (off = ±2)
+const FADE_START = 2;    // los 5 (centro + ±1 + ±2) full opacity
+const FADE_END = 2.9;    // los ±3 entran/salen con fade desde los costados
 
 /* Wrap del offset a [-N/2, N/2) para que el carrusel sea infinito y cada
    item tome el camino corto (no se "teletransporte" cuando hace loop). */
@@ -190,14 +190,15 @@ export default function PastDrop() {
       style={{
         position: "relative",
         minHeight: "260vh", // ~160vh de scroll pinned para 1 ciclo completo
-        background: "#050505",
+        /* Lila/púrpura saturado estilo DICH PAST_DROP */
+        background: "#e0a8db",
         backgroundImage:
-          "radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
+          "radial-gradient(rgba(0,0,0,0.12) 1px, transparent 1px)",
         backgroundSize: "26px 26px",
-        color: "#f6dd8e",
+        color: "#0a0a0a",
       }}
     >
-      <XDecoration seed={11} count={22} color="rgba(244,215,116,0.18)" />
+      <XDecoration seed={11} count={22} color="rgba(0,0,0,0.25)" />
 
       {/* ============ STAGE STICKY ============ */}
       <div
@@ -217,20 +218,12 @@ export default function PastDrop() {
             justifyContent: "space-between",
             alignItems: "center",
             padding: "var(--space-md) var(--container-pad) 0",
-            color: "rgba(246,221,142,0.85)",
+            color: "#0a0a0a",
             zIndex: 3,
           }}
         >
-          <span className="system-text" style={{ color: "rgba(246,221,142,0.7)" }}>
-            {site.pastDrop.eyebrow}
-          </span>
-          <span
-            className="system-text"
-            style={{
-              letterSpacing: "0.15em",
-              color: "rgba(246,221,142,0.7)",
-            }}
-          >
+          <span className="system-text">{site.pastDrop.eyebrow}</span>
+          <span className="system-text" style={{ letterSpacing: "0.15em" }}>
             PAST_DROP · {String(activeIndex + 1).padStart(2, "0")} /{" "}
             {String(N).padStart(2, "0")}
           </span>
@@ -248,21 +241,11 @@ export default function PastDrop() {
           <h2
             className="display"
             style={{
-              fontSize: "clamp(3rem, 8vw, 7rem)",
+              fontSize: "clamp(3rem, 8vw, 6.5rem)",
               lineHeight: 0.95,
               letterSpacing: "-0.02em",
               margin: 0,
-              /* Dorado metalizado: gradiente con bandas claro→oscuro→claro
-                 que simula el reflejo de luz sobre metal pulido. */
-              background:
-                "linear-gradient(180deg, #fde79a 0%, #e9c45c 30%, #b78023 52%, #e9c45c 74%, #fde79a 100%)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-              WebkitTextFillColor: "transparent",
-              /* Halo ámbar suave alrededor del texto */
-              filter:
-                "drop-shadow(0 0 24px rgba(255,200,60,0.45)) drop-shadow(0 2px 12px rgba(0,0,0,0.6))",
+              color: "#0a0a0a",
             }}
           >
             {site.pastDrop.title}
@@ -283,24 +266,6 @@ export default function PastDrop() {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          {/* Floor glow: halo dorado debajo de los círculos que simula
-              que están "apoyados" sobre una superficie reflectante. */}
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: "50%",
-              bottom: "8%",
-              transform: "translateX(-50%)",
-              width: "70%",
-              height: "18%",
-              background:
-                "radial-gradient(ellipse at center, rgba(255,200,60,0.22) 0%, rgba(255,200,60,0.06) 40%, transparent 70%)",
-              filter: "blur(8px)",
-              pointerEvents: "none",
-              zIndex: 0,
-            }}
-          />
           {VIDEOS.map((v, i) => (
             <CarouselItem
               key={v.src}
@@ -329,8 +294,7 @@ export default function PastDrop() {
             className="system-text"
             style={{
               letterSpacing: "0.18em",
-              color: "#f6dd8e",
-              textShadow: "0 0 12px rgba(255,200,60,0.4)",
+              color: "#0a0a0a",
             }}
           >
             ▸ {VIDEOS[activeIndex].label}
@@ -340,7 +304,7 @@ export default function PastDrop() {
             style={{
               display: "flex",
               gap: "1rem",
-              color: "rgba(246,221,142,0.55)",
+              color: "rgba(10,10,10,0.7)",
             }}
           >
             <motion.span>{coordX}</motion.span>
@@ -383,17 +347,22 @@ function CarouselItem({
   /* zIndex: el del centro arriba, los de afuera abajo */
   const zIndex = useTransform(offset, (o) => Math.round(100 - Math.abs(o) * 10));
 
+  /* Acento amarillo sutil en el arco superior cuando es el activo
+     (mimetiza el detalle del reference del usuario). */
+  const accentOpacity = useTransform(offset, (o) => {
+    const a = Math.abs(o);
+    if (a > 0.5) return 0;
+    return 1 - a * 2; // 1 en el centro, 0 cuando |off|>=0.5
+  });
+
   return (
     <motion.div
       style={{
         position: "absolute",
         left: "50%",
         /* Alineación por BASE: todos los círculos sientan su borde inferior
-           en la misma línea horizontal. transformOrigin "50% 100%" hace que
-           el scale los achique HACIA ABAJO (queda fijo el borde inferior),
-           entonces los más chicos no quedan "flotando" arriba — siguen
-           apoyados en la misma línea base. Eso elimina el efecto arco/anillo. */
-        bottom: "14%",
+           en la misma línea horizontal. */
+        bottom: "12%",
         width: SIZE,
         height: SIZE,
         aspectRatio: "1 / 1",
@@ -404,51 +373,49 @@ function CarouselItem({
         opacity,
         zIndex,
         borderRadius: "50%",
-        /* Anillo dorado metalizado: gradiente vertical con bandas claro→oscuro→claro
-           que simula reflejo de luz sobre metal pulido. El padding es el grosor
-           del anillo; el inner circle (blanco) va adentro. */
-        background:
-          "linear-gradient(180deg, #fce791 0%, #e0b94a 24%, #a07614 50%, #d2a23b 76%, #fce791 100%)",
-        padding: 14,
-        boxSizing: "border-box",
-        /* Glow ámbar exterior + sombra inferior para apoyar visualmente sobre piso */
-        boxShadow:
-          "0 0 36px rgba(255,200,60,0.28), 0 22px 50px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.45), inset 0 -1px 1px rgba(0,0,0,0.4)",
+        overflow: "hidden",
+        /* Borde fino oscuro estilo DICH PAST_DROP */
+        border: "2px solid #0a0a0a",
+        background: "#ffffff",
+        /* Sombra suave que apoya el círculo sobre el fondo lila */
+        boxShadow: "0 14px 30px rgba(0,0,0,0.22)",
         willChange: "transform, opacity",
         transformOrigin: "50% 100%",
       }}
     >
-      <div
+      <video
+        ref={registerRef}
+        src={src}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
         style={{
           width: "100%",
           height: "100%",
-          borderRadius: "50%",
-          background: "#ffffff",
-          overflow: "hidden",
-          position: "relative",
-          /* Sombra interna sutil para dar profundidad entre el anillo y el contenido */
-          boxShadow: "inset 0 0 20px rgba(0,0,0,0.15)",
+          objectFit: "contain",
+          transform: "scale(0.88)",
+          transformOrigin: "center",
+          pointerEvents: "none",
+          display: "block",
         }}
-      >
-        <video
-          ref={registerRef}
-          src={src}
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            transform: "scale(0.88)",
-            transformOrigin: "center",
-            pointerEvents: "none",
-            display: "block",
-          }}
-        />
-      </div>
+      />
+
+      {/* Acento amarillo en el arco superior del círculo activo */}
+      <motion.div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: -1,
+          borderRadius: "50%",
+          border: "1.5px solid #f4dc3f",
+          /* Solo arco superior visible: clip el bottom 55% */
+          clipPath: "inset(0 0 55% 0)",
+          opacity: accentOpacity,
+          pointerEvents: "none",
+        }}
+      />
     </motion.div>
   );
 }
