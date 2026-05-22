@@ -45,14 +45,17 @@ const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja mu
 const ORBIT_RATE = 0.50;        // rad/s — velocidad de la orbita conjunta de las cajas (un poco mas rapido que el SPIN propio anterior)
 const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
 
-/* ANILLOS DORADOS — dos toros tipo Saturno que enmarcan la orbita de las
-   cajas POR FUERA (no la atraviesan). Las cajas orbitan a radio R=1.05;
-   ambos anillos estan a radio mayor para que se vean por afuera de las
-   cajas, no cortandolas. Comparten la inclinacion ORBIT_TILT con la orbita. */
-const RING_DEFS: { radius: number; tube: number; opacity: number }[] = [
-  { radius: 1.70, tube: 0.022, opacity: 0.95 }, // anillo principal exterior
-  { radius: 1.95, tube: 0.014, opacity: 0.65 }, // anillo secundario, mas fino y separado
-];
+/* ANILLOS DORADOS — dos orbitas cruzadas tipo atomo. Comparten el eje X
+   como diametro comun y son perpendiculares entre si: una vive en el plano
+   de la orbita de las cajas (ORBIT_TILT) y la otra en el plano perpendicular
+   (ORBIT_TILT - π/2). Estan a radio MAYOR que la orbita de las cajas (R=1.05)
+   para no atravesarlas. Todo el sistema rota lento sobre el eje vertical Y
+   para dar sensacion de orbita dinamica/atomica. */
+const RING_RADIUS = 1.55;
+const RING_TUBE = 0.022;
+const RING_SPIN_RATE = 0.18; // rad/s — rotacion del par de anillos sobre Y
+const RING_COLOR = "#d9a850";
+const RING_EMISSIVE = "#8a5a14";
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
@@ -276,27 +279,54 @@ interface BoxStarProps {
   progressRef: React.MutableRefObject<number>;
 }
 
-/* ANILLOS — sistema dorado tipo Saturno alineado al plano orbital de las
-   cajas. Comparten la inclinacion ORBIT_TILT para que las cajas circulen
-   visiblemente "sobre" los anillos. */
+/* ANILLOS — dos orbitas cruzadas perpendiculares (tipo atomo) compartiendo
+   el eje X como diametro comun. Ambas a radio > orbita de cajas para no
+   atravesarlas. El grupo rota lento sobre el eje Y vertical, dando la
+   sensacion de orbita girando.
+
+   Geometria: el toro por defecto vive en el plano XY (normal Z).
+   - Anillo 1: rotacion X = ORBIT_TILT → normal (0, -sin T, cos T).
+     Coincide con el plano de la orbita de las cajas.
+   - Anillo 2: rotacion X = ORBIT_TILT - π/2 → normal (0, cos T, sin T).
+     Perpendicular al anillo 1 (producto escalar = 0). Sus planos comparten
+     el eje X, asi que se cruzan en (±radio, 0, 0) — vertices de la cruz. */
 function PlanetRings() {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame((state) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = state.clock.elapsedTime * RING_SPIN_RATE;
+    }
+  });
+
   return (
-    <group rotation={[ORBIT_TILT, 0, 0]}>
-      {RING_DEFS.map((d, i) => (
-        <mesh key={i}>
-          <torusGeometry args={[d.radius, d.tube, 16, 128]} />
-          <meshStandardMaterial
-            color="#d9a850"
-            emissive="#8a5a14"
-            emissiveIntensity={0.6}
-            metalness={0.9}
-            roughness={0.35}
-            transparent
-            opacity={d.opacity}
-            depthWrite={false}
-          />
-        </mesh>
-      ))}
+    <group ref={groupRef}>
+      <mesh rotation={[ORBIT_TILT, 0, 0]}>
+        <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
+        <meshStandardMaterial
+          color={RING_COLOR}
+          emissive={RING_EMISSIVE}
+          emissiveIntensity={0.65}
+          metalness={0.9}
+          roughness={0.35}
+          transparent
+          opacity={0.92}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh rotation={[ORBIT_TILT - Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
+        <meshStandardMaterial
+          color={RING_COLOR}
+          emissive={RING_EMISSIVE}
+          emissiveIntensity={0.65}
+          metalness={0.9}
+          roughness={0.35}
+          transparent
+          opacity={0.92}
+          depthWrite={false}
+        />
+      </mesh>
     </group>
   );
 }
