@@ -60,7 +60,7 @@ const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
 const RING_SLOPE = 0.5;
 const RING_AXIS_ANGLE = Math.atan(RING_SLOPE); // ~26.57° — angulo del eje visible en pantalla
-const RING_DEPTH_TILT = 0.55;                  // rad (~32°) — tilt frontal: aspecto del ellipse visible (mayor = mas plano, menor = mas redondo). Bajo = mas circulo → las cajas caben dentro vertical y horizontalmente
+const RING_DEPTH_TILT = 0.90;                  // rad (~52°) — tilt frontal: define cuanto se "ve" la X. Mas alto = ellipses mas planos (X mas marcada en pantalla). Mas bajo = ellipses redondos (X se pierde, parecen 2 circulos superpuestos). 0.90 = punto medio donde la X es clara y las cajas todavia entran
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
