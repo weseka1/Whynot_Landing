@@ -1,0 +1,144 @@
+"use client";
+
+/* ============================================================================
+   MONO MASCOT — model-viewer wrapper que reusa /assets/3d/mono.glb
+   ----------------------------------------------------------------------------
+   - Mira al frente por default
+   - Sigue al mouse en eje Y (rota a izq/der según el lado donde está el cursor)
+   - Lerp para movimiento suave (LERP 0.08)
+   - IntersectionObserver: pausa el rAF cuando el mascot está fuera del viewport
+   - Visibility API: pausa cuando la tab está oculta
+   - El <script> de model-viewer y el preload del GLB ya están en app/layout.tsx
+   ============================================================================ */
+
+import { useEffect, useRef } from "react";
+
+const GLB_SRC = "/assets/3d/mono.glb";
+
+type Props = {
+  /** Diámetro del visor (cuadrado). Default 220px. */
+  size?: number;
+  /** Ángulo vertical fijo (88 ≈ horizontal directo, mirando de frente). */
+  basePolar?: number;
+  /** Distancia de cámara como porcentaje (e.g. "55%"). */
+  radius?: string;
+  /** Rango máximo de rotación horizontal en grados (a cada lado). */
+  maxAngle?: number;
+  /** Smoothness del seguimiento — 0.05 amortiguado, 0.2 rápido. */
+  lerp?: number;
+};
+
+export default function MonoMascot({
+  size = 220,
+  basePolar = 88,
+  radius = "55%",
+  maxAngle = 55,
+  lerp = 0.08,
+}: Props) {
+  const modelRef = useRef<HTMLElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let targetAngle = 0;
+    let currentAngle = 0;
+    let raf = 0;
+    let visible = true; // mascot en viewport
+    let hidden = false; // tab oculta
+
+    const onMove = (e: MouseEvent) => {
+      if (!visible || hidden) return;
+      /* Normalizamos clientX a [-1, 1] sobre el ancho del viewport.
+         Signo negado: cursor a la derecha → mono mira a la derecha (sigue). */
+      const normalized = (e.clientX / window.innerWidth) * 2 - 1;
+      targetAngle = -normalized * maxAngle;
+    };
+    const onLeave = () => {
+      targetAngle = 0;
+    };
+
+    const loop = () => {
+      currentAngle += (targetAngle - currentAngle) * lerp;
+      const el = modelRef.current as any;
+      if (el) {
+        el.cameraOrbit = `${currentAngle.toFixed(2)}deg ${basePolar}deg ${radius}`;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    const start = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
+    let io: IntersectionObserver | null = null;
+    if (wrapperRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        ([entry]) => {
+          visible = entry.isIntersecting;
+          if (visible && !hidden) start();
+          else stop();
+        },
+        { rootMargin: "100px" }
+      );
+      io.observe(wrapperRef.current);
+    }
+
+    const onVis = () => {
+      hidden = document.hidden;
+      if (visible && !hidden) start();
+      else stop();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mouseleave", onLeave);
+    start();
+
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
+      document.removeEventListener("visibilitychange", onVis);
+      io?.disconnect();
+      stop();
+    };
+  }, [basePolar, radius, maxAngle, lerp]);
+
+  return (
+    <div
+      ref={wrapperRef}
+      style={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        position: "relative",
+        pointerEvents: "none",
+      }}
+      aria-hidden
+    >
+      {/* @ts-ignore — web component declarado en types/model-viewer.d.ts */}
+      <model-viewer
+        ref={modelRef}
+        src={GLB_SRC}
+        alt="WHYNOT mono mascot"
+        disable-zoom
+        shadow-intensity="0"
+        exposure="1.1"
+        camera-orbit={`0deg ${basePolar}deg ${radius}`}
+        camera-target="0m 0.45m 0m"
+        field-of-view="26deg"
+        interaction-prompt="none"
+        loading="eager"
+        style={{
+          width: "100%",
+          height: "100%",
+          background: "transparent",
+        }}
+      />
+    </div>
+  );
+}
