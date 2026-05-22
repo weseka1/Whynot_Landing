@@ -49,9 +49,10 @@ const VIDEOS = [
 
 const N = VIDEOS.length;
 const STEP = 360 / N;       // ángulo entre círculos
-const RADIUS = 720;         // radio del anillo (px)
-const SIZE = 280;           // diámetro base de cada círculo (px)
-const ACTIVE_SCALE = 1.55;  // qué tanto crece el del centro
+const RADIUS = 520;         // radio del anillo (px)
+const SIZE = 200;           // diámetro base de cada círculo (px)
+const ACTIVE_SCALE = 1.4;   // qué tanto crece el del centro
+const PERSPECTIVE = 2000;   // mayor = menos magnificación de los cercanos
 
 export default function PastDrop() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -208,8 +209,8 @@ export default function PastDrop() {
           <h2
             className="display"
             style={{
-              fontSize: "clamp(4rem, 13vw, 11rem)",
-              lineHeight: 0.9,
+              fontSize: "clamp(2.2rem, 6vw, 5rem)",
+              lineHeight: 0.95,
               letterSpacing: "-0.02em",
               color: "var(--color-peach-fg)",
               margin: 0,
@@ -224,7 +225,7 @@ export default function PastDrop() {
           style={{
             flex: 1,
             position: "relative",
-            perspective: "1400px",
+            perspective: `${PERSPECTIVE}px`,
             cursor: "grab",
             touchAction: "none",
             userSelect: "none",
