@@ -93,16 +93,19 @@ const SPECS: Spec[] = [
 const N = SPECS.length;
 
 /* ---------------- LAYOUT ---------------- */
-const SIZE_W = 540;       // cápsula activa: ancho (px)
-const SIZE_H = 360;       // cápsula activa: alto (px) — aspect 3:2
-const SPACING = 460;      // distancia entre centros — overlap suave
-const SIDE_SCALE = 0.52;  // off=±1 — bastante más chicas (deja respirar al activo)
-const OUTER_SCALE = 0.36; // off=±2
+const CIRCLE_SIZE = 340;  // diámetro de la cápsula activa (px)
+const SPACING = 290;      // distancia entre centros — overlap suave (~50px)
+const SIDE_SCALE = 0.48;  // off=±1 — bastante más chicas (deja respirar al activo)
+const OUTER_SCALE = 0.32; // off=±2
 const FADE_START = 1.7;
-const FADE_END = 2.6;
+const FADE_END = 2.5;
 
 const GOLD = "#e8c468";   // ámbar pálido — el accent del sistema
 const GOLD_DIM = "rgba(232,196,104,0.55)";
+
+/* Noise SVG inline para el overlay cinematográfico (grain sutil sobre todo) */
+const NOISE_URL =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E\")";
 
 /* ---------------- HELPERS ---------------- */
 function wrapOffset(raw: number, total: number) {
@@ -359,10 +362,96 @@ export default function PastDrop() {
         {/* ----- METADATA PANEL (left) ----- */}
         <MetadataPanel active={active} activeIndex={activeIndex} luminosity={luminosity} />
 
+        {/* ----- PROGRESS TICKS (scrubber visual del archive) ----- */}
+        <ProgressTicks activeIndex={activeIndex} position={position} />
+
         {/* ----- BOTTOM HUD ----- */}
         <HudBottom active={active} coordX={coordX} coordY={coordY} />
+
+        {/* ----- NOISE OVERLAY (grain cinematográfico sobre todo) ----- */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: NOISE_URL,
+            backgroundRepeat: "repeat",
+            opacity: 0.05,
+            mixBlendMode: "overlay",
+            pointerEvents: "none",
+            zIndex: 12,
+          }}
+        />
       </div>
     </section>
+  );
+}
+
+/* ============================================================================
+   PROGRESS TICKS — scrubber visual (15 tick marks) que muestra posición
+   en el archive. La activa se ilumina y se agranda. La posición flotante
+   (entre dos ticks) se indica con un caret pequeño que se desliza.
+   ============================================================================ */
+function ProgressTicks({
+  activeIndex,
+  position,
+}: {
+  activeIndex: number;
+  position: MotionValue<number>;
+}) {
+  /* Caret posicional: el motion value position determina dónde está el
+     "marcador continuo" dentro del array de ticks. */
+  const caretX = useTransform(position, (p) => {
+    const wrapped = ((p % N) + N) % N;
+    /* cada tick ocupa 14px (10 + 4 gap aprox). Total ancho = N*14 - 4 */
+    return wrapped * 14;
+  });
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 70,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 6,
+        pointerEvents: "none",
+      }}
+    >
+      <div style={{ display: "flex", gap: 4, position: "relative" }}>
+        {Array.from({ length: N }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              width: 2,
+              height: i === activeIndex ? 16 : 6,
+              background:
+                i === activeIndex ? GOLD : "rgba(232,196,104,0.28)",
+              boxShadow:
+                i === activeIndex
+                  ? "0 0 8px rgba(232,196,104,0.55)"
+                  : "none",
+              transition: "height 0.4s cubic-bezier(0.16,1,0.3,1), background 0.4s, box-shadow 0.4s",
+            }}
+          />
+        ))}
+        {/* Caret continuo (sigue position en vivo) */}
+        <motion.div
+          style={{
+            position: "absolute",
+            top: -8,
+            left: -3,
+            x: caretX,
+            width: 8,
+            height: 5,
+            borderTop: `1px solid ${GOLD}`,
+            borderLeft: "4px solid transparent",
+            borderRight: "4px solid transparent",
+            background: "transparent",
+            pointerEvents: "none",
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -741,16 +830,20 @@ function Capsule({
     return arr[0] * arr[1];
   });
 
+  /* Opacity para el orbital ring (multiplicador suave para que no sea full) */
+  const orbitalOpacity = useTransform(isActive, (a) => a * 0.55);
+  const arcOpacity = useTransform(isActive, (a) => a * 0.9);
+
   return (
     <motion.div
       style={{
         position: "absolute",
         left: "50%",
         top: "50%",
-        width: SIZE_W,
-        height: SIZE_H,
-        marginLeft: -SIZE_W / 2,
-        marginTop: -SIZE_H / 2,
+        width: CIRCLE_SIZE,
+        height: CIRCLE_SIZE,
+        marginLeft: -CIRCLE_SIZE / 2,
+        marginTop: -CIRCLE_SIZE / 2,
         x,
         scaleX: s,
         scaleY: s,
@@ -762,35 +855,122 @@ function Capsule({
         willChange: "transform, opacity",
       }}
     >
-      {/* ===== Outer glass frame (capsule) ===== */}
+      {/* ===== Breathing glow detrás del activo (radial ámbar+violeta) ===== */}
+      <motion.div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: -80,
+          opacity: isActive,
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      >
+        <motion.div
+          animate={{ opacity: [0.55, 0.95, 0.55], scale: [1, 1.06, 1] }}
+          transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            background:
+              "radial-gradient(circle, rgba(232,196,104,0.35) 0%, rgba(160,40,200,0.20) 40%, transparent 70%)",
+            filter: "blur(28px)",
+          }}
+        />
+      </motion.div>
+
+      {/* ===== Orbital ring (dashed, slow rotation 60s) ===== */}
+      <motion.div
+        aria-hidden
+        animate={{ rotate: 360 }}
+        transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+        style={{
+          position: "absolute",
+          inset: -32,
+          opacity: orbitalOpacity,
+          pointerEvents: "none",
+        }}
+      >
+        <svg viewBox="0 0 400 400" width="100%" height="100%">
+          <circle
+            cx="200"
+            cy="200"
+            r="198"
+            fill="none"
+            stroke="rgba(232,196,104,0.55)"
+            strokeWidth="1"
+            strokeDasharray="2 8"
+          />
+        </svg>
+      </motion.div>
+
+      {/* ===== Scanning arc (60° visible, fast rotation 7s) ===== */}
+      <motion.div
+        aria-hidden
+        animate={{ rotate: 360 }}
+        transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+        style={{
+          position: "absolute",
+          inset: -12,
+          opacity: arcOpacity,
+          pointerEvents: "none",
+        }}
+      >
+        <svg viewBox="0 0 400 400" width="100%" height="100%">
+          <defs>
+            <linearGradient id={`arc-${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(232,196,104,0)" />
+              <stop offset="100%" stopColor={GOLD} />
+            </linearGradient>
+          </defs>
+          <circle
+            cx="200"
+            cy="200"
+            r="196"
+            fill="none"
+            stroke={`url(#arc-${index})`}
+            strokeWidth="2"
+            strokeDasharray="200 1060"
+            strokeLinecap="round"
+          />
+        </svg>
+      </motion.div>
+
+      {/* ===== L-corner markers en el bounding-box del círculo ===== */}
+      <CornerMarker pos="tl" />
+      <CornerMarker pos="tr" />
+      <CornerMarker pos="bl" />
+      <CornerMarker pos="br" />
+
+      {/* ===== Outer glass capsule (CÍRCULO) ===== */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          borderRadius: 28,
+          borderRadius: "50%",
           background:
             "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
-          border: "1px solid rgba(232,196,104,0.35)",
+          border: "1px solid rgba(232,196,104,0.4)",
           boxShadow: `
-            0 0 70px rgba(120,40,180,0.28),
-            0 0 40px rgba(232,196,104,0.18),
+            0 0 70px rgba(120,40,180,0.32),
+            0 0 40px rgba(232,196,104,0.22),
             0 35px 70px rgba(0,0,0,0.55),
-            inset 0 1px 1px rgba(255,255,255,0.18),
+            inset 0 1px 1px rgba(255,255,255,0.2),
             inset 0 -1px 1px rgba(0,0,0,0.45)
           `,
           overflow: "hidden",
         }}
       >
-        {/* ===== Inner white platform (where the shoe lives) ===== */}
+        {/* ===== Inner white platform (shoe stage) ===== */}
         <div
           style={{
             position: "absolute",
-            inset: 12,
-            borderRadius: 20,
+            inset: 10,
+            borderRadius: "50%",
             background:
               "linear-gradient(180deg, #ffffff 0%, #f4f4f0 100%)",
             overflow: "hidden",
-            boxShadow: "inset 0 -25px 50px rgba(0,0,0,0.06)",
+            boxShadow: "inset 0 -22px 45px rgba(0,0,0,0.06)",
           }}
         >
           <video
@@ -805,7 +985,7 @@ function Capsule({
               width: "100%",
               height: "100%",
               objectFit: "contain",
-              transform: "scale(0.86)",
+              transform: "scale(0.85)",
               transformOrigin: "center",
               pointerEvents: "none",
               display: "block",
@@ -816,10 +996,10 @@ function Capsule({
             aria-hidden
             style={{
               position: "absolute",
-              bottom: "11%",
-              left: "22%",
-              right: "22%",
-              height: 12,
+              bottom: "13%",
+              left: "24%",
+              right: "24%",
+              height: 10,
               background:
                 "radial-gradient(ellipse at center, rgba(0,0,0,0.22), transparent 70%)",
               filter: "blur(5px)",
@@ -830,120 +1010,117 @@ function Capsule({
           <motion.div
             aria-hidden
             animate={{ y: ["-30%", "130%"] }}
-            transition={{
-              duration: 7,
-              repeat: Infinity,
-              ease: "linear",
-            }}
+            transition={{ duration: 6.5, repeat: Infinity, ease: "linear" }}
             style={{
               position: "absolute",
               left: 0,
               right: 0,
-              height: 60,
+              height: 50,
               background:
-                "linear-gradient(180deg, transparent, rgba(232,196,104,0.14), transparent)",
+                "linear-gradient(180deg, transparent, rgba(232,196,104,0.18), transparent)",
               pointerEvents: "none",
               opacity: isActive,
             }}
           />
         </div>
+      </div>
 
-        {/* ===== Corner technical markers (siempre visibles, finos) ===== */}
-        <CornerMarker pos="tl" />
-        <CornerMarker pos="tr" />
-        <CornerMarker pos="bl" />
-        <CornerMarker pos="br" />
-
-        {/* ===== Floating spec readouts (solo en activa) ===== */}
-        <motion.div
-          style={{
-            position: "absolute",
-            bottom: 14,
-            left: 18,
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.58rem",
-            letterSpacing: "0.28em",
-            color: GOLD,
-            opacity: isActive,
-            pointerEvents: "none",
-          }}
-        >
-          {spec.code}
-        </motion.div>
-        <motion.div
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 18,
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.58rem",
-            letterSpacing: "0.28em",
-            color: "rgba(232,196,104,0.55)",
-            opacity: isActive,
-            pointerEvents: "none",
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center",
-          }}
-        >
+      {/* ===== Floating data labels con líneas conectoras (solo en activo) =====
+          Posicionadas FUERA del círculo en las 4 esquinas del bounding box,
+          extendidas hacia los costados. Cada label tiene una thin connector
+          line que apunta hacia el círculo (data-viz minimal aesthetic).        */}
+      <FloatingLabel pos="tl" opacity={isActive}>
+        <span style={{ color: "#ff5436", fontSize: "0.5rem" }}>
           <motion.span
             animate={{ opacity: [1, 0.3, 1] }}
             transition={{ duration: 1.4, repeat: Infinity }}
-            style={{ color: "#ff5436" }}
+            style={{ display: "inline-block" }}
           >
             ●
           </motion.span>
-          REC
-        </motion.div>
-        <motion.div
-          style={{
-            position: "absolute",
-            top: 14,
-            left: 18,
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.58rem",
-            letterSpacing: "0.28em",
-            color: GOLD_DIM,
-            opacity: isActive,
-            pointerEvents: "none",
-          }}
-        >
-          {spec.year}
-        </motion.div>
-        <motion.div
-          style={{
-            position: "absolute",
-            bottom: 14,
-            right: 18,
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.58rem",
-            letterSpacing: "0.28em",
-            color: GOLD_DIM,
-            opacity: isActive,
-            pointerEvents: "none",
-          }}
-        >
-          {spec.spec}
-        </motion.div>
-      </div>
+        </span>{" "}
+        REC
+      </FloatingLabel>
+      <FloatingLabel pos="tr" opacity={isActive}>
+        {spec.year}
+      </FloatingLabel>
+      <FloatingLabel pos="bl" opacity={isActive}>
+        {spec.spec}
+      </FloatingLabel>
+      <FloatingLabel pos="br" opacity={isActive}>
+        <span style={{ color: GOLD }}>{spec.code}</span>
+      </FloatingLabel>
+    </motion.div>
+  );
+}
+
+/* ============================================================================
+   FloatingLabel — etiqueta técnica posicionada FUERA del círculo con line
+   connector apuntando al círculo (data-viz callout)
+   ============================================================================ */
+function FloatingLabel({
+  pos,
+  opacity,
+  children,
+}: {
+  pos: "tl" | "tr" | "bl" | "br";
+  opacity: MotionValue<number>;
+  children: React.ReactNode;
+}) {
+  const isLeft = pos === "tl" || pos === "bl";
+  const positions: Record<typeof pos, React.CSSProperties> = {
+    tl: { top: -2, left: -125 },
+    tr: { top: -2, right: -110 },
+    bl: { bottom: -2, left: -125 },
+    br: { bottom: -2, right: -110 },
+  };
+  return (
+    <motion.div
+      style={{
+        position: "absolute",
+        ...positions[pos],
+        display: "flex",
+        alignItems: "center",
+        gap: "0.55rem",
+        opacity,
+        pointerEvents: "none",
+        fontFamily: "var(--font-mono, monospace)",
+        fontSize: "0.58rem",
+        letterSpacing: "0.25em",
+        color: GOLD_DIM,
+        whiteSpace: "nowrap",
+        flexDirection: isLeft ? "row" : "row-reverse",
+      }}
+    >
+      <span>{children}</span>
+      <span
+        style={{
+          width: 28,
+          height: 1,
+          background:
+            "linear-gradient(to right, transparent, rgba(232,196,104,0.6))",
+        }}
+      />
     </motion.div>
   );
 }
 
 function CornerMarker({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
-  const SIZE = 14;
+  const SIZE = 16;
   const base: React.CSSProperties = {
     position: "absolute",
     width: SIZE,
     height: SIZE,
     pointerEvents: "none",
   };
+  /* Los markers se posicionan en los CORNERS del bounding-box del círculo
+     (apenas fuera de su perímetro) — estilo viewfinder / scope. */
   const stroke = `1px solid ${GOLD_DIM}`;
   const styleByPos: Record<typeof pos, React.CSSProperties> = {
-    tl: { top: 8, left: 8, borderTop: stroke, borderLeft: stroke },
-    tr: { top: 8, right: 8, borderTop: stroke, borderRight: stroke },
-    bl: { bottom: 8, left: 8, borderBottom: stroke, borderLeft: stroke },
-    br: { bottom: 8, right: 8, borderBottom: stroke, borderRight: stroke },
+    tl: { top: -2, left: -2, borderTop: stroke, borderLeft: stroke },
+    tr: { top: -2, right: -2, borderTop: stroke, borderRight: stroke },
+    bl: { bottom: -2, left: -2, borderBottom: stroke, borderLeft: stroke },
+    br: { bottom: -2, right: -2, borderBottom: stroke, borderRight: stroke },
   };
   return <div aria-hidden style={{ ...base, ...styleByPos[pos] }} />;
 }
