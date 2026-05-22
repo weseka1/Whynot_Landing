@@ -18,7 +18,10 @@ type RawEntry = { type: "360" | "image"; frames: number };
 type RawIndex = Record<string, RawEntry>;
 const RAW: RawIndex = indexRaw as RawIndex;
 
-/* ---------- Public types ---------- */
+/* ---------- Public types ----------
+   Plain data (sin métodos) para que sea serializable y se pueda pasar de
+   Server Components a Client Components sin errores. Las URLs se calculan
+   con las funciones helper de abajo: frameUrl(entry, n), mainUrl(entry).   */
 export type CatalogEntry = {
   brand: string;          // "JORDAN"
   model: string;          // "3 Retro"  (puede incluir " / " si hay sub-modelo)
@@ -26,19 +29,30 @@ export type CatalogEntry = {
   type: "360" | "image";
   frames: number;
   path: string;           // 'BRAND/Model/Colorway' (tal cual viene del index)
+  encodedPath: string;    // path con cada segmento URL-encoded (cache)
   slug: {
     brand: string;
     model: string;
     colorway: string;
     full: string;         // 'brand/model/colorway' (lowercase, ascii-only)
   };
-  /** Frame n (1-indexed). Solo válido si type === '360' y n <= frames. */
-  frameUrl(n: number): string;
-  /** URL del main.jpg (fallback para items 'image'). */
-  mainUrl(): string;
-  /** Primer frame (póster). Si es 360 → 360_01; si es image → main.jpg. */
-  posterUrl(): string;
 };
+
+/** Frame n (1-indexed). Válido si entry.type === '360' y n <= entry.frames. */
+export function frameUrl(entry: CatalogEntry, n: number): string {
+  const num = String(n).padStart(2, "0");
+  return `${SUPABASE_CATALOG_BASE}/${entry.encodedPath}/360_${num}.jpg`;
+}
+
+/** URL del main.jpg (fallback para items 'image'). */
+export function mainUrl(entry: CatalogEntry): string {
+  return `${SUPABASE_CATALOG_BASE}/${entry.encodedPath}/main.jpg`;
+}
+
+/** Primer frame (póster). Si es 360 → 360_01; si es image → main.jpg. */
+export function posterUrl(entry: CatalogEntry): string {
+  return entry.type === "360" ? frameUrl(entry, 1) : mainUrl(entry);
+}
 
 /* ---------- Helpers ---------- */
 function slugify(s: string): string {
@@ -69,8 +83,6 @@ function buildEntry(path: string, raw: RawEntry): CatalogEntry {
   };
   slug.full = `${slug.brand}/${slug.model}/${slug.colorway}`;
 
-  const urlPath = encodePath(path);
-
   return {
     brand,
     model,
@@ -78,17 +90,8 @@ function buildEntry(path: string, raw: RawEntry): CatalogEntry {
     type: raw.type,
     frames: raw.frames,
     path,
+    encodedPath: encodePath(path),
     slug,
-    frameUrl(n: number) {
-      const num = String(n).padStart(2, "0");
-      return `${SUPABASE_CATALOG_BASE}/${urlPath}/360_${num}.jpg`;
-    },
-    mainUrl() {
-      return `${SUPABASE_CATALOG_BASE}/${urlPath}/main.jpg`;
-    },
-    posterUrl() {
-      return this.type === "360" ? this.frameUrl(1) : this.mainUrl();
-    },
   };
 }
 
