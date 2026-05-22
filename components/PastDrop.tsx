@@ -51,9 +51,7 @@ const VIDEOS = VIDEO_FILES.map((f) => ({
 
 const N = VIDEOS.length;
 const SIZE = 340;        // diámetro base (el del centro, scale 1)
-const SPACING = 420;     // separación horizontal entre centros (px) — bien
-                         // más grande que SIZE para que NO haya impresión
-                         // de anillo/fila pegada; queda aire entre uno y otro
+const SPACING = 360;     // separación horizontal entre centros (px)
 const SIDE_SCALE = 0.62; // tamaño de los vecinos (off = ±1) — bien más chicos
 const OUTER_SCALE = 0.35;// tamaño de los exteriores (off = ±2) — apenas se ven
 const FADE_START = 1.2;  // empieza a desvanecer apenas pasa el lateral visible
@@ -358,7 +356,7 @@ function CarouselItem({
         borderRadius: "50%",
         overflow: "hidden",
         border: "2px solid var(--color-peach-fg)",
-        background: "#0a0a0a",
+        background: "#ffffff",
         boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
         willChange: "transform, opacity",
         transformOrigin: "50% 100%",
