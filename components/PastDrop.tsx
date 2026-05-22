@@ -50,9 +50,9 @@ const VIDEOS = VIDEO_FILES.map((f) => ({
 }));
 
 const N = VIDEOS.length;
-const SIZE = 420;        // diámetro base (el del centro, scale 1) — bien grande estilo DICH
-const SPACING = 340;     // separación horizontal entre centros (px) — MENOR a SIZE → overlap
-const SIDE_SCALE = 0.86; // tamaño de los vecinos (off = ±1) — apenas más chicos
+const SIZE = 320;        // diámetro base (el del centro, scale 1) — matchea proporciones ref DICH
+const SPACING = 275;     // separación horizontal entre centros (px) — overlap suave ~45px (~14%)
+const SIDE_SCALE = 0.85; // tamaño de los vecinos (off = ±1) — apenas más chicos
 const OUTER_SCALE = 0.72;// tamaño de los exteriores (off = ±2)
 const FADE_START = 2;    // los 5 (centro + ±1 + ±2) full opacity
 const FADE_END = 2.9;    // los ±3 entran/salen con fade desde los costados
@@ -374,11 +374,15 @@ function CarouselItem({
         zIndex,
         borderRadius: "50%",
         overflow: "hidden",
-        /* Borde fino oscuro estilo DICH PAST_DROP */
-        border: "2px solid #0a0a0a",
+        /* Marco grueso negro + línea dorada fina por afuera (orden de
+           box-shadow: el primero es el más cercano al elemento). */
+        border: "5px solid #0a0a0a",
         background: "#ffffff",
-        /* Sombra suave que apoya el círculo sobre el fondo lila */
-        boxShadow: "0 14px 30px rgba(0,0,0,0.22)",
+        boxShadow:
+          /* 1) outer gold ring 2px (afuera del borde negro) */
+          "0 0 0 2px #d4a52c," +
+          /* 2) sombra suave de apoyo sobre el fondo lila */
+          "0 14px 30px rgba(0,0,0,0.22)",
         willChange: "transform, opacity",
         transformOrigin: "50% 100%",
       }}
