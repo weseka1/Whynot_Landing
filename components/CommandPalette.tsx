@@ -19,7 +19,7 @@ import {
   mainUrl,
   type CatalogEntry,
 } from "@/data/catalog";
-import { searchEntries } from "@/lib/searchEntries";
+import { searchAll } from "@/lib/searchEntries";
 
 const DARK = "#0a0a14";
 const DARK_DIM = "rgba(10,10,20,0.65)";
@@ -40,9 +40,11 @@ export default function CommandPalette({
   const [selectedIdx, setSelectedIdx] = useState(0);
 
   const all = useMemo(() => getAllEntries(), []);
+  /* searchAll usa el índice Fuse global precomputado del módulo (preguardado
+     al cargar) → respuestas instantáneas a cada keystroke. */
   const results = useMemo(
-    () => searchEntries(all, query).slice(0, MAX_RESULTS),
-    [all, query]
+    () => searchAll(query, MAX_RESULTS),
+    [query]
   );
 
   /* Reset cuando se abre */
