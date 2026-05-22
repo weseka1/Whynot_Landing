@@ -38,6 +38,9 @@ MIAMI_IMPORT.zip
 !public/assets/hero/golden-goose.mp4
 !public/assets/hero/golden-goose-gold.mp4
 !public/assets/hero/golden-goose-silver.mp4
+# excepcion: videos 360 del carrusel de PastDrop
+!public/videos-360/
+!public/videos-360/*.mp4
 
 # Claude config local
 .claude/
