@@ -42,8 +42,20 @@ const BASE_SCALE = 0.50;        // scale base de cada caja (modelos GLB son gran
 const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva isométrica
 const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
-const ORBIT_RATE = 0.30;        // rad/s — las 4 cajas orbitan juntas alrededor del eje central
+const ORBIT_RATE = 0.50;        // rad/s — velocidad de la orbita conjunta de las cajas (un poco mas rapido que el SPIN propio anterior)
 const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
+
+/* ANILLOS DORADOS — sistema tipo Saturno alrededor del centro de la
+   formacion. Cada anillo es un torus que vive en el MISMO plano orbital
+   que las cajas (rotado ORBIT_TILT alrededor de X), asi visualizan la
+   trayectoria. Diferentes radios y opacidades dan textura de "ring system". */
+const RING_DEFS: { radius: number; tube: number; opacity: number }[] = [
+  { radius: 0.78, tube: 0.010, opacity: 0.40 },
+  { radius: 0.95, tube: 0.018, opacity: 0.75 },
+  { radius: 1.05, tube: 0.024, opacity: 0.95 }, // anillo principal — radio == R (orbita de las cajas)
+  { radius: 1.22, tube: 0.014, opacity: 0.65 },
+  { radius: 1.42, tube: 0.008, opacity: 0.35 },
+];
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
@@ -150,9 +162,10 @@ function Box({ src, index, progressRef }: BoxProps) {
     const currentPillar = Math.min(Math.floor(activeIndex), PILLAR_COUNT - 1);
     const tInPillar = activeIndex - currentPillar;
 
-    // Offset lateral en world units (la formación se desplaza al lado del pilar)
-    const offsetMagnitude = state.viewport.width / OFFSET_DIVISOR;
-
+    /* El offset lateral izq/der por pilar lo aplica el grupo padre (lateralRef
+       en BoxStar). Aca la caja solo calcula su posicion en el sistema de la
+       formacion + orbita; el desplazamiento al costado del texto del pilar es
+       compartido con los anillos. */
     let targetX: number, targetY: number, targetZ: number;
 
     /* OPACITY UNIFICADA: función única del activeIndex, no del branch.
@@ -184,20 +197,14 @@ function Box({ src, index, progressRef }: BoxProps) {
 
       const cosT = Math.cos(ORBIT_TILT);
       const sinT = Math.sin(ORBIT_TILT);
-      const rx = ox;
-      const ry = oy * cosT - oz * sinT;
-      const rz = oy * sinT + oz * cosT;
-
-      targetX = rx + pillarSign(index) * offsetMagnitude;
-      targetY = ry + Math.max(scrollSince, 0) * ANCHOR_RISE;
-      targetZ = rz;
+      targetX = ox;
+      targetY = oy * cosT - oz * sinT + Math.max(scrollSince, 0) * ANCHOR_RISE;
+      targetZ = oy * sinT + oz * cosT;
     } else {
       /* ===== Caja ACTIVA (en formación o transicionando) ===== */
       const posNow = posOnPillar(currentPillar, index);
-      const signNow = pillarSign(currentPillar);
 
       let posTarget: [number, number, number];
-      let signTarget: number;
       let transitionT: number;
 
       const isLastPillar = currentPillar === PILLAR_COUNT - 1;
@@ -205,15 +212,12 @@ function Box({ src, index, progressRef }: BoxProps) {
 
       if (isLastPillar) {
         posTarget = posNow;
-        signTarget = signNow;
         transitionT = 0;
       } else if (isLeavingHere) {
         posTarget = posNow;
-        signTarget = signNow;
         transitionT = THREE.MathUtils.smoothstep(tInPillar, TRANSITION_START, TRANSITION_END);
       } else {
         posTarget = posOnPillar(currentPillar + 1, index);
-        signTarget = pillarSign(currentPillar + 1);
         transitionT = THREE.MathUtils.smoothstep(tInPillar, TRANSITION_START, TRANSITION_END);
       }
 
@@ -226,10 +230,7 @@ function Box({ src, index, progressRef }: BoxProps) {
          1) rotacion alrededor del eje Z local (giro en XY) → orbita
          2) rotacion alrededor del eje X (inclinacion ORBIT_TILT) → el plano
             de la orbita se inclina hacia atras, generando perspectiva: las
-            cajas se acercan/alejan en Z mientras giran (no quedan planas
-            frente a la camara).
-         El offset lateral izq/der se suma DESPUES de las rotaciones para que
-         la composicion entera se mueva sin distorsionar la orbita. */
+            cajas se acercan/alejan en Z mientras giran. */
       const orbitAngle = state.clock.elapsedTime * ORBIT_RATE;
       const cosO = Math.cos(orbitAngle);
       const sinO = Math.sin(orbitAngle);
@@ -242,9 +243,6 @@ function Box({ src, index, progressRef }: BoxProps) {
       targetX = ox;
       targetY = oy * cosT - oz * sinT;
       targetZ = oy * sinT + oz * cosT;
-
-      const signLerped = THREE.MathUtils.lerp(signNow, signTarget, transitionT);
-      targetX += signLerped * offsetMagnitude;
     }
 
     /* Lerp temporal: la posición persigue al target con easing exponencial.
@@ -281,19 +279,79 @@ interface BoxStarProps {
   progressRef: React.MutableRefObject<number>;
 }
 
+/* ANILLOS — sistema dorado tipo Saturno alineado al plano orbital de las
+   cajas. Comparten la inclinacion ORBIT_TILT para que las cajas circulen
+   visiblemente "sobre" los anillos. */
+function PlanetRings() {
+  return (
+    <group rotation={[ORBIT_TILT, 0, 0]}>
+      {RING_DEFS.map((d, i) => (
+        <mesh key={i}>
+          <torusGeometry args={[d.radius, d.tube, 16, 128]} />
+          <meshStandardMaterial
+            color="#d9a850"
+            emissive="#8a5a14"
+            emissiveIntensity={0.6}
+            metalness={0.9}
+            roughness={0.35}
+            transparent
+            opacity={d.opacity}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function BoxStar({ progressRef }: BoxStarProps) {
   /* Tilt en X del grupo + offset Y negativo:
-     - tilt inclina la estrella hacia atrás (efecto isométrico).
+     - tilt inclina la formacion hacia atrás (perspectiva isométrica suave).
      - GROUP_Y_OFFSET baja toda la composición para que no se solape
-       con el texto del pilar (que vive en la mitad superior del viewport).
-     La órbita conjunta de las 4 cajas se calcula dentro de cada Box rotando
-     la posición de la formación alrededor del eje central — el offset lateral
-     izq/der NO se ve afectado por la rotación (queda como traslación pura). */
+       con el texto del pilar.
+     `lateralRef` agrupa anillos + cajas y aplica el offset izq/der por pilar
+     una sola vez (asi los anillos siguen a las cajas en cada cambio de pilar). */
+  const lateralRef = useRef<THREE.Group>(null);
+
+  useFrame((state, dt) => {
+    const group = lateralRef.current;
+    if (!group) return;
+
+    const p = progressRef.current;
+    const t = THREE.MathUtils.clamp(
+      (p - PROGRESS_IN) / (PROGRESS_OUT - PROGRESS_IN),
+      0,
+      1
+    );
+    const activeIndex = t * PILLAR_COUNT;
+    const currentPillar = Math.min(Math.floor(activeIndex), PILLAR_COUNT - 1);
+    const tInPillar = activeIndex - currentPillar;
+
+    const signNow = pillarSign(currentPillar);
+    const signNext = currentPillar < PILLAR_COUNT - 1
+      ? pillarSign(currentPillar + 1)
+      : signNow;
+    const transitionT = THREE.MathUtils.smoothstep(
+      tInPillar,
+      TRANSITION_START,
+      TRANSITION_END
+    );
+    const signLerped = THREE.MathUtils.lerp(signNow, signNext, transitionT);
+    const offsetMagnitude = state.viewport.width / OFFSET_DIVISOR;
+    const targetX = signLerped * offsetMagnitude;
+
+    const k = 1 - Math.exp(-dt * POSITION_DAMP);
+    group.position.x += (targetX - group.position.x) * k;
+  });
+
   return (
     <group position={[0, GROUP_Y_OFFSET, 0]} rotation={[GROUP_TILT_X, 0, 0]}>
-      {BOX_SOURCES.map((src, i) => (
-        <Box key={src} src={src} index={i} progressRef={progressRef} />
-      ))}
+      <group ref={lateralRef}>
+        <PlanetRings />
+        {BOX_SOURCES.map((src, i) => (
+          <Box key={src} src={src} index={i} progressRef={progressRef} />
+        ))}
+      </group>
     </group>
   );
 }
