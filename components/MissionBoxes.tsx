@@ -54,13 +54,13 @@ const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi h
    por eso se ve eliptico y no como una linea fina. El par cruza en el
    centro formando una X clara, sin animacion (un torus es simetrico
    sobre su normal asi que cualquier rotacion global se ve rara). */
-const RING_RADIUS = 2.20;                      // ajustado para que los anillos abracen la formacion de cajas de cerca (compacto) — diamante interior de la X = ±1.84 vs cajas ±1.43
+const RING_RADIUS = 2.20;                      // longitud de cada brazo de la X (desde el centro). Cajas a radio ±1.05 + tamaño visual ~0.3 → 2.20 las contiene comodas
 const RING_TUBE = 0.024;
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
-const RING_SLOPE = 1.0;                        // pendiente del eje mayor en pantalla. 1.0 = ejes a 45° → X perpendicular (90° entre brazos), imita la X roja de referencia
-const RING_AXIS_ANGLE = Math.atan(RING_SLOPE); // = π/4 (45°)
-const RING_DEPTH_TILT = 0.75;                  // rad (~43°) — tilt frontal: cuanto se "abre" cada anillo en profundidad. Menos plano = "diamante interior" mas grande → cajas mejor encerradas
+const RING_SLOPE = 1.0;                        // pendiente de cada linea de la X en pantalla. 1.0 = lineas a 45° (X perpendicular como la referencia roja)
+const RING_AXIS_ANGLE = Math.atan(RING_SLOPE); // = π/4 (45°) — angulo de cada brazo respecto al horizontal
+const RING_DEPTH_TILT = Math.PI / 2;           // π/2 = anillos EDGE-ON respecto a la camara → se proyectan como lineas rectas (no como elipses). La X queda dibujada plana en el plano XY de pantalla. Los toros tienen su grosor (tubo) → las "lineas" tienen ancho RING_TUBE pero no se ven como ovalos
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
@@ -284,17 +284,18 @@ interface BoxStarProps {
   progressRef: React.MutableRefObject<number>;
 }
 
-/* ANILLOS — dos toros dorados en pose tipo atomo, fijos.
-   Construccion (cada anillo):
-   1) Mesh local rotation [RING_DEPTH_TILT, 0, 0]:
-      el toro arranca en plano XY (frente a camara, circulo completo).
-      Una rotacion sobre X lo "tumba" hacia adelante, convirtiendolo en
-      un ellipse desde la camara — eje mayor sobre X local, eje menor
-      reducido por cos(RING_DEPTH_TILT).
-   2) Grupo exterior rotation [0, 0, ±RING_AXIS_ANGLE]:
-      rota el ellipse alrededor del eje Z del mundo (perpendicular a la
-      pantalla), inclinandolo. El eje mayor del ellipse pasa de X a
-      (cos α, sin α, 0) → en pantalla queda con pendiente tan(α) = ±0.5. */
+/* ANILLOS — dos toros dorados que dibujan una X plana en el plano XY de
+   la camara. Construccion (cada anillo):
+   1) Mesh local rotation [π/2, 0, 0] (RING_DEPTH_TILT = π/2):
+      rota el toro 90° sobre X → su plano pasa de XY (frente a camara)
+      a XZ (perpendicular a camara, edge-on). Desde la camara se ve
+      como una linea horizontal en pantalla (el alto del toro va hacia
+      adentro/atras en Z, no se ve).
+   2) Grupo exterior rotation [0, 0, ±RING_AXIS_ANGLE] (= ±π/4):
+      rota la linea alrededor del eje Z del mundo (perpendicular a la
+      pantalla). La linea horizontal pasa a tener pendiente tan(α) = ±1.
+      Las dos lineas se cruzan en el origen formando una X perpendicular
+      como la X roja de referencia. */
 function PlanetRings() {
   return (
     <group>
