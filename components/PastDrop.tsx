@@ -316,8 +316,8 @@ export default function PastDrop() {
       style={{
         position: "relative",
         minHeight: "260vh",
-        background: "#050510",
-        color: "#e9e2d4",
+        background: "#e0a8db", // lila DICH PAST_DROP
+        color: "#0a0a14",
         overflow: "hidden",
       }}
     >
@@ -335,12 +335,15 @@ export default function PastDrop() {
         <BackgroundGrid />
         <BackgroundParticles />
 
-        {/* ----- GIANT BRAND TEXT BEHIND ----- */}
+        {/* ----- GIANT BRAND TEXT BEHIND -----
+             Sobre lila: italic oscuro en lugar de white-on-dark. Sin
+             mix-blend (que en bg claro lo borraría). Opacity un poco más
+             alta para que se lea bien la marca activa.                    */}
         <AnimatePresence mode="wait">
           <motion.div
             key={active.brand}
             initial={{ opacity: 0, y: 28, filter: "blur(28px)" }}
-            animate={{ opacity: 0.08, y: 0, filter: "blur(0px)" }}
+            animate={{ opacity: 0.14, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: -28, filter: "blur(28px)" }}
             transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
             style={{
@@ -353,12 +356,11 @@ export default function PastDrop() {
               fontSize: "clamp(6rem, 20vw, 20rem)",
               letterSpacing: "-0.04em",
               lineHeight: 0.85,
-              color: "#fff",
+              color: "#0a0a14",
               pointerEvents: "none",
               whiteSpace: "nowrap",
               zIndex: 1,
               userSelect: "none",
-              mixBlendMode: "screen",
             }}
           >
             {active.brand}
@@ -383,7 +385,7 @@ export default function PastDrop() {
           <div
             className="system-text"
             style={{
-              color: GOLD_DIM,
+              color: "rgba(10,10,20,0.65)",
               marginBottom: "0.6rem",
               fontSize: "0.72rem",
               letterSpacing: "0.3em",
@@ -397,9 +399,8 @@ export default function PastDrop() {
               fontSize: "clamp(2.2rem, 5.5vw, 4.5rem)",
               lineHeight: 0.95,
               letterSpacing: "-0.02em",
-              color: "#fff",
+              color: "#0a0a14",
               margin: 0,
-              textShadow: "0 4px 30px rgba(0,0,0,0.7)",
             }}
           >
             {site.pastDrop.title}
@@ -509,10 +510,10 @@ function ProgressTicks({
               width: 2,
               height: i === activeIndex ? 16 : 6,
               background:
-                i === activeIndex ? GOLD : "rgba(232,196,104,0.28)",
+                i === activeIndex ? "#0a0a14" : "rgba(10,10,20,0.32)",
               boxShadow:
                 i === activeIndex
-                  ? "0 0 8px rgba(232,196,104,0.55)"
+                  ? "0 0 8px rgba(10,10,20,0.35)"
                   : "none",
               transition: "height 0.4s cubic-bezier(0.16,1,0.3,1), background 0.4s, box-shadow 0.4s",
             }}
@@ -527,7 +528,7 @@ function ProgressTicks({
             x: caretX,
             width: 8,
             height: 5,
-            borderTop: `1px solid ${GOLD}`,
+            borderTop: `1px solid #0a0a14`,
             borderLeft: "4px solid transparent",
             borderRight: "4px solid transparent",
             background: "transparent",
@@ -543,24 +544,12 @@ function ProgressTicks({
    BACKGROUND LAYERS
    ============================================================================ */
 function BackgroundAurora() {
+  /* Atmósferas suaves para el lila — pastel highlights y un magenta-rosado
+     tenue que da profundidad sin oscurecer el fondo. Sin vignette (oscurecía
+     los bordes del lila); sin cosmos dark. */
   return (
     <>
-      {/* Atmospheric base — multi-stop radial cosmos */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: `
-            radial-gradient(ellipse 80% 60% at 18% 28%, rgba(120,40,180,0.42), transparent 60%),
-            radial-gradient(ellipse 70% 50% at 82% 72%, rgba(220,30,120,0.32), transparent 60%),
-            radial-gradient(ellipse 60% 50% at 50% 50%, rgba(40,15,80,0.55), transparent 70%),
-            linear-gradient(180deg, #0a0a14 0%, #1a0b2a 50%, #050510 100%)
-          `,
-          zIndex: 0,
-        }}
-      />
-      {/* Slow drifting amber aurora */}
+      {/* Pastel highlights drift */}
       <motion.div
         aria-hidden
         animate={{ x: [-40, 40, -40], y: [-25, 25, -25] }}
@@ -568,14 +557,15 @@ function BackgroundAurora() {
         style={{
           position: "absolute",
           inset: -80,
-          background: "radial-gradient(circle 700px at 30% 40%, rgba(232,196,104,0.22), transparent 60%)",
+          background:
+            "radial-gradient(circle 700px at 30% 40%, rgba(255,240,255,0.28), transparent 60%)",
           filter: "blur(50px)",
           mixBlendMode: "screen",
           pointerEvents: "none",
           zIndex: 0,
         }}
       />
-      {/* Magenta accent drift (counter direction) */}
+      {/* Magenta-rosado accent drift */}
       <motion.div
         aria-hidden
         animate={{ x: [30, -30, 30], y: [20, -20, 20] }}
@@ -583,20 +573,10 @@ function BackgroundAurora() {
         style={{
           position: "absolute",
           inset: -50,
-          background: "radial-gradient(circle 500px at 70% 60%, rgba(220,30,120,0.20), transparent 65%)",
-          filter: "blur(60px)",
-          mixBlendMode: "screen",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
-      {/* Vignette */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.6) 100%)",
+          background:
+            "radial-gradient(circle 500px at 70% 60%, rgba(220,140,200,0.32), transparent 65%)",
+          filter: "blur(70px)",
+          mixBlendMode: "multiply",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -606,21 +586,16 @@ function BackgroundAurora() {
 }
 
 function BackgroundGrid() {
+  /* Dots oscuros sobre el lila (estilo DICH PAST_DROP). Patrón regular. */
   return (
     <div
       aria-hidden
       style={{
         position: "absolute",
         inset: 0,
-        backgroundImage: `
-          linear-gradient(rgba(232,196,104,0.05) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(232,196,104,0.05) 1px, transparent 1px)
-        `,
-        backgroundSize: "52px 52px",
-        WebkitMaskImage:
-          "radial-gradient(circle at center, black 22%, transparent 78%)",
-        maskImage:
-          "radial-gradient(circle at center, black 22%, transparent 78%)",
+        backgroundImage:
+          "radial-gradient(rgba(10,10,20,0.18) 1px, transparent 1px)",
+        backgroundSize: "26px 26px",
         pointerEvents: "none",
         zIndex: 0,
       }}
@@ -659,8 +634,8 @@ function BackgroundParticles() {
             width: p.size,
             height: p.size,
             borderRadius: "50%",
-            background: "rgba(232,196,104,0.7)",
-            boxShadow: "0 0 8px rgba(232,196,104,0.5)",
+            background: "rgba(10,10,20,0.6)",
+            boxShadow: "0 0 6px rgba(10,10,20,0.35)",
             pointerEvents: "none",
             zIndex: 1,
           }}
@@ -686,7 +661,7 @@ function HudTop({ active, activeIndex }: { active: Spec; activeIndex: number }) 
         justifyContent: "space-between",
         alignItems: "center",
         zIndex: 10,
-        color: GOLD_DIM,
+        color: "rgba(10,10,20,0.7)",
         fontFamily: "var(--font-mono, monospace)",
         fontSize: "0.7rem",
         letterSpacing: "0.22em",
@@ -708,13 +683,13 @@ function HudTop({ active, activeIndex }: { active: Spec; activeIndex: number }) 
         </motion.span>
         <span>D://DATA_CORE / ARCHIVE</span>
         <span style={{ opacity: 0.4 }}>•</span>
-        <span style={{ color: GOLD }}>
+        <span style={{ color: "#0a0a14", fontWeight: 600 }}>
           SPEC_{String(activeIndex + 1).padStart(3, "0")}
         </span>
       </div>
       <div style={{ display: "flex", gap: "1.2rem", alignItems: "center" }}>
-        <span style={{ opacity: 0.5 }}>{active.spec}</span>
-        <span style={{ color: GOLD }}>
+        <span style={{ opacity: 0.55 }}>{active.spec}</span>
+        <span style={{ color: "#0a0a14", fontWeight: 600 }}>
           [{String(activeIndex + 1).padStart(2, "0")}/{String(N).padStart(2, "0")}]
         </span>
       </div>
@@ -751,7 +726,7 @@ function HudBottom({
       }}
     >
       <div style={{ display: "flex", gap: "0.8rem", alignItems: "center" }}>
-        <span style={{ color: GOLD }}>▸</span>
+        <span style={{ color: "#0a0a14" }}>▸</span>
         <AnimatePresence mode="wait">
           <motion.span
             key={active.label}
@@ -759,13 +734,13 @@ function HudBottom({
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
             transition={{ duration: 0.45 }}
-            style={{ color: "#e9e2d4", letterSpacing: "0.2em" }}
+            style={{ color: "#0a0a14", letterSpacing: "0.2em", fontWeight: 600 }}
           >
             {active.label}
           </motion.span>
         </AnimatePresence>
       </div>
-      <div style={{ display: "flex", gap: "1rem", color: GOLD_DIM }}>
+      <div style={{ display: "flex", gap: "1rem", color: "rgba(10,10,20,0.65)" }}>
         <motion.span>{coordX}</motion.span>
         <span>//</span>
         <motion.span>{coordY}</motion.span>
@@ -808,7 +783,7 @@ function MetadataPanel({
           width: 1,
           height: 32,
           background:
-            "linear-gradient(to bottom, transparent, rgba(232,196,104,0.7))",
+            "linear-gradient(to bottom, transparent, rgba(10,10,20,0.8))",
           marginBottom: "1rem",
         }}
       />
@@ -838,13 +813,13 @@ function MetadataPanel({
               <span
                 style={{
                   width: 92,
-                  color: GOLD_DIM,
+                  color: "rgba(10,10,20,0.55)",
                   whiteSpace: "nowrap",
                 }}
               >
                 {r.label}
               </span>
-              <span style={{ color: "#e9e2d4" }}>{r.value}</span>
+              <span style={{ color: "#0a0a14", fontWeight: 600 }}>{r.value}</span>
             </div>
           ))}
           <div
@@ -853,11 +828,11 @@ function MetadataPanel({
               gap: "0.8rem",
               marginTop: "1rem",
               paddingTop: "0.8rem",
-              borderTop: "1px solid rgba(232,196,104,0.18)",
+              borderTop: "1px solid rgba(10,10,20,0.18)",
             }}
           >
-            <span style={{ width: 92, color: GOLD_DIM }}>LUM</span>
-            <motion.span style={{ color: GOLD }}>{luminosity}</motion.span>
+            <span style={{ width: 92, color: "rgba(10,10,20,0.55)" }}>LUM</span>
+            <motion.span style={{ color: "#0a0a14", fontWeight: 600 }}>{luminosity}</motion.span>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -939,7 +914,8 @@ function Capsule({
         willChange: "transform, opacity",
       }}
     >
-      {/* ===== Breathing glow detrás del activo (radial ámbar+violeta) ===== */}
+      {/* ===== Breathing glow detrás del activo — pastel rosado-blanco
+              que apoya al activo sobre el lila (en lugar de cosmic dark). */}
       <motion.div
         aria-hidden
         style={{
@@ -957,8 +933,8 @@ function Capsule({
             width: "100%",
             height: "100%",
             background:
-              "radial-gradient(circle, rgba(232,196,104,0.35) 0%, rgba(160,40,200,0.20) 40%, transparent 70%)",
-            filter: "blur(28px)",
+              "radial-gradient(circle, rgba(255,250,240,0.55) 0%, rgba(244,220,63,0.18) 40%, transparent 70%)",
+            filter: "blur(30px)",
           }}
         />
       </motion.div>
@@ -981,14 +957,14 @@ function Capsule({
             cy="200"
             r="198"
             fill="none"
-            stroke="rgba(232,196,104,0.55)"
+            stroke="rgba(10,10,20,0.6)"
             strokeWidth="1"
             strokeDasharray="2 8"
           />
         </svg>
       </motion.div>
 
-      {/* ===== Scanning arc (60° visible, fast rotation 7s) ===== */}
+      {/* ===== Scanning arc (60° visible, fast rotation 7s) — yellow DICH accent ===== */}
       <motion.div
         aria-hidden
         animate={{ rotate: 360 }}
@@ -1003,8 +979,8 @@ function Capsule({
         <svg viewBox="0 0 400 400" width="100%" height="100%">
           <defs>
             <linearGradient id={`arc-${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(232,196,104,0)" />
-              <stop offset="100%" stopColor={GOLD} />
+              <stop offset="0%" stopColor="rgba(244,220,63,0)" />
+              <stop offset="100%" stopColor="#f4dc3f" />
             </linearGradient>
           </defs>
           <circle
@@ -1026,21 +1002,19 @@ function Capsule({
       <CornerMarker pos="bl" />
       <CornerMarker pos="br" />
 
-      {/* ===== Outer glass capsule (CÍRCULO) ===== */}
+      {/* ===== Outer glass capsule (CÍRCULO) — adaptado para lila ===== */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           borderRadius: "50%",
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
-          border: "1px solid rgba(232,196,104,0.4)",
+          background: "#ffffff",
+          border: "2px solid #0a0a14",
           boxShadow: `
-            0 0 70px rgba(120,40,180,0.32),
-            0 0 40px rgba(232,196,104,0.22),
-            0 35px 70px rgba(0,0,0,0.55),
-            inset 0 1px 1px rgba(255,255,255,0.2),
-            inset 0 -1px 1px rgba(0,0,0,0.45)
+            0 35px 70px rgba(0,0,0,0.28),
+            0 0 30px rgba(10,10,20,0.18),
+            inset 0 1px 1px rgba(255,255,255,0.7),
+            inset 0 -2px 4px rgba(0,0,0,0.08)
           `,
           overflow: "hidden",
         }}
@@ -1090,7 +1064,7 @@ function Capsule({
               pointerEvents: "none",
             }}
           />
-          {/* Scan line vertical que recorre el activo */}
+          {/* Scan line vertical que recorre el activo (tinte oscuro suave) */}
           <motion.div
             aria-hidden
             animate={{ y: ["-30%", "130%"] }}
@@ -1101,7 +1075,7 @@ function Capsule({
               right: 0,
               height: 50,
               background:
-                "linear-gradient(180deg, transparent, rgba(232,196,104,0.18), transparent)",
+                "linear-gradient(180deg, transparent, rgba(10,10,20,0.06), transparent)",
               pointerEvents: "none",
               opacity: isActive,
             }}
@@ -1132,7 +1106,7 @@ function Capsule({
         {spec.spec}
       </FloatingLabel>
       <FloatingLabel pos="br" opacity={isActive}>
-        <span style={{ color: GOLD }}>{spec.code}</span>
+        <span style={{ color: "#0a0a14", fontWeight: 600 }}>{spec.code}</span>
       </FloatingLabel>
 
       {/* ===== ENTER prompt (debajo del activo, indica clickeable) ===== */}
@@ -1149,8 +1123,8 @@ function Capsule({
             fontFamily: "var(--font-mono, monospace)",
             fontSize: "0.62rem",
             letterSpacing: "0.4em",
-            color: GOLD,
-            textShadow: "0 0 14px rgba(232,196,104,0.5)",
+            color: "#0a0a14",
+            fontWeight: 600,
             whiteSpace: "nowrap",
             display: "flex",
             gap: "0.6rem",
@@ -1203,7 +1177,7 @@ function FloatingLabel({
         fontFamily: "var(--font-mono, monospace)",
         fontSize: "0.58rem",
         letterSpacing: "0.25em",
-        color: GOLD_DIM,
+        color: "rgba(10,10,20,0.75)",
         whiteSpace: "nowrap",
         flexDirection: isLeft ? "row" : "row-reverse",
       }}
@@ -1214,7 +1188,7 @@ function FloatingLabel({
           width: 28,
           height: 1,
           background:
-            "linear-gradient(to right, transparent, rgba(232,196,104,0.6))",
+            "linear-gradient(to right, transparent, rgba(10,10,20,0.7))",
         }}
       />
     </motion.div>
@@ -1229,9 +1203,8 @@ function CornerMarker({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
     height: SIZE,
     pointerEvents: "none",
   };
-  /* Los markers se posicionan en los CORNERS del bounding-box del círculo
-     (apenas fuera de su perímetro) — estilo viewfinder / scope. */
-  const stroke = `1px solid ${GOLD_DIM}`;
+  /* Markers en CORNERS del bounding-box (estilo viewfinder/scope), oscuros. */
+  const stroke = `1px solid rgba(10,10,20,0.65)`;
   const styleByPos: Record<typeof pos, React.CSSProperties> = {
     tl: { top: -2, left: -2, borderTop: stroke, borderLeft: stroke },
     tr: { top: -2, right: -2, borderTop: stroke, borderRight: stroke },
@@ -1274,14 +1247,14 @@ function NavArrow({
         height: 60,
         borderRadius: "50%",
         background:
-          "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-        border: "1px solid rgba(232,196,104,0.4)",
+          "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.4) 100%)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        border: "1.5px solid #0a0a14",
         boxShadow:
-          "0 0 30px rgba(232,196,104,0.2), 0 12px 30px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(0,0,0,0.4)",
+          "0 0 30px rgba(255,255,255,0.4), 0 12px 26px rgba(0,0,0,0.28), inset 0 1px 1px rgba(255,255,255,0.85), inset 0 -2px 4px rgba(0,0,0,0.08)",
         cursor: "pointer",
-        color: GOLD,
+        color: "#0a0a14",
         display: "grid",
         placeItems: "center",
         zIndex: 8,
@@ -1295,14 +1268,11 @@ function NavArrow({
         viewBox="0 0 24 24"
         fill="none"
         aria-hidden
-        style={{
-          filter: "drop-shadow(0 0 6px rgba(232,196,104,0.4))",
-        }}
       >
         <path
           d={isLeft ? "M15 5 L8 12 L15 19" : "M9 5 L16 12 L9 19"}
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth="1.7"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -1318,9 +1288,10 @@ function NavArrow({
           fontFamily: "var(--font-mono, monospace)",
           fontSize: "0.55rem",
           letterSpacing: "0.35em",
-          color: GOLD_DIM,
+          color: "rgba(10,10,20,0.7)",
           whiteSpace: "nowrap",
           pointerEvents: "none",
+          fontWeight: 600,
         }}
       >
         {isLeft ? "PREV" : "NEXT"}
