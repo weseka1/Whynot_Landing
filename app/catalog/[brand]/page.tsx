@@ -1,21 +1,20 @@
 /* ============================================================================
    BRAND SHOWROOM — /catalog/[brand]
    ----------------------------------------------------------------------------
-   Catálogo COMPLETO de una marca: todos los modelos con todos sus colorways.
-   Cada colorway click → /catalog/[brand]/[model]/[colorway] (visor 360).
+   Catálogo completo de una marca, PAGINADO (24 cards = 3 col × 8 rows).
+   Estado de paginación en URL hash → sobrevive back-button del browser.
    Server component. Pre-genera 1 ruta por brand-slug en build.
    ============================================================================ */
 
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import {
   brandNameFromSlug,
   getEntriesByBrandSlug,
-  groupByModel,
   getAllBrandSlugs,
 } from "@/data/catalog";
 import BrandHero from "@/components/BrandHero";
-import ColorwayCard from "@/components/ColorwayCard";
+import PaginatedColorways from "@/components/PaginatedColorways";
+import BackButton from "@/components/BackButton";
 
 type Params = {
   params: Promise<{ brand: string }>;
@@ -44,11 +43,15 @@ export default async function BrandPage({ params }: Params) {
   if (!brandName) notFound();
 
   const entries = getEntriesByBrandSlug(brandSlug);
-  const models = groupByModel(entries);
+  /* Orden estable para paginación: por modelo, luego por colorway. */
+  const sorted = [...entries].sort((a, b) => {
+    const m = a.model.localeCompare(b.model);
+    return m !== 0 ? m : a.colorway.localeCompare(b.colorway);
+  });
 
-  const totalColorways = entries.length;
-  const total360 = entries.filter((e) => e.type === "360").length;
-  const totalModels = models.length;
+  const total = sorted.length;
+  const total360 = sorted.filter((e) => e.type === "360").length;
+  const totalModels = new Set(sorted.map((e) => e.slug.model)).size;
 
   return (
     <main
@@ -97,41 +100,30 @@ export default async function BrandPage({ params }: Params) {
           <span style={{ opacity: 0.4 }}>•</span>
           <span style={{ color: GOLD }}>{brandName}</span>
         </div>
-        <Link
-          href="/#section-past-drop"
-          style={{
-            color: GOLD_DIM,
-            textDecoration: "none",
-          }}
-        >
-          ← BACK TO ARCHIVE
-        </Link>
+        <BackButton
+          fallbackHref="/#section-past-drop"
+          label="← BACK TO ARCHIVE"
+          style={{ color: GOLD_DIM }}
+        />
       </div>
 
       {/* ============ BRAND HERO ============ */}
       <BrandHero
         brandName={brandName}
         totalModels={totalModels}
-        totalColorways={totalColorways}
+        totalColorways={total}
         total360={total360}
       />
 
-      {/* ============ MODELS GROUPS ============ */}
+      {/* ============ PAGINATED GRID ============ */}
       <div
         style={{
           position: "relative",
           zIndex: 5,
-          padding: "1rem 2rem 6rem",
+          padding: "1rem 2rem 4rem",
         }}
       >
-        {models.map((mg) => (
-          <ModelSection
-            key={mg.modelSlug}
-            brandSlug={brandSlug}
-            modelName={mg.model}
-            colorways={mg.colorways}
-          />
-        ))}
+        <PaginatedColorways entries={sorted} brandSlug={brandSlug} />
       </div>
 
       {/* ============ BOTTOM HUD ============ */}
@@ -158,7 +150,7 @@ export default async function BrandPage({ params }: Params) {
           <span>BA1RES_FOOTWEAR / ARCHIVE_v01</span>
           <span style={{ opacity: 0.4 }}>//</span>
           <span style={{ color: GOLD }}>
-            {totalColorways} SPECIMENS · {total360} × 360°
+            {total} SPECIMENS · {total360} × 360°
           </span>
         </div>
       </div>
@@ -213,92 +205,5 @@ function BackgroundLayers() {
         }}
       />
     </>
-  );
-}
-
-function ModelSection({
-  brandSlug,
-  modelName,
-  colorways,
-}: {
-  brandSlug: string;
-  modelName: string;
-  colorways: ReturnType<typeof groupByModel>[number]["colorways"];
-}) {
-  const total = colorways.length;
-  const has360 = colorways.filter((c) => c.type === "360").length;
-  return (
-    <section
-      style={{
-        marginBottom: "5rem",
-        position: "relative",
-      }}
-    >
-      {/* Model header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          marginBottom: "1.8rem",
-          paddingBottom: "0.8rem",
-          borderBottom: "1px solid rgba(232,196,104,0.18)",
-        }}
-      >
-        <div>
-          <div
-            className="system-text"
-            style={{
-              color: GOLD_DIM,
-              fontSize: "0.62rem",
-              letterSpacing: "0.3em",
-              marginBottom: "0.4rem",
-            }}
-          >
-            MODEL · {String(total).padStart(2, "0")} COLORWAYS
-          </div>
-          <h2
-            className="display"
-            style={{
-              fontSize: "clamp(1.8rem, 3.5vw, 3rem)",
-              lineHeight: 1,
-              letterSpacing: "-0.01em",
-              color: "#fff",
-              margin: 0,
-            }}
-          >
-            {modelName}
-          </h2>
-        </div>
-        <div
-          style={{
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.62rem",
-            letterSpacing: "0.25em",
-            color: GOLD,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {has360 > 0 ? `${has360} × 360°` : "STATIC"}
-        </div>
-      </div>
-
-      {/* Colorways grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: "1.4rem",
-        }}
-      >
-        {colorways.map((entry) => (
-          <ColorwayCard
-            key={entry.path}
-            entry={entry}
-            href={`/catalog/${brandSlug}/${entry.slug.model}/${entry.slug.colorway}`}
-          />
-        ))}
-      </div>
-    </section>
   );
 }

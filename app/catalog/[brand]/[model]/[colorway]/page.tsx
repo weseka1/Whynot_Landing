@@ -6,9 +6,9 @@
    ============================================================================ */
 
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { getAllEntries, getEntryBySlug } from "@/data/catalog";
 import Frame360Viewer from "@/components/Frame360Viewer";
+import BackButton from "@/components/BackButton";
 
 type Params = {
   params: Promise<{
@@ -123,16 +123,11 @@ export default async function CatalogProductPage({ params }: Params) {
           <span style={{ opacity: 0.4 }}>/</span>
           <span style={{ color: "#e9e2d4" }}>{entry.model}</span>
         </div>
-        <Link
-          href="/#section-past-drop"
-          style={{
-            color: GOLD_DIM,
-            textDecoration: "none",
-            transition: "color 0.2s",
-          }}
-        >
-          ← BACK TO ARCHIVE
-        </Link>
+        <BackButton
+          fallbackHref={`/catalog/${entry.slug.brand}`}
+          label={`← BACK TO ${entry.brand}`}
+          style={{ color: GOLD_DIM }}
+        />
       </div>
 
       {/* ============ STAGE ============ */}
