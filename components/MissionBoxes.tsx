@@ -45,19 +45,22 @@ const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja mu
 const ORBIT_RATE = 0.50;        // rad/s — velocidad de la orbita conjunta de las cajas (un poco mas rapido que el SPIN propio anterior)
 const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
 
-/* ANILLOS DORADOS — dos orbitas cruzadas tipo atomo, estaticas en pose
-   tipo simbolo atomico. Comparten el eje X como diametro comun y son
-   perpendiculares entre si: una vive en el plano de la orbita de las cajas
-   (ORBIT_TILT) y la otra en el plano perpendicular (ORBIT_TILT - π/2).
-   Estan a radio MAYOR que la orbita de las cajas (R=1.05) para no
-   atravesarlas. NO rotan globalmente — un torus es rotacionalmente
-   simetrico sobre su normal, asi que un "spin" propio seria invisible; y
-   cualquier otra rotacion hace que el par se mueva raro. La sensacion de
-   giro la aportan las cajas que orbitan dentro de los anillos. */
+/* ANILLOS DORADOS — dos orbitas cruzadas tipo atomo, en pose estatica.
+   Vista desde el frente (plano X,Y de la camara), los ejes mayores de los
+   anillos quedan sobre las rectas:
+       y = +(1/2) x   → anillo 1 (sube a la derecha)
+       y = -(1/2) x   → anillo 2 (baja a la derecha)
+   Cada anillo se "despliega" sobre Z (inclinacion frontal RING_DEPTH_TILT),
+   por eso se ve eliptico y no como una linea fina. El par cruza en el
+   centro formando una X clara, sin animacion (un torus es simetrico
+   sobre su normal asi que cualquier rotacion global se ve rara). */
 const RING_RADIUS = 2.40;
 const RING_TUBE = 0.028;
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
+const RING_SLOPE = 0.5;
+const RING_AXIS_ANGLE = Math.atan(RING_SLOPE); // ~26.57° — angulo del eje visible en pantalla
+const RING_DEPTH_TILT = 1.05;                  // rad (~60°) — tilt frontal: aspecto del ellipse visible (mayor = mas plano, menor = mas redondo)
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
@@ -281,47 +284,52 @@ interface BoxStarProps {
   progressRef: React.MutableRefObject<number>;
 }
 
-/* ANILLOS — dos orbitas cruzadas perpendiculares (tipo atomo) compartiendo
-   el eje X como diametro comun. Pose estatica (no rotan): un torus es
-   simetrico sobre su normal y cualquier rotacion global cambia la pose
-   visualmente — se ve raro. La sensacion de movimiento la dan las cajas
-   orbitando dentro de los anillos.
-
-   Geometria: el toro por defecto vive en el plano XY (normal Z).
-   - Anillo 1: rotacion X = ORBIT_TILT → normal (0, -sin T, cos T).
-     Coincide con el plano de la orbita de las cajas.
-   - Anillo 2: rotacion X = ORBIT_TILT - π/2 → normal (0, cos T, sin T).
-     Perpendicular al anillo 1 (producto escalar = 0). Sus planos comparten
-     el eje X, asi que se cruzan en (±radio, 0, 0) — vertices de la cruz. */
+/* ANILLOS — dos toros dorados en pose tipo atomo, fijos.
+   Construccion (cada anillo):
+   1) Mesh local rotation [RING_DEPTH_TILT, 0, 0]:
+      el toro arranca en plano XY (frente a camara, circulo completo).
+      Una rotacion sobre X lo "tumba" hacia adelante, convirtiendolo en
+      un ellipse desde la camara — eje mayor sobre X local, eje menor
+      reducido por cos(RING_DEPTH_TILT).
+   2) Grupo exterior rotation [0, 0, ±RING_AXIS_ANGLE]:
+      rota el ellipse alrededor del eje Z del mundo (perpendicular a la
+      pantalla), inclinandolo. El eje mayor del ellipse pasa de X a
+      (cos α, sin α, 0) → en pantalla queda con pendiente tan(α) = ±0.5. */
 function PlanetRings() {
   return (
     <group>
-      <mesh rotation={[ORBIT_TILT, 0, 0]}>
-        <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
-        <meshStandardMaterial
-          color={RING_COLOR}
-          emissive={RING_EMISSIVE}
-          emissiveIntensity={0.65}
-          metalness={0.9}
-          roughness={0.35}
-          transparent
-          opacity={0.92}
-          depthWrite={false}
-        />
-      </mesh>
-      <mesh rotation={[ORBIT_TILT - Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
-        <meshStandardMaterial
-          color={RING_COLOR}
-          emissive={RING_EMISSIVE}
-          emissiveIntensity={0.65}
-          metalness={0.9}
-          roughness={0.35}
-          transparent
-          opacity={0.92}
-          depthWrite={false}
-        />
-      </mesh>
+      {/* Anillo 1 — eje visible: y = +(1/2) x */}
+      <group rotation={[0, 0, RING_AXIS_ANGLE]}>
+        <mesh rotation={[RING_DEPTH_TILT, 0, 0]}>
+          <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
+          <meshStandardMaterial
+            color={RING_COLOR}
+            emissive={RING_EMISSIVE}
+            emissiveIntensity={0.65}
+            metalness={0.9}
+            roughness={0.35}
+            transparent
+            opacity={0.92}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
+      {/* Anillo 2 — eje visible: y = -(1/2) x */}
+      <group rotation={[0, 0, -RING_AXIS_ANGLE]}>
+        <mesh rotation={[RING_DEPTH_TILT, 0, 0]}>
+          <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
+          <meshStandardMaterial
+            color={RING_COLOR}
+            emissive={RING_EMISSIVE}
+            emissiveIntensity={0.65}
+            metalness={0.9}
+            roughness={0.35}
+            transparent
+            opacity={0.92}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
     </group>
   );
 }
