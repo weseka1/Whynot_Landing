@@ -45,26 +45,27 @@ const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja mu
 const ORBIT_RATE = 0.50;        // rad/s — velocidad de la orbita conjunta de las cajas (un poco mas rapido que el SPIN propio anterior)
 const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
 
-/* ANILLOS DORADOS — sistema atomico clasico de 3 anillos en planos
-   mutuamente perpendiculares (XY, XZ, YZ). Cada anillo es un toro 3D
-   visible como elipse desde la camara — el conjunto forma una jaula
-   wireframe esferica que enmarca la formacion compacta de cajas en el
-   centro (como un atomo: nucleo + orbitales). Pose estatica. */
-const RING_RADIUS = 2.20;                      // radio de cada anillo. Cajas a orbit radius 0.65 + tamaño visual ~0.7 = extent maximo ~1.35 → 2.20 da margen 0.85 unidades, las cajas quedan claramente dentro de la jaula
-const RING_TUBE = 0.026;
+/* ANILLOS DORADOS — icono atomico clasico: 3 anillos elipticos tiltados,
+   cada uno rotado 120° alrededor del eje vertical Y. Cada anillo se construye
+   en 2 pasos (nested groups):
+     1) <group rotation={[0, yAngle, 0]}> rota alrededor del eje vertical
+     2) <mesh rotation={[RING_TILT, 0, 0]}> inclina el toro hacia adelante,
+        convirtiendo el circulo en elipse desde la perspectiva de camara
+   El resultado es la firma visual del simbolo del atomo: 3 elipses cruzandose
+   en el centro con simetria rotacional 3-fold respecto a Y. Pose estatica. */
+const RING_RADIUS = 1.55;                      // jaula ajustada: cajas a orbit radius 0.65 + tamaño visual ~0.5 = extent maximo ~1.15 → 1.55 da margen pequeño (~0.4), los anillos envuelven las cajas como en el icono atomico clasico
+const RING_TUBE = 0.028;
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
+const RING_TILT = Math.PI / 3;                 // 60° de inclinacion alrededor de X → cada anillo se ve como elipse pronunciada (no circulo)
 
-/* RING_CONFIGS — rotaciones Euler [x, y, z] de cada anillo respecto a su
-   pose default (toro en plano XY con normal Z). Los tres planos canonicos
-   forman la jaula 3D mutuamente perpendicular:
-   - [0, 0, 0]:       plano XY → frente a camara (normal Z)
-   - [π/2, 0, 0]:     plano XZ → horizontal (normal Y)
-   - [0, π/2, 0]:     plano YZ → lateral (normal X) */
-const RING_CONFIGS: { rotation: [number, number, number] }[] = [
-  { rotation: [0, 0, 0] },
-  { rotation: [Math.PI / 2, 0, 0] },
-  { rotation: [0, Math.PI / 2, 0] },
+/* RING_Y_ANGLES — angulos de rotacion alrededor del eje vertical Y para los
+   3 anillos. Distribucion equiespaciada (0°, 120°, 240°) → simetria 3-fold,
+   forma exacta del simbolo del atomo. */
+const RING_Y_ANGLES = [
+  0,
+  (2 * Math.PI) / 3,
+  (4 * Math.PI) / 3,
 ];
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
@@ -289,28 +290,31 @@ interface BoxStarProps {
   progressRef: React.MutableRefObject<number>;
 }
 
-/* ANILLOS — 3 toros dorados en planos mutuamente perpendiculares (XY,
-   XZ, YZ) formando una jaula wireframe esferica alrededor del centro,
-   tipo simbolo atomico clasico. Cada uno se renderiza con la rotacion
-   definida en RING_CONFIGS — ningun anillo gira (pose estatica).
-   El sentido de movimiento lo aportan las cajas orbitando en el nucleo. */
+/* ANILLOS — 3 toros dorados tiltados, rotados 120° alrededor del eje vertical
+   Y para formar el simbolo del atomo clasico. Cada anillo se compone con un
+   <group> exterior (rotacion Y) que contiene un <mesh> con rotacion X (tilt).
+   El orden importa: tiltar primero (mesh) y luego rotar alrededor de Y (group)
+   produce 3 elipses con simetria 3-fold; el orden inverso daria 3 anillos
+   identicos sin variacion visual. */
 function PlanetRings() {
   return (
     <group>
-      {RING_CONFIGS.map((cfg, i) => (
-        <mesh key={i} rotation={cfg.rotation}>
-          <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
-          <meshStandardMaterial
-            color={RING_COLOR}
-            emissive={RING_EMISSIVE}
-            emissiveIntensity={0.65}
-            metalness={0.9}
-            roughness={0.35}
-            transparent
-            opacity={0.92}
-            depthWrite={false}
-          />
-        </mesh>
+      {RING_Y_ANGLES.map((yAngle, i) => (
+        <group key={i} rotation={[0, yAngle, 0]}>
+          <mesh rotation={[RING_TILT, 0, 0]}>
+            <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
+            <meshStandardMaterial
+              color={RING_COLOR}
+              emissive={RING_EMISSIVE}
+              emissiveIntensity={0.65}
+              metalness={0.9}
+              roughness={0.35}
+              transparent
+              opacity={0.92}
+              depthWrite={false}
+            />
+          </mesh>
+        </group>
       ))}
     </group>
   );
