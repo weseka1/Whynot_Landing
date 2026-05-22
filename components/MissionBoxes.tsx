@@ -45,16 +45,13 @@ const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja mu
 const ORBIT_RATE = 0.50;        // rad/s — velocidad de la orbita conjunta de las cajas (un poco mas rapido que el SPIN propio anterior)
 const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
 
-/* ANILLOS DORADOS — sistema tipo Saturno alrededor del centro de la
-   formacion. Cada anillo es un torus que vive en el MISMO plano orbital
-   que las cajas (rotado ORBIT_TILT alrededor de X), asi visualizan la
-   trayectoria. Diferentes radios y opacidades dan textura de "ring system". */
+/* ANILLOS DORADOS — dos toros tipo Saturno que enmarcan la orbita de las
+   cajas POR FUERA (no la atraviesan). Las cajas orbitan a radio R=1.05;
+   ambos anillos estan a radio mayor para que se vean por afuera de las
+   cajas, no cortandolas. Comparten la inclinacion ORBIT_TILT con la orbita. */
 const RING_DEFS: { radius: number; tube: number; opacity: number }[] = [
-  { radius: 0.78, tube: 0.010, opacity: 0.40 },
-  { radius: 0.95, tube: 0.018, opacity: 0.75 },
-  { radius: 1.05, tube: 0.024, opacity: 0.95 }, // anillo principal — radio == R (orbita de las cajas)
-  { radius: 1.22, tube: 0.014, opacity: 0.65 },
-  { radius: 1.42, tube: 0.008, opacity: 0.35 },
+  { radius: 1.70, tube: 0.022, opacity: 0.95 }, // anillo principal exterior
+  { radius: 1.95, tube: 0.014, opacity: 0.65 }, // anillo secundario, mas fino y separado
 ];
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
