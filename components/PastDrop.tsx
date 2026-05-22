@@ -33,6 +33,7 @@ import { useRouter } from "next/navigation";
 import { site } from "@/data/site";
 import { HERO_SPECS, resolveHeroSpec, type CatalogEntry } from "@/data/catalog";
 import { Scanlines, CursorGlow } from "@/components/CatalogAtmosphere";
+import CommandPalette from "@/components/CommandPalette";
 
 /* ---------------- METADATA ----------------
    Cada Spec se construye a partir de un HeroSpec (video + path canonico al
@@ -144,6 +145,19 @@ export default function PastDrop() {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  /* ---------- Command palette (search global) ---------- */
+  const [searchOpen, setSearchOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   /* ---------- Scroll → posición continua ---------- */
   const { scrollYProgress } = useScroll({
@@ -370,7 +384,11 @@ export default function PastDrop() {
         </AnimatePresence>
 
         {/* ----- TOP HUD ----- */}
-        <HudTop active={active} activeIndex={activeIndex} />
+        <HudTop
+          active={active}
+          activeIndex={activeIndex}
+          onSearchClick={() => setSearchOpen(true)}
+        />
 
         {/* ----- TITLE + EYEBROW ----- */}
         <div
@@ -476,6 +494,9 @@ export default function PastDrop() {
       {/* Cursor-reactive glow + scanlines CRT (sobre toda la seccion sticky) */}
       <CursorGlow />
       <Scanlines />
+
+      {/* Command palette overlay (global archive search) */}
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </section>
   );
 }
@@ -656,7 +677,15 @@ function BackgroundParticles() {
 /* ============================================================================
    HUD
    ============================================================================ */
-function HudTop({ active, activeIndex }: { active: Spec; activeIndex: number }) {
+function HudTop({
+  active,
+  activeIndex,
+  onSearchClick,
+}: {
+  active: Spec;
+  activeIndex: number;
+  onSearchClick?: () => void;
+}) {
   return (
     <div
       style={{
@@ -695,7 +724,59 @@ function HudTop({ active, activeIndex }: { active: Spec; activeIndex: number }) 
           SPEC_{String(activeIndex + 1).padStart(3, "0")}
         </span>
       </div>
-      <div style={{ display: "flex", gap: "1.2rem", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "1rem",
+          alignItems: "center",
+          pointerEvents: "auto",
+        }}
+      >
+        {/* Search trigger glass pill */}
+        {onSearchClick && (
+          <motion.button
+            onClick={onSearchClick}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            aria-label="Open archive search"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.55rem",
+              padding: "0.35rem 0.8rem",
+              background: "rgba(255,255,255,0.6)",
+              border: "1.5px solid #0a0a14",
+              borderRadius: 999,
+              cursor: "pointer",
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: "0.62rem",
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "#0a0a14",
+              fontWeight: 600,
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              boxShadow:
+                "0 4px 14px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.8)",
+            }}
+          >
+            <span style={{ fontSize: "0.85rem", lineHeight: 1 }}>⌖</span>
+            <span>SEARCH</span>
+            <span
+              style={{
+                padding: "1px 6px",
+                background: "rgba(244,220,63,0.6)",
+                border: "1px solid #0a0a14",
+                borderRadius: 4,
+                fontSize: "0.52rem",
+                letterSpacing: "0.18em",
+              }}
+            >
+              ⌘K
+            </span>
+          </motion.button>
+        )}
         <span style={{ opacity: 0.55 }}>{active.spec}</span>
         <span style={{ color: "#0a0a14", fontWeight: 600 }}>
           [{String(activeIndex + 1).padStart(2, "0")}/{String(N).padStart(2, "0")}]

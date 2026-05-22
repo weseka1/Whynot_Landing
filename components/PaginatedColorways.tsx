@@ -9,9 +9,10 @@
    - Scroll suave al inicio del grid en cambio manual de página.
    ============================================================================ */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ColorwayCard from "./ColorwayCard";
+import { searchEntries } from "@/lib/searchEntries";
 import type { CatalogEntry } from "@/data/catalog";
 
 const PAGE_SIZE = 24;
@@ -41,6 +42,7 @@ export default function PaginatedColorways({
   brandSlug: string;
 }) {
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const gridTopRef = useRef<HTMLDivElement>(null);
   const isFirstRenderRef = useRef(true);
 
@@ -63,10 +65,22 @@ export default function PaginatedColorways({
     });
   }, [page]);
 
-  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+  /* Cuando cambia el filtro, volvemos a página 1 (no tendría sentido seguir
+     en la 3 si el filtro deja sólo 2 resultados). */
+  useEffect(() => {
+    if (search) setPage(1);
+  }, [search]);
+
+  /* Filtro inline: si hay query, usamos los resultados filtrados. */
+  const filtered = useMemo(
+    () => (search ? searchEntries(entries, search) : entries),
+    [entries, search]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const start = (safePage - 1) * PAGE_SIZE;
-  const pageEntries = entries.slice(start, start + PAGE_SIZE);
+  const pageEntries = filtered.slice(start, start + PAGE_SIZE);
 
   return (
     <div style={{ position: "relative" }}>
@@ -74,6 +88,91 @@ export default function PaginatedColorways({
         ref={gridTopRef}
         style={{ position: "absolute", top: -100, left: 0, height: 1 }}
       />
+
+      {/* Search filter bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "1rem",
+          marginBottom: "1.2rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.6rem",
+            padding: "0.55rem 0.95rem",
+            background: "rgba(255,255,255,0.55)",
+            border: `1.5px solid ${DARK}`,
+            borderRadius: 999,
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            boxShadow:
+              "0 6px 16px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.8)",
+            flex: "1 1 320px",
+            maxWidth: 440,
+          }}
+        >
+          <span style={{ color: DARK, fontSize: "0.95rem", fontWeight: 700 }}>
+            ⌖
+          </span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="FILTER · type model or colorway..."
+            style={{
+              flex: 1,
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              color: DARK,
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: "0.75rem",
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+            }}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              aria-label="Clear filter"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: DARK_DIM,
+                fontSize: "0.8rem",
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {search && (
+          <div
+            style={{
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: "0.62rem",
+              letterSpacing: "0.25em",
+              textTransform: "uppercase",
+              color: filtered.length === 0 ? "#ff5436" : DARK,
+              fontWeight: 700,
+            }}
+          >
+            {filtered.length === 0
+              ? "NO MATCHES"
+              : `${filtered.length} MATCH${filtered.length === 1 ? "" : "ES"}`}
+          </div>
+        )}
+      </div>
 
       {/* Top counter strip */}
       <div
@@ -101,35 +200,64 @@ export default function PaginatedColorways({
         <span>
           DISPLAYING{" "}
           <span style={{ color: DARK, fontWeight: 600 }}>
-            {start + 1}–{Math.min(start + PAGE_SIZE, entries.length)}
+            {filtered.length === 0
+              ? 0
+              : `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)}`}
           </span>{" "}
-          / {entries.length}
+          / {filtered.length}
         </span>
       </div>
 
-      {/* Grid 3 cols × 8 rows */}
+      {/* Grid 3 cols × 8 rows  (con empty state si el filtro no matchea) */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={safePage}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="paginated-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            gap: "1.4rem",
-          }}
-        >
-          {pageEntries.map((entry) => (
-            <ColorwayCard
-              key={entry.path}
-              entry={entry}
-              href={`/catalog/${brandSlug}/${entry.slug.model}/${entry.slug.colorway}`}
-            />
-          ))}
-        </motion.div>
+        {filtered.length === 0 ? (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              padding: "4rem 1rem",
+              textAlign: "center",
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: "0.7rem",
+              letterSpacing: "0.3em",
+              color: DARK_DIM,
+              textTransform: "uppercase",
+              border: `1px dashed rgba(10,10,20,0.25)`,
+              borderRadius: 12,
+            }}
+          >
+            <div style={{ fontSize: "1.4rem", marginBottom: "0.8rem" }}>⊘</div>
+            <div style={{ fontWeight: 700, color: DARK, marginBottom: "0.4rem" }}>
+              NO SPECIMENS MATCH
+            </div>
+            <div>TRY ANOTHER QUERY</div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={safePage}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="paginated-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: "1.4rem",
+            }}
+          >
+            {pageEntries.map((entry) => (
+              <ColorwayCard
+                key={entry.path}
+                entry={entry}
+                href={`/catalog/${brandSlug}/${entry.slug.model}/${entry.slug.colorway}`}
+              />
+            ))}
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {totalPages > 1 && (
