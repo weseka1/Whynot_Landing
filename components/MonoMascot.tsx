@@ -11,17 +11,25 @@
    - El <script> de model-viewer y el preload del GLB ya están en app/layout.tsx
    ============================================================================ */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-const GLB_SRC = "/assets/3d/mono.glb";
+/* GLB del MONO CUERPO COMPLETO 3D — 23.9MB. Más pesado pero modelo full-body
+   en lugar del busto que usa el Hero. Para optimizar percibida velocidad, el
+   archivo se sirve cacheable desde /public y el componente lo lazy-monta sólo
+   cuando entra al viewport (IntersectionObserver). */
+const GLB_SRC = "/assets/3d/mono-cuerpo-completo.glb";
 
 type Props = {
-  /** Diámetro del visor (cuadrado). Default 220px. */
+  /** Diámetro del visor (cuadrado). Default 240px. */
   size?: number;
-  /** Ángulo vertical fijo (88 ≈ horizontal directo, mirando de frente). */
+  /** Ángulo vertical fijo (90 ≈ horizontal directo, mirando de frente). */
   basePolar?: number;
-  /** Distancia de cámara como porcentaje (e.g. "55%"). */
+  /** Distancia de cámara — para body completo necesita más zoom-out. */
   radius?: string;
+  /** Punto al que mira la cámara (compensa el centro del modelo). */
+  cameraTarget?: string;
+  /** Field of view en grados. Para body lleno un FOV mayor cabe mejor. */
+  fov?: string;
   /** Rango máximo de rotación horizontal en grados (a cada lado). */
   maxAngle?: number;
   /** Smoothness del seguimiento — 0.05 amortiguado, 0.2 rápido. */
@@ -29,9 +37,11 @@ type Props = {
 };
 
 export default function MonoMascot({
-  size = 220,
-  basePolar = 88,
-  radius = "55%",
+  size = 240,
+  basePolar = 90,
+  radius = "120%",
+  cameraTarget = "0m 0.9m 0m",
+  fov = "30deg",
   maxAngle = 55,
   lerp = 0.08,
 }: Props) {
@@ -108,6 +118,30 @@ export default function MonoMascot({
     };
   }, [basePolar, radius, maxAngle, lerp]);
 
+  /* Lazy mount del <model-viewer>: solo cuando el wrapper entra (o ha
+     entrado alguna vez) al viewport. Evita pagar la descarga de 23MB en
+     brand pages que el usuario nunca llega a ver el mascot.                */
+  const [shouldMount, setShouldMount] = useState(false);
+  useEffect(() => {
+    if (shouldMount) return;
+    if (!wrapperRef.current) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setShouldMount(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldMount(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(wrapperRef.current);
+    return () => io.disconnect();
+  }, [shouldMount]);
+
   return (
     <div
       ref={wrapperRef}
@@ -120,7 +154,8 @@ export default function MonoMascot({
       }}
       aria-hidden
     >
-      {/* @ts-ignore — web component declarado en types/model-viewer.d.ts */}
+      {!shouldMount ? null : (
+      /* @ts-ignore — web component declarado en types/model-viewer.d.ts */
       <model-viewer
         ref={modelRef}
         src={GLB_SRC}
@@ -129,8 +164,8 @@ export default function MonoMascot({
         shadow-intensity="0"
         exposure="1.1"
         camera-orbit={`0deg ${basePolar}deg ${radius}`}
-        camera-target="0m 0.45m 0m"
-        field-of-view="26deg"
+        camera-target={cameraTarget}
+        field-of-view={fov}
         interaction-prompt="none"
         loading="eager"
         style={{
@@ -139,6 +174,7 @@ export default function MonoMascot({
           background: "transparent",
         }}
       />
+      )}
     </div>
   );
 }
