@@ -43,7 +43,7 @@ const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva i
 const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
 const ORBIT_RATE = 0.30;        // rad/s — las 4 cajas orbitan juntas alrededor del eje central
-const ORBIT_TILT = 0.65;        // rad — inclinacion del plano orbital respecto al plano de pantalla (0 = orbita plana frente a camara, mas alto = mas perspectiva 3D)
+const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
    - La caja es visible mientras activeIndex < index+1 (su pilar todavía corre).
@@ -312,9 +312,11 @@ export default function MissionBoxes({ progress }: MissionBoxesProps) {
 
   return (
     <Canvas
-      /* Cámara alejada + Y elevada → más perspectiva 3D, cajas se ven más chicas.
-         FOV bajo (36) reduce distorsión en los bordes.                           */
-      camera={{ position: [0, 1.1, 9], fov: 36 }}
+      /* Camara elevada (Y=2.5) para mirar el anillo orbital desde arriba en
+         angulo ~17° → perspectiva clara de anillo de Jupiter/Saturno con
+         depth visible (boxes del frente abajo y mas grandes, las del fondo
+         arriba y mas chicas). FOV bajo (36) reduce distorsion. */
+      camera={{ position: [0, 2.5, 9], fov: 36 }}
       dpr={isMobile ? 1 : [1, 1.5]}
       style={{ width: "100%", height: "100%", background: "transparent" }}
       gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
