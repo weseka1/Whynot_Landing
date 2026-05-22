@@ -38,34 +38,41 @@ const PROGRESS_OUT  = 0.92;
 const R = 0.65;                 // radio de las formaciones — más chico = cajas más juntas (compacto, tipo nucleo del atomo)
 const SQRT2_2 = 0.7071068;      // sin/cos(45°) — vértices diagonales (estrella ×)
 const SQRT3_2 = 0.8660254;      // sin(60°) — triángulo
-const BASE_SCALE = 0.50;        // scale base de cada caja (modelos GLB son grandes)
+const TARGET_BOX_SIZE = 0.62;   // tamaño objetivo (dimension maxima) de cada caja en unidades de mundo. Cada GLB se auto-escala a esto sin importar su tamaño nativo → control deterministico del extent de la caja para que entre en el cage de anillos
 const GROUP_TILT_X = 0.16;      // inclinación del grupo en X → perspectiva isométrica
 const GROUP_Y_OFFSET = -0.65;   // bajar toda la composición → no choca con el texto del pilar
 const Y_VERTEX_OFFSET = Math.PI / 4; // rotación Y base = 45° → cada caja muestra esquina (vértice) al frente
 const ORBIT_RATE = 0.50;        // rad/s — velocidad de la orbita conjunta de las cajas (un poco mas rapido que el SPIN propio anterior)
 const ORBIT_TILT = 1.30;        // rad (~74°) — el plano orbital queda casi horizontal, como anillo de Saturno/Jupiter visto desde arriba en perspectiva
 
-/* ANILLOS DORADOS — icono atomico clasico: 3 anillos elipticos tiltados,
-   cada uno rotado 120° alrededor del eje vertical Y. Cada anillo se construye
-   en 2 pasos (nested groups):
-     1) <group rotation={[0, yAngle, 0]}> rota alrededor del eje vertical
-     2) <mesh rotation={[RING_TILT, 0, 0]}> inclina el toro hacia adelante,
-        convirtiendo el circulo en elipse desde la perspectiva de camara
-   El resultado es la firma visual del simbolo del atomo: 3 elipses cruzandose
-   en el centro con simetria rotacional 3-fold respecto a Y. Pose estatica. */
-const RING_RADIUS = 1.55;                      // jaula ajustada: cajas a orbit radius 0.65 + tamaño visual ~0.5 = extent maximo ~1.15 → 1.55 da margen pequeño (~0.4), los anillos envuelven las cajas como en el icono atomico clasico
-const RING_TUBE = 0.028;
+/* ANILLOS DORADOS — icono atomico clasico: 3 elipses identicas en el plano
+   de la pantalla, rotadas 60° una respecto de otra alrededor del eje
+   camara-perpendicular (Z). Construccion en 2 pasos por anillo:
+     1) <mesh rotation={[RING_TILT_X, 0, 0]}>  inclina alrededor de X →
+        el toro se ve como ELIPSE (no circulo) desde la camara, con eje mayor
+        horizontal y eje menor cos(RING_TILT_X)
+     2) <group rotation={[0, 0, zAngle]}>      rota esa elipse alrededor del
+        eje de la camara → produce 3 elipses rotadas en el plano de la pantalla
+   Resultado: la firma exacta del simbolo del atomo (tipo logo Wikipedia),
+   donde los 3 anillos cruzan en el centro y son rotaciones puras del mismo
+   patron. CRITICO: rotar alrededor de Z (camera axis), NO Y (vertical) — el
+   intento previo con rotacion Y producia un cage con un anillo casi horizontal
+   y dos casi verticales (no es el icono atomico). */
+const RING_RADIUS = 1.45;                      // jaula ajustada: cajas a orbit radius 0.65 con TARGET_BOX_SIZE 0.62 (half-diag ~0.54) → extent maximo ~1.19. RING_RADIUS 1.45 da margen ~0.26 (cage tight como en la referencia)
+const RING_TUBE = 0.030;                       // tubo del toro: ligeramente mas grueso para presencia visual al radio menor
 const RING_COLOR = "#d9a850";
 const RING_EMISSIVE = "#8a5a14";
-const RING_TILT = Math.PI / 3;                 // 60° de inclinacion alrededor de X → cada anillo se ve como elipse pronunciada (no circulo)
+const RING_TILT_X = Math.PI / 3;               // 60° de inclinacion del toro alrededor de X → elipse pronunciada (eje menor = cos60° = 0.5 del eje mayor)
 
-/* RING_Y_ANGLES — angulos de rotacion alrededor del eje vertical Y para los
-   3 anillos. Distribucion equiespaciada (0°, 120°, 240°) → simetria 3-fold,
-   forma exacta del simbolo del atomo. */
-const RING_Y_ANGLES = [
+/* RING_Z_ANGLES — angulos de rotacion en el plano de la pantalla (eje Z, eje
+   de la camara). 0° → elipse horizontal; 60° → tilt arriba-derecha; 120° →
+   tilt arriba-izquierda. Distribucion 0°/60°/120° (NO 0°/120°/240°: con 180°
+   de span el resultado tiene simetria 2-fold redundante; con 120° se ve la
+   firma del icono atomico). */
+const RING_Z_ANGLES = [
   0,
+  Math.PI / 3,
   (2 * Math.PI) / 3,
-  (4 * Math.PI) / 3,
 ];
 const ANCHOR_RISE = 0;          // la caja anclada NO se mueve — queda quieta en su slot y se desvanece
 /* Fade unificado por "lifetime" de cada caja:
@@ -135,12 +142,32 @@ interface BoxProps {
 
 function Box({ src, index, progressRef }: BoxProps) {
   const { scene } = useGLTF(src);
-  const ref = useRef<THREE.Object3D>(null);
+  const ref = useRef<THREE.Group>(null);
   const materialsRef = useRef<THREE.Material[]>([]);
 
-  /* Clonamos scene + materiales para mutar opacity sin afectar otras instancias */
+  /* Clonamos scene + materiales para mutar opacity sin afectar otras instancias.
+     Auto-fit: medimos el bbox del GLB nativo y lo escalamos para que su
+     dimension maxima quede en TARGET_BOX_SIZE — asi cada caja tiene exactamente
+     el mismo extent visual sin importar las unidades nativas del modelo
+     (los GLBs pueden venir con escalas muy distintas; antes se usaba
+     BASE_SCALE=0.5 fijo y las cajas terminaban con tamaños imprevisibles).
+     Despues recentro el modelo para que su centro caiga en el origen → la
+     posicion del wrapper <group> es exactamente la posicion del centro de la caja. */
   const cloned = useMemo(() => {
     const c = scene.clone();
+
+    const bbox = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const fitScale = TARGET_BOX_SIZE / maxDim;
+    c.scale.setScalar(fitScale);
+
+    bbox.setFromObject(c);
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+    c.position.sub(center);
+
     const mats: THREE.Material[] = [];
     c.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
@@ -264,8 +291,8 @@ function Box({ src, index, progressRef }: BoxProps) {
     obj.position.y += (targetY - obj.position.y) * kPos;
     obj.position.z += (targetZ - obj.position.z) * kPos;
 
-    /* Scale base fijo (modelos GLB son grandes en su unidad nativa) */
-    obj.scale.setScalar(BASE_SCALE);
+    /* La escala ya está fijada en el modelo clonado (auto-fit a
+       TARGET_BOX_SIZE) — no se toca aca para no anularla. */
 
     /* Orientación fija — la caja no gira sobre su propio eje.
        Y_VERTEX_OFFSET = 45° → muestra un vértice al frente. El movimiento
@@ -283,25 +310,35 @@ function Box({ src, index, progressRef }: BoxProps) {
     obj.visible = newOp > 0.01;
   });
 
-  return <primitive ref={ref} object={cloned} />;
+  /* Wrapper <group>: la posicion/rotacion del grupo controla la trayectoria
+     orbital de la caja. El <primitive> interior contiene el GLB ya pre-escalado
+     y recentrado (auto-fit), asi el grupo posiciona EL CENTRO de la caja
+     directamente — sin sorpresas por el pivot nativo del modelo. */
+  return (
+    <group ref={ref}>
+      <primitive object={cloned} />
+    </group>
+  );
 }
 
 interface BoxStarProps {
   progressRef: React.MutableRefObject<number>;
 }
 
-/* ANILLOS — 3 toros dorados tiltados, rotados 120° alrededor del eje vertical
-   Y para formar el simbolo del atomo clasico. Cada anillo se compone con un
-   <group> exterior (rotacion Y) que contiene un <mesh> con rotacion X (tilt).
-   El orden importa: tiltar primero (mesh) y luego rotar alrededor de Y (group)
-   produce 3 elipses con simetria 3-fold; el orden inverso daria 3 anillos
-   identicos sin variacion visual. */
+/* ANILLOS — 3 toros dorados formando el simbolo del atomo clasico.
+   Estructura por anillo: <group rotation={[0, 0, zAngle]}> contiene un
+   <mesh rotation={[RING_TILT_X, 0, 0]}> con el toro. La composicion de las
+   2 rotaciones (en orden mesh→group, es decir Rz(zAngle) * Rx(RING_TILT_X))
+   tilta el toro alrededor de X y luego lo rota en el plano de la pantalla
+   alrededor de Z → desde la camara se ve UNA elipse rotada en su lugar.
+   Con zAngle = 0°, 60°, 120° se obtienen 3 elipses identicas rotadas a 60° una
+   de otra → simetria 3-fold en pantalla = simbolo del atomo. */
 function PlanetRings() {
   return (
     <group>
-      {RING_Y_ANGLES.map((yAngle, i) => (
-        <group key={i} rotation={[0, yAngle, 0]}>
-          <mesh rotation={[RING_TILT, 0, 0]}>
+      {RING_Z_ANGLES.map((zAngle, i) => (
+        <group key={i} rotation={[0, 0, zAngle]}>
+          <mesh rotation={[RING_TILT_X, 0, 0]}>
             <torusGeometry args={[RING_RADIUS, RING_TUBE, 16, 128]} />
             <meshStandardMaterial
               color={RING_COLOR}
