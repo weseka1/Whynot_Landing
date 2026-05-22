@@ -29,67 +29,77 @@ import {
   AnimatePresence,
   MotionValue,
 } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { site } from "@/data/site";
+import { HERO_SPECS, resolveHeroSpec, type CatalogEntry } from "@/data/catalog";
 
-/* ---------------- METADATA ---------------- */
+/* ---------------- METADATA ----------------
+   Cada Spec se construye a partir de un HeroSpec (video + path canonico al
+   catalogo) + la CatalogEntry resuelta. Así cada cápsula muestra datos reales
+   del catálogo (frames disponibles, marca/modelo/colorway exactos) y, al
+   clickearla, navegamos a la página del producto.                              */
 type Spec = {
   src: string;
   label: string;
   brand: string;
-  year: string;
-  material: string;
-  code: string;
-  spec: string;
+  model: string;
+  colorway: string;
+  year: string;          // sintetizado por brand (placeholder editorial)
+  material: string;      // sintetizado por brand (placeholder editorial)
+  code: string;          // sintetizado por brand+model+colorway
+  spec: string;          // sintetizado por brand+index
+  href: string | null;   // ruta del producto en este Next app (null si no existe)
+  entry: CatalogEntry | null;
 };
 
-const SPECS: Spec[] = [
-  { src: "/videos-360/LUISVOUITTON.mp4", label: "LV TRAINER",
-    brand: "LOUIS VUITTON", year: "2024", material: "MONOGRAM DENIM",
-    code: "LV.TR.001", spec: "AW-024-LV" },
-  { src: "/videos-360/adidasbape.mp4", label: "ADIDAS × BAPE",
-    brand: "ADIDAS × BAPE", year: "2023", material: "CAMO LEATHER",
-    code: "AB.CM.002", spec: "FW-023-AB" },
-  { src: "/videos-360/amiri.mp4", label: "AMIRI STADIUM",
-    brand: "AMIRI", year: "2024", material: "DISTRESSED CANVAS",
-    code: "AM.ST.003", spec: "SS-024-AM" },
-  { src: "/videos-360/asicsgel-kayano.mp4", label: "GEL-KAYANO 14",
-    brand: "ASICS", year: "2023", material: "MESH × GEL",
-    code: "AS.GK.004", spec: "TR-023-AS" },
-  { src: "/videos-360/balenciaga.mp4", label: "TRACK",
-    brand: "BALENCIAGA", year: "2022", material: "MULTI-PANEL",
-    code: "BL.TR.005", spec: "AW-022-BL" },
-  { src: "/videos-360/bape.mp4", label: "BAPE STA",
-    brand: "BAPE", year: "2024", material: "PATENT LEATHER",
-    code: "BP.ST.006", spec: "SS-024-BP" },
-  { src: "/videos-360/jordan3blackcat.mp4", label: "JORDAN III BLACK CAT",
-    brand: "JORDAN", year: "2023", material: "BLACK NUBUCK",
-    code: "JD.III.007", spec: "RT-023-JD" },
-  { src: "/videos-360/jordanpatentgold.mp4", label: "JORDAN PATENT",
-    brand: "JORDAN", year: "2023", material: "PATENT × GOLD",
-    code: "JD.PT.008", spec: "AW-023-JD" },
-  { src: "/videos-360/lanvin.mp4", label: "LANVIN CURB",
-    brand: "LANVIN", year: "2024", material: "SUEDE × CALFSKIN",
-    code: "LN.CB.009", spec: "SS-024-LN" },
-  { src: "/videos-360/nikeairforce1triplewhite.mp4", label: "AF1 TRIPLE WHITE",
-    brand: "NIKE", year: "2023", material: "TUMBLED LEATHER",
-    code: "NK.AF.010", spec: "CO-023-NK" },
-  { src: "/videos-360/nikejordantatum.mp4", label: "JORDAN TATUM",
-    brand: "JORDAN", year: "2024", material: "TECH MESH",
-    code: "JD.TA.011", spec: "PE-024-JD" },
-  { src: "/videos-360/offwhitebe-right-4x-RIFE-RIFE3.1-16fps.mp4", label: "OFF-WHITE BE RIGHT",
-    brand: "OFF-WHITE", year: "2022", material: "MIXED MEDIA",
-    code: "OW.BR.012", spec: "AW-022-OW" },
-  { src: "/videos-360/pumared.mp4", label: "PUMA SUEDE",
-    brand: "PUMA", year: "2024", material: "SUEDE",
-    code: "PM.SD.013", spec: "SS-024-PM" },
-  { src: "/videos-360/sbdunkverdy.mp4", label: "SB DUNK VERDY",
-    brand: "NIKE SB", year: "2024", material: "PREMIUM SUEDE",
-    code: "SB.DK.014", spec: "AR-024-SB" },
-  { src: "/videos-360/timberland6-InchBoot.mp4", label: "TIMBERLAND 6\"",
-    brand: "TIMBERLAND", year: "2023", material: "PREMIUM NUBUCK",
-    code: "TB.06.015", spec: "WI-023-TB" },
-];
+/* Editorial fillers para que el HUD siga teniendo "metadata premium" hasta
+   que tengamos campos reales (year/material/sku) en el index del catálogo. */
+const BRAND_FALLBACKS: Record<string, { year: string; material: string }> = {
+  "LOUIS VUITTON":  { year: "2024", material: "MONOGRAM DENIM" },
+  "ADIDAS x BAPE":  { year: "2023", material: "CAMO LEATHER" },
+  "AMIRI":          { year: "2024", material: "TECH CANVAS" },
+  "ASICS":          { year: "2023", material: "MESH × GEL" },
+  "BALENCIAGA":     { year: "2022", material: "MULTI-PANEL" },
+  "BAPE":           { year: "2024", material: "PATENT LEATHER" },
+  "JORDAN":         { year: "2023", material: "PREMIUM LEATHER" },
+  "LANVIN":         { year: "2024", material: "SUEDE × CALFSKIN" },
+  "NIKE":           { year: "2024", material: "TUMBLED LEATHER" },
+  "OFF WHITE":      { year: "2022", material: "MIXED MEDIA" },
+  "PUMA LE FRANCE": { year: "2024", material: "SUEDE" },
+  "SB DUNK":        { year: "2024", material: "PREMIUM SUEDE" },
+  "TIMBERLAND":     { year: "2023", material: "PREMIUM NUBUCK" },
+};
 
+function buildSpec(hs: typeof HERO_SPECS[number], i: number): Spec {
+  const resolved = resolveHeroSpec(hs);
+  const entry = resolved.entry;
+  const brand = entry?.brand ?? "—";
+  const model = entry?.model ?? "";
+  const colorway = entry?.colorway ?? "";
+  const fb = BRAND_FALLBACKS[brand] ?? { year: "—", material: "—" };
+  const codeShort = (brand.replace(/[^A-Z]/g, "").slice(0, 3) || "DCH")
+    .padEnd(3, "X");
+  const code = `${codeShort}.${String(i + 1).padStart(3, "0")}`;
+  const spec = `SPEC-${String(i + 1).padStart(3, "0")}-${codeShort}`;
+  const href = entry
+    ? `/catalog/${entry.slug.brand}/${entry.slug.model}/${entry.slug.colorway}`
+    : null;
+  return {
+    src: hs.src,
+    label: hs.label,
+    brand,
+    model,
+    colorway,
+    year: fb.year,
+    material: fb.material,
+    code,
+    spec,
+    href,
+    entry,
+  };
+}
+
+const SPECS: Spec[] = HERO_SPECS.map(buildSpec);
 const N = SPECS.length;
 
 /* ---------------- LAYOUT ---------------- */
@@ -131,6 +141,7 @@ function opacityForOffset(off: number) {
 export default function PastDrop() {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   /* ---------- Scroll → posición continua ---------- */
   const { scrollYProgress } = useScroll({
@@ -184,22 +195,51 @@ export default function PastDrop() {
     mouseY.set(0);
   }, [mouseX, mouseY]);
 
-  /* ---------- Drag handlers ---------- */
-  const dragRef = useRef<{ startX: number; baseOffset: number } | null>(null);
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX, baseOffset: dragOffset.get() };
-  }, [dragOffset]);
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    const dx = e.clientX - dragRef.current.startX;
-    dragOffset.set(dragRef.current.baseOffset - dx / SPACING);
-  }, [dragOffset]);
-  const onPointerUp = useCallback((e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
-    dragRef.current = null;
-  }, []);
+  /* ---------- Drag handlers (con disambiguación click vs drag) ----------
+     Si el puntero se movió más de DRAG_THRESHOLD_PX entre down y up → fue
+     drag → no navegar. Si fue click puro → navegar al href del activo.    */
+  const DRAG_THRESHOLD_PX = 8;
+  const dragRef = useRef<{
+    startX: number;
+    baseOffset: number;
+    didDrag: boolean;
+  } | null>(null);
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      dragRef.current = {
+        startX: e.clientX,
+        baseOffset: dragOffset.get(),
+        didDrag: false,
+      };
+    },
+    [dragOffset]
+  );
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragRef.current) return;
+      const dx = e.clientX - dragRef.current.startX;
+      if (Math.abs(dx) > DRAG_THRESHOLD_PX) dragRef.current.didDrag = true;
+      dragOffset.set(dragRef.current.baseOffset - dx / SPACING);
+    },
+    [dragOffset]
+  );
+  const onPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragRef.current) return;
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {}
+      const didDrag = dragRef.current.didDrag;
+      dragRef.current = null;
+      if (!didDrag) {
+        const href = SPECS[lastIdxRef.current]?.href;
+        if (href) router.push(href);
+      }
+    },
+    [router]
+  );
 
   /* ---------- Video play/pause ---------- */
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
@@ -1050,6 +1090,38 @@ function Capsule({
       <FloatingLabel pos="br" opacity={isActive}>
         <span style={{ color: GOLD }}>{spec.code}</span>
       </FloatingLabel>
+
+      {/* ===== ENTER prompt (debajo del activo, indica clickeable) ===== */}
+      {spec.href && (
+        <motion.div
+          aria-hidden
+          style={{
+            position: "absolute",
+            bottom: -42,
+            left: "50%",
+            translateX: "-50%",
+            opacity: isActive,
+            pointerEvents: "none",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: "0.62rem",
+            letterSpacing: "0.4em",
+            color: GOLD,
+            textShadow: "0 0 14px rgba(232,196,104,0.5)",
+            whiteSpace: "nowrap",
+            display: "flex",
+            gap: "0.6rem",
+            alignItems: "center",
+          }}
+        >
+          <motion.span
+            animate={{ x: [0, 4, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          >
+            ▸
+          </motion.span>
+          ENTER ARCHIVE
+        </motion.div>
+      )}
     </motion.div>
   );
 }

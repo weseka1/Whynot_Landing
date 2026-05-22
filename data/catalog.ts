@@ -1,0 +1,191 @@
+/* ============================================================================
+   CATALOG — Data layer del catálogo BA1RES FOOTWEAR
+   ----------------------------------------------------------------------------
+   Source of truth: data/catalog-index.json (279 colorways)
+   Imágenes hosteadas en Supabase:
+     https://jkkytzgmhzzngnntkfbr.supabase.co/storage/v1/object/public/catalog/
+   Estructura de paths del index: "MARCA/Modelo/Colorway"
+   Frames 360: 360_01.jpg ... 360_NN.jpg (1-indexed, zero-padded a 2 dígitos).
+   ============================================================================ */
+
+import indexRaw from "./catalog-index.json";
+
+export const SUPABASE_CATALOG_BASE =
+  "https://jkkytzgmhzzngnntkfbr.supabase.co/storage/v1/object/public/catalog";
+
+/* ---------- Raw types ---------- */
+type RawEntry = { type: "360" | "image"; frames: number };
+type RawIndex = Record<string, RawEntry>;
+const RAW: RawIndex = indexRaw as RawIndex;
+
+/* ---------- Public types ---------- */
+export type CatalogEntry = {
+  brand: string;          // "JORDAN"
+  model: string;          // "3 Retro"  (puede incluir " / " si hay sub-modelo)
+  colorway: string;       // "Black Cat"
+  type: "360" | "image";
+  frames: number;
+  path: string;           // 'BRAND/Model/Colorway' (tal cual viene del index)
+  slug: {
+    brand: string;
+    model: string;
+    colorway: string;
+    full: string;         // 'brand/model/colorway' (lowercase, ascii-only)
+  };
+  /** Frame n (1-indexed). Solo válido si type === '360' y n <= frames. */
+  frameUrl(n: number): string;
+  /** URL del main.jpg (fallback para items 'image'). */
+  mainUrl(): string;
+  /** Primer frame (póster). Si es 360 → 360_01; si es image → main.jpg. */
+  posterUrl(): string;
+};
+
+/* ---------- Helpers ---------- */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/&/g, "-and-")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function encodePath(p: string): string {
+  return p.split("/").map(encodeURIComponent).join("/");
+}
+
+function buildEntry(path: string, raw: RawEntry): CatalogEntry {
+  const parts = path.split("/");
+  const brand = parts[0] ?? "";
+  const colorway = parts[parts.length - 1] ?? "";
+  const model = parts.slice(1, -1).join(" / ");
+
+  const slug = {
+    brand: slugify(brand),
+    model: slugify(model),
+    colorway: slugify(colorway),
+    full: "",
+  };
+  slug.full = `${slug.brand}/${slug.model}/${slug.colorway}`;
+
+  const urlPath = encodePath(path);
+
+  return {
+    brand,
+    model,
+    colorway,
+    type: raw.type,
+    frames: raw.frames,
+    path,
+    slug,
+    frameUrl(n: number) {
+      const num = String(n).padStart(2, "0");
+      return `${SUPABASE_CATALOG_BASE}/${urlPath}/360_${num}.jpg`;
+    },
+    mainUrl() {
+      return `${SUPABASE_CATALOG_BASE}/${urlPath}/main.jpg`;
+    },
+    posterUrl() {
+      return this.type === "360" ? this.frameUrl(1) : this.mainUrl();
+    },
+  };
+}
+
+/* ---------- Build entries (eager) ---------- */
+const ENTRIES: CatalogEntry[] = Object.entries(RAW).map(([path, raw]) =>
+  buildEntry(path, raw)
+);
+
+const BY_PATH = new Map<string, CatalogEntry>(
+  ENTRIES.map((e) => [e.path, e])
+);
+const BY_SLUG = new Map<string, CatalogEntry>(
+  ENTRIES.map((e) => [e.slug.full, e])
+);
+
+/* ---------- Public API ---------- */
+export function getAllEntries(): CatalogEntry[] {
+  return ENTRIES;
+}
+
+export function getEntryByPath(path: string): CatalogEntry | null {
+  return BY_PATH.get(path) ?? null;
+}
+
+export function getEntryBySlug(
+  brand: string,
+  model: string,
+  colorway: string
+): CatalogEntry | null {
+  return BY_SLUG.get(`${brand}/${model}/${colorway}`) ?? null;
+}
+
+export function getEntriesByBrand(brand: string): CatalogEntry[] {
+  return ENTRIES.filter((e) => e.brand === brand);
+}
+
+export function getAllBrands(): string[] {
+  return [...new Set(ENTRIES.map((e) => e.brand))].sort();
+}
+
+export const CATALOG_STATS = {
+  total: ENTRIES.length,
+  with360: ENTRIES.filter((e) => e.type === "360").length,
+  withImage: ENTRIES.filter((e) => e.type === "image").length,
+  totalFrames: ENTRIES.reduce((acc, e) => acc + e.frames, 0),
+  brands: [...new Set(ENTRIES.map((e) => e.brand))].sort(),
+} as const;
+
+/* ============================================================================
+   HERO MAPPING — vincula los 15 videos mp4 del hero PastDrop a colorways reales
+   del catálogo. Cuando el usuario clickea una cápsula, navegamos al colorway
+   correspondiente. Si la entry no existe (path obsoleto), heroEntry devuelve
+   null y el caller maneja el fallback (link deshabilitado).
+   ============================================================================ */
+export type HeroSpec = {
+  src: string;          // ruta al .mp4 en public/videos-360
+  label: string;        // display name corto
+  catalogPath: string;  // path canónico en el catalog-index
+};
+
+export const HERO_SPECS: HeroSpec[] = [
+  { src: "/videos-360/LUISVOUITTON.mp4",                       label: "LV TRAINER",
+    catalogPath: "LOUIS VUITTON/Trainer Maxi/Denim & white" },
+  { src: "/videos-360/adidasbape.mp4",                          label: "ADIDAS × BAPE",
+    catalogPath: "ADIDAS x BAPE/Superstar x Bape/Blue White Star" },
+  { src: "/videos-360/amiri.mp4",                               label: "AMIRI MA-1",
+    catalogPath: "AMIRI/MA-1/White" },
+  { src: "/videos-360/asicsgel-kayano.mp4",                     label: "GEL-KAYANO",
+    catalogPath: "ASICS/Gel-Kayano/Grey" },
+  { src: "/videos-360/balenciaga.mp4",                          label: "TRACK",
+    catalogPath: "BALENCIAGA/Triple S/Black Leather" },
+  { src: "/videos-360/bape.mp4",                                label: "BAPE STA",
+    catalogPath: "BAPE/STA Low/Royal Blue" },
+  { src: "/videos-360/jordan3blackcat.mp4",                     label: "JORDAN III BLACK CAT",
+    catalogPath: "JORDAN/3 Retro/Black Cat" },
+  { src: "/videos-360/jordanpatentgold.mp4",                    label: "JORDAN 1 PATENT GOLD",
+    catalogPath: "JORDAN/1 Retro High/Patent Gold" },
+  { src: "/videos-360/lanvin.mp4",                              label: "LANVIN CURB",
+    catalogPath: "LANVIN/Curb Sneakers/White Black" },
+  { src: "/videos-360/nikeairforce1triplewhite.mp4",            label: "AF1 JEWELS WHITE",
+    catalogPath: "NIKE/Air Force 1/Jewels White" },
+  { src: "/videos-360/nikejordantatum.mp4",                     label: "JORDAN TATUM",
+    catalogPath: "NIKE/Jordan Tatum 1/Red Cement" },
+  { src: "/videos-360/offwhitebe-right-4x-RIFE-RIFE3.1-16fps.mp4", label: "OFF-WHITE BE RIGHT",
+    catalogPath: "OFF WHITE/Be-Right/White" },
+  { src: "/videos-360/pumared.mp4",                             label: "PUMA LA FRANCÉ",
+    catalogPath: "PUMA LE FRANCE/LaFrancé/Red" },
+  { src: "/videos-360/sbdunkverdy.mp4",                         label: "SB DUNK VERDY",
+    catalogPath: "SB DUNK/SB Dunk Low/Verdy" },
+  { src: "/videos-360/timberland6-InchBoot.mp4",                label: "TIMBERLAND BOOTS",
+    catalogPath: "TIMBERLAND/Boots/Wheat" },
+];
+
+/** Devuelve la HeroSpec enriquecida con su CatalogEntry (puede ser null si el path no existe). */
+export function resolveHeroSpec(hs: HeroSpec) {
+  return {
+    ...hs,
+    entry: getEntryByPath(hs.catalogPath),
+  };
+}
