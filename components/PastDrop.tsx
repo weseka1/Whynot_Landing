@@ -50,12 +50,14 @@ const VIDEOS = VIDEO_FILES.map((f) => ({
 }));
 
 const N = VIDEOS.length;
-const SIZE = 300;        // diámetro base (el del centro, scale 1)
-const SPACING = 290;     // separación horizontal entre centros (px)
-const SIDE_SCALE = 0.78; // tamaño de los vecinos (off = ±1)
-const OUTER_SCALE = 0.6; // tamaño de los que están más afuera (off = ±2)
-const FADE_START = 2;    // a partir de qué |offset| empezar a desvanecer
-const FADE_END = 2.7;    // |offset| al que llega a opacity 0
+const SIZE = 340;        // diámetro base (el del centro, scale 1)
+const SPACING = 420;     // separación horizontal entre centros (px) — bien
+                         // más grande que SIZE para que NO haya impresión
+                         // de anillo/fila pegada; queda aire entre uno y otro
+const SIDE_SCALE = 0.62; // tamaño de los vecinos (off = ±1) — bien más chicos
+const OUTER_SCALE = 0.35;// tamaño de los exteriores (off = ±2) — apenas se ven
+const FADE_START = 1.2;  // empieza a desvanecer apenas pasa el lateral visible
+const FADE_END = 1.95;   // |offset| al que llega a opacity 0
 
 /* Wrap del offset a [-N/2, N/2) para que el carrusel sea infinito y cada
    item tome el camino corto (no se "teletransporte" cuando hace loop). */
@@ -326,7 +328,9 @@ function CarouselItem({
     wrapOffset(index - p, N)
   );
   const x = useTransform(offset, (o) => o * SPACING);
-  const scale = useTransform(offset, scaleForOffset);
+  /* scaleX y scaleY bindeados al MISMO motion value para garantizar uniformidad
+     (algunas versiones de framer-motion son finicky con `scale` único). */
+  const s = useTransform(offset, scaleForOffset);
   const opacity = useTransform(offset, opacityForOffset);
   /* zIndex: el del centro arriba, los de afuera abajo */
   const zIndex = useTransform(offset, (o) => Math.round(100 - Math.abs(o) * 10));
@@ -339,10 +343,12 @@ function CarouselItem({
         top: "50%",
         width: SIZE,
         height: SIZE,
+        aspectRatio: "1 / 1",        // garantiza forma cuadrada → círculo
         marginLeft: -SIZE / 2,
         marginTop: -SIZE / 2,
         x,
-        scale,
+        scaleX: s,
+        scaleY: s,
         opacity,
         zIndex,
         borderRadius: "50%",
@@ -351,6 +357,7 @@ function CarouselItem({
         background: "#0a0a0a",
         boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
         willChange: "transform, opacity",
+        transformOrigin: "center center",
       }}
     >
       <video
