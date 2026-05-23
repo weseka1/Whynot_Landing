@@ -33,7 +33,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { site } from "@/data/site";
-import GlassOrb3DClient from "./GlassOrb3DClient";
 
 /* Stats tecnicos que rodean el circulo (HUD AR scanner). Cambiar libremente. */
 const TECH_STATS_LEFT = [
@@ -202,33 +201,64 @@ export default function Collections() {
               }}
             />
 
-            {/* === GLASS ORB 3D — planeta semitranslucido (R3F + Three.js) ===
-                Esfera de vidrio con atmosfera fresnel + glow interior. El
-                producto va DENTRO como plano texturizado.
-
-                Los items 01/02/03 son .webm VP9 con alpha REAL (yuva420p,
-                144 frames 360 grados de las Golden Goose Super Star sobre
-                fondo negro, extraidos con extract-black-bg.py). No hace
-                falta chroma key: el alpha viene horneado. Safari (que no
-                soporta VP9 alpha) tiene fallback automatico a PNG sequence.
-
-                El item 04 cae a imagen estatica.                         */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={current.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.4 }}
-                style={{ position: "absolute", inset: 0 }}
-              >
-                <GlassOrb3DClient
-                  productImage={
-                    ("video" in current && current.video) || current.image
-                  }
-                />
-              </motion.div>
-            </AnimatePresence>
+            {/* === PRODUCTO PLANO con alpha real ===
+                Items 01/02/03 son .webm VP9 yuva420p (144 frames 360 deg,
+                extraidos por scripts/process-shoe-video/extract-black-bg.py
+                con refinement VITMatte). El browser decodifica el alpha
+                horneado nativamente. Item 04 cae a <img> estatica.
+                Float CSS animation (floatGentle) da vida sin Three.js.    */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "grid",
+                placeItems: "center",
+                pointerEvents: "none",
+              }}
+            >
+              <AnimatePresence mode="wait">
+                {"video" in current && current.video ? (
+                  <motion.video
+                    key={current.id}
+                    src={current.video}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    initial={{ opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
+                    style={{
+                      width: "88%",
+                      height: "88%",
+                      objectFit: "contain",
+                      animation: "floatGentle 5.5s ease-in-out infinite",
+                      filter:
+                        "drop-shadow(0 18px 22px rgba(46,42,37,0.18)) drop-shadow(0 4px 6px rgba(46,42,37,0.10))",
+                    }}
+                  />
+                ) : (
+                  <motion.img
+                    key={current.id}
+                    src={current.image}
+                    alt={current.name}
+                    initial={{ opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
+                    style={{
+                      width: "88%",
+                      height: "88%",
+                      objectFit: "contain",
+                      animation: "floatGentle 5.5s ease-in-out infinite",
+                      filter:
+                        "drop-shadow(0 18px 22px rgba(46,42,37,0.18)) drop-shadow(0 4px 6px rgba(46,42,37,0.10))",
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* === Coordenadas debajo del circulo === */}
@@ -455,6 +485,10 @@ export default function Collections() {
 
       {/* ============ Styles JSX scoped (hover del discover + thumbs) ============ */}
       <style jsx>{`
+        @keyframes floatGentle {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50%      { transform: translateY(-10px) rotate(0.4deg); }
+        }
         .ar-discover:hover {
           background: var(--color-graphite);
           color: var(--color-pearl);
