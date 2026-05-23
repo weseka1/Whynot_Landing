@@ -61,13 +61,30 @@ export const site = {
 
   /* ---------------- MISSION ---------------- */
   mission: {
-    eyebrow: "C://SYSTEM_FILES / MISSION",
-    title:   "Our Mission",
+    eyebrow:  "// OUR MISSION",
+    title:    "Somos WhyNot",
+    subtitle: "Conocenos. Cuatro pilares. Una forma distinta de comprar.",
     pillars: [
-      { id: ".001", label: "Source",     copy: "Designing fashion as software. Every drop is versioned and documented." },
-      { id: ".002", label: "Build",      copy: "Engineered silhouettes from recycled tech-fibers. Traceable thread to thread." },
-      { id: ".003", label: "Release",    copy: "Wearer-owned. Never algorithmic. Each release is a file you can open." },
-      { id: ".004", label: "Archive",    copy: "Every capsule preserved. Numbered, sealed, indexed — nothing leaves the system." },
+      {
+        id:    ".001 SOURCE",
+        label: "Asesoría 1:1",
+        copy:  "Curaduría humana por Instagram y WhatsApp. Te ayudamos a elegir como si fuera para nosotros — cero bots, cero scripts. Respuesta real, en el momento.",
+      },
+      {
+        id:    ".002 BUILD",
+        label: "Unboxing a medida",
+        copy:  "¿Viste algo que te gustó? Mandanos la captura. Te devolvemos un video unboxing del producto, grabado para vos, antes de tomar la decisión.",
+      },
+      {
+        id:    ".003 RELEASE",
+        label: "Tres canales, un hilo",
+        copy:  "Instagram · WhatsApp · Web. Entrás por donde te queda mejor — la conversación no se rompe entre canales.",
+      },
+      {
+        id:    ".004 ARCHIVE",
+        label: "Llegada garantizada",
+        copy:  "CABA y GBA: entrega en el día, pago contra-entrega. Interior del país: 2 a 4 días hábiles, directo a tu puerta.",
+      },
     ],
   },
 

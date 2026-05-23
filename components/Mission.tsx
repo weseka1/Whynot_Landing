@@ -68,6 +68,19 @@ export default function Mission() {
           >
             {site.mission.title}
           </h2>
+          {site.mission.subtitle && (
+            <p
+              style={{
+                marginTop: "var(--space-md)",
+                maxWidth: 520,
+                fontSize: "clamp(1rem, 1.4vw, 1.25rem)",
+                lineHeight: 1.5,
+                color: "rgba(10,10,20,0.7)",
+              }}
+            >
+              {site.mission.subtitle}
+            </p>
+          )}
         </div>
 
         {/* 4 pilares: texto a la izquierda (50%), mono 3D a la derecha (50%).
