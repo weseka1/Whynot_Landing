@@ -40,6 +40,21 @@ const TARGET_SIZE         = 2.5;
 const ANIM_FADE_IN_S      = 0.15;
 const ANIM_TIME_SCALE     = 0.6;
 
+/* Y_DROP_FROM = altura inicial del mono en world Y (3D units) — bien arriba
+   del frame visible para que entre cayendo desde fuera del viewport del
+   canvas. Frame vertical aprox: [-2.4, +2.4] con cam Z=6.5 FOV 36°. +4
+   queda por encima del frame: el mono entra al frame durante la caida. */
+const Y_DROP_FROM = 4.0;
+/* Y_REST = posicion final/anchor del mono. 0 = centro del frame (su sitio
+   natural). */
+const Y_REST = 0;
+
+/* easeOutCubic — desacelera al final. Visualmente: el mono cae rapido al
+   principio (gravedad) y "frena" al aterrizar. Da sensacion de impacto. */
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
 interface MonkeyProps {
   triggerSignalRef: React.MutableRefObject<boolean>;
 }
@@ -91,6 +106,11 @@ function Monkey({ triggerSignalRef }: MonkeyProps) {
 
   const { actions, mixer, names } = useAnimations(cleanedAnimations, ref);
   const actionRef = useRef<THREE.AnimationAction | null>(null);
+  /* Refs para el tween de caida Y. tweenStartMsRef = null cuando no hay
+     tween activo. clipDurationRef = duracion del clip / timeScale para
+     sincronizar el tween con la animacion. */
+  const tweenStartMsRef = useRef<number | null>(null);
+  const clipDurationRef = useRef<number>(1);
 
   useEffect(() => {
     if (!names.length) return;
@@ -101,23 +121,51 @@ function Monkey({ triggerSignalRef }: MonkeyProps) {
     action.setLoop(THREE.LoopOnce, 1);
     action.clampWhenFinished = true;
     action.timeScale = ANIM_TIME_SCALE;
-    /* Pose final como pose inicial: ir al ultimo frame y pausar. */
     action.reset();
     action.play();
     action.time = duration;
     mixer.update(0);
     action.paused = true;
     actionRef.current = action;
+    clipDurationRef.current = duration / ANIM_TIME_SCALE;
+    /* Posicion inicial del wrapper: ARRIBA del frame, fuera del viewport
+       del canvas. El mono no se ve al cargar — recien entra al frame
+       cuando el trigger inicie el tween de caida. */
+    if (ref.current) ref.current.position.y = Y_DROP_FROM;
   }, [actions, mixer, names]);
 
   useFrame(() => {
-    if (!triggerSignalRef.current) return;
-    triggerSignalRef.current = false;
-    const action = actionRef.current;
-    if (!action) return;
-    action.reset();
-    action.fadeIn(ANIM_FADE_IN_S);
-    action.play();
+    const obj = ref.current;
+    if (!obj) return;
+
+    /* Trigger: cuando el wrapper exterior pone triggerSignalRef en true,
+       arrancamos animacion + tween Y. El mono SALTA a Y_DROP_FROM (arriba)
+       instantaneamente y empieza a caer mientras se reproduce el clip. */
+    if (triggerSignalRef.current) {
+      triggerSignalRef.current = false;
+      const action = actionRef.current;
+      if (action) {
+        action.reset();
+        action.fadeIn(ANIM_FADE_IN_S);
+        action.play();
+      }
+      obj.position.y = Y_DROP_FROM;
+      tweenStartMsRef.current = performance.now();
+    }
+
+    /* Tween Y activo: avanzar segun tiempo. easeOutCubic = cae rapido,
+       frena al final → sensacion de aterrizaje con gravedad. */
+    const startMs = tweenStartMsRef.current;
+    if (startMs !== null) {
+      const elapsed = (performance.now() - startMs) / 1000;
+      const t = THREE.MathUtils.clamp(elapsed / clipDurationRef.current, 0, 1);
+      const eased = easeOutCubic(t);
+      obj.position.y = THREE.MathUtils.lerp(Y_DROP_FROM, Y_REST, eased);
+      if (t >= 1) {
+        obj.position.y = Y_REST;
+        tweenStartMsRef.current = null;
+      }
+    }
   });
 
   return (
