@@ -1,22 +1,27 @@
 "use client";
 
 /* ============================================================================
-   GLASS ORB 3D — Esfera de vidrio REAL con WebGL (R3F + Three.js)
+   GLASS ORB 3D — Planet-like semi-translucent sphere (R3F + Three.js)
    --------------------------------------------------------------------------
-   Renderiza una esfera transparente con material refractante real y el
-   producto adentro como plano texturizado, flotando.
+   Estetica: esfera de cristal con look de PLANETA — capa de atmosfera con
+   rim glow fresnel, esfera principal con iridescencia + transmision, glow
+   interior radial. El producto va DENTRO como plano texturizado.
+
+   Capas (z-order del interno al externo):
+     1. InnerGlow      — sprite/disco luminoso detras del producto (alma)
+     2. ProductPlane   — el plano texturizado (video webm con alpha o PNG)
+     3. GlassSphere    — esfera principal con MeshTransmissionMaterial
+     4. AtmosphereShell — capa exterior con fresnel rim glow (additive)
+
+   El orb completo (sphere+atmosphere+glow) rota lentamente en Y para dar
+   sensacion de planeta vivo. El producto plano se mantiene estatico — la
+   rotacion 360 ya viene horneada en el video webm de la zapatilla.
 
    FUENTES DE CONTENIDO SOPORTADAS:
-     - .webm con alpha real (VP9 yuva420p) — preferido. Sin chroma key.
-       Generado offline con `npm run bg:process`. Safari NO soporta VP9
-       alpha → fallback automatico a PNG sequence si se pasa pngSequence.
-     - .mp4/.mov con fondo (chroma key opcional via shader) — fallback
-       backward-compat para videos sin pre-procesar.
-     - .png/.webp/.jpg — imagen estatica, con chroma key opcional
-       (offscreen canvas, una sola vez al cargar).
-     - PNG sequence — fallback para Safari cuando no soporta WebM alpha.
-
-   El switcher decide qué subcomponente usar segun la URL + capability.
+     - .webm con alpha real (VP9 yuva420p) — preferido, sin chroma key.
+     - .mp4/.mov con fondo (chroma key opcional via shader) — fallback.
+     - .png/.webp/.jpg — imagen estatica con chroma key opcional.
+     - PNG sequence — fallback Safari para WebM alpha.
    ============================================================================ */
 
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -48,20 +53,15 @@ function getExt(url: string): string {
   return m ? m[1] : "";
 }
 
-/* Detecta si el browser soporta VP9 con alpha en WebM (Chrome/Firefox/Edge
-   YES, Safari NO). Devuelve true conservadoramente cuando canPlayType
-   indica al menos "maybe".                                              */
 function supportsWebMAlpha(): boolean {
   if (typeof window === "undefined") return false;
   const v = document.createElement("video");
   const canVP9 = v.canPlayType('video/webm; codecs="vp9"');
-  // Safari devuelve "" para VP9 webm. Resto: "probably" o "maybe".
   return canVP9 !== "";
 }
 
 /* ============================================================================
    ProductImagePlane — imagen estatica (.png/.webp/.jpg)
-   Si tiene chromaKey, procesa con offscreen canvas (una sola vez).
    ============================================================================ */
 
 function useProcessedTexture(
@@ -156,9 +156,7 @@ function ProductImagePlane({
 }
 
 /* ============================================================================
-   ProductVideoAlphaPlane — video .webm VP9 con alpha real (sin shader chroma)
-   El asset ya tiene alpha horneado (preprocesado con rembg). Solo VideoTexture
-   + meshBasicMaterial transparent. Costo: cero.
+   ProductVideoAlphaPlane — video .webm VP9 con alpha real
    ============================================================================ */
 
 function ProductVideoAlphaPlane({ url }: { url: string }) {
@@ -197,7 +195,7 @@ function ProductVideoAlphaPlane({ url }: { url: string }) {
   }, [url]);
 
   if (!texture) return null;
-  const SCALE = 1.4;
+  const SCALE = 1.5;
   return (
     <mesh>
       <planeGeometry args={[SCALE * aspect, SCALE]} />
@@ -213,8 +211,7 @@ function ProductVideoAlphaPlane({ url }: { url: string }) {
 }
 
 /* ============================================================================
-   ProductVideoChromaPlane — video .mp4/.mov con fondo (chroma key en shader)
-   Backward compat para videos sin pre-procesar (silver, gold).
+   ProductVideoChromaPlane — fallback chroma key shader
    ============================================================================ */
 
 function ProductVideoChromaPlane({
@@ -299,7 +296,7 @@ function ProductVideoChromaPlane({
   }, []);
 
   if (!texture) return null;
-  const SCALE = 1.4;
+  const SCALE = 1.5;
   return (
     <mesh>
       <planeGeometry args={[SCALE * aspect, SCALE]} />
@@ -315,9 +312,7 @@ function ProductVideoChromaPlane({
 }
 
 /* ============================================================================
-   ProductPngSequencePlane — anima PNG sequence con alpha real (Safari fallback)
-   Carga N frames .png, los precachea como Texture y los cicla por frame
-   a fps configurado. Cada texture tiene alpha horneado del rembg.
+   ProductPngSequencePlane — Safari fallback con PNG sequence
    ============================================================================ */
 
 function ProductPngSequencePlane({
@@ -325,8 +320,8 @@ function ProductPngSequencePlane({
   count,
   fps = 24,
 }: {
-  base: string;      // ej: "/assets/hero/golden-goose-frames/"
-  count: number;     // cantidad de PNGs disponibles
+  base: string;
+  count: number;
   fps?: number;
 }) {
   const [textures, setTextures] = useState<THREE.Texture[] | null>(null);
@@ -376,7 +371,6 @@ function ProductPngSequencePlane({
     return () => { cancelled = true; };
   }, [base, count]);
 
-  /* Avance del frame index segun fps + delta time del rAF de R3F */
   useFrame((_, dt) => {
     if (!textures || textures.length === 0 || !matRef.current) return;
     timeRef.current += dt;
@@ -389,7 +383,7 @@ function ProductPngSequencePlane({
   });
 
   if (!textures || textures.length === 0) return null;
-  const SCALE = 1.4;
+  const SCALE = 1.5;
   return (
     <mesh>
       <planeGeometry args={[SCALE * aspect, SCALE]} />
@@ -423,56 +417,192 @@ function ProductPlane({ url, chromaKey, pngSequence }: ProductPlaneProps) {
     setWebmAlphaSupported(supportsWebMAlpha());
   }, []);
 
-  // Evitamos render en SSR / antes de la deteccion
   if (webmAlphaSupported === null) return null;
 
-  // .webm: alpha real horneado. Si el browser soporta -> usar. Sino, fallback.
   if (ext === "webm") {
     if (webmAlphaSupported) return <ProductVideoAlphaPlane url={url} />;
     if (pngSequence) {
       return <ProductPngSequencePlane base={pngSequence.base} count={pngSequence.count} fps={pngSequence.fps ?? 24} />;
     }
-    // Sin fallback: intenta cargarlo igual (Safari mostrara el primer frame)
     return <ProductVideoAlphaPlane url={url} />;
   }
 
-  // .mp4/.mov: backward compat con shader chroma key (silver, gold)
   if (ext === "mp4" || ext === "mov") {
     return <ProductVideoChromaPlane url={url} chromaKey={chromaKey || "#ffffff"} />;
   }
 
-  // Imagen estatica
   return <ProductImagePlane url={url} chromaKey={chromaKey} />;
 }
 
 /* ============================================================================
-   GlassSphere — la esfera de cristal en si
+   InnerGlow — disco radial luminoso detras del producto
+   --------------------------------------------------------------------------
+   Da "alma" al planeta: el producto parece flotar dentro de una atmosfera
+   luminosa. Geometria plane con shader radial gradient additive.
+   ============================================================================ */
+
+function InnerGlow() {
+  const uniforms = useMemo(
+    () => ({
+      uColorCore: { value: new THREE.Color("#fff5e0") },
+      uColorEdge: { value: new THREE.Color("#9bb5d6") },
+      uIntensity: { value: 0.55 },
+    }),
+    []
+  );
+
+  const fragment = `
+    varying vec2 vUv;
+    uniform vec3 uColorCore;
+    uniform vec3 uColorEdge;
+    uniform float uIntensity;
+    void main() {
+      vec2 c = vUv - 0.5;
+      float d = length(c) * 2.0;
+      float core = smoothstep(1.0, 0.0, d);          // mas brillante al centro
+      float edge = smoothstep(0.95, 0.4, d);         // halo medio
+      float a = pow(core, 1.6) * 0.85 + pow(edge, 3.0) * 0.25;
+      vec3 col = mix(uColorEdge, uColorCore, pow(core, 1.4));
+      gl_FragColor = vec4(col, a * uIntensity);
+    }
+  `;
+  const vertex = `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `;
+
+  return (
+    <mesh position={[0, 0, -0.4]}>
+      <planeGeometry args={[2.6, 2.6]} />
+      <shaderMaterial
+        uniforms={uniforms}
+        vertexShader={vertex}
+        fragmentShader={fragment}
+        transparent
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+        toneMapped={false}
+      />
+    </mesh>
+  );
+}
+
+/* ============================================================================
+   AtmosphereShell — capa exterior con fresnel rim glow (efecto planeta)
+   --------------------------------------------------------------------------
+   Esfera ligeramente mayor que la principal, con material custom que
+   ilumina solo los bordes (alta en grazing angles, baja al centro). Da
+   esa banda atmosferica luminosa caracteristica de los planetas.
+   ============================================================================ */
+
+function AtmosphereShell({ isMobile }: { isMobile: boolean }) {
+  const uniforms = useMemo(
+    () => ({
+      uColorRim:   { value: new THREE.Color("#cce4ff") },   // azul atmosfera
+      uColorInner: { value: new THREE.Color("#fff2d6") },   // calido al interior
+      uPower:      { value: 2.6 },
+      uIntensity:  { value: 0.85 },
+    }),
+    []
+  );
+
+  const vertex = `
+    varying vec3 vNormal;
+    varying vec3 vViewDir;
+    void main() {
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vNormal = normalize(normalMatrix * normal);
+      vViewDir = normalize(-mv.xyz);
+      gl_Position = projectionMatrix * mv;
+    }
+  `;
+  const fragment = `
+    varying vec3 vNormal;
+    varying vec3 vViewDir;
+    uniform vec3 uColorRim;
+    uniform vec3 uColorInner;
+    uniform float uPower;
+    uniform float uIntensity;
+    void main() {
+      float ndv = max(0.0, dot(normalize(vNormal), normalize(vViewDir)));
+      float rim = pow(1.0 - ndv, uPower);          // 1 en bordes, 0 al centro
+      vec3 col = mix(uColorInner, uColorRim, rim);
+      float a = rim * uIntensity;
+      gl_FragColor = vec4(col, a);
+    }
+  `;
+
+  return (
+    <mesh scale={1.085}>
+      <sphereGeometry args={[1.2, isMobile ? 48 : 80, isMobile ? 48 : 80]} />
+      <shaderMaterial
+        uniforms={uniforms}
+        vertexShader={vertex}
+        fragmentShader={fragment}
+        transparent
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+        side={THREE.FrontSide}
+        toneMapped={false}
+      />
+    </mesh>
+  );
+}
+
+/* ============================================================================
+   GlassSphere — esfera principal de cristal con iridescence + transmission
    ============================================================================ */
 
 function GlassSphere({ isMobile }: { isMobile: boolean }) {
   return (
     <mesh>
-      <sphereGeometry args={[1.2, isMobile ? 48 : 96, isMobile ? 48 : 96]} />
+      <sphereGeometry args={[1.2, isMobile ? 56 : 96, isMobile ? 56 : 96]} />
       <MeshTransmissionMaterial
         backside
-        backsideThickness={0.05}
-        thickness={0.1}
-        transmission={0.95}
-        roughness={0.04}
-        ior={1.08}
-        chromaticAberration={0}
-        anisotropy={0}
-        distortion={0}
-        distortionScale={0}
-        temporalDistortion={0}
+        backsideThickness={0.06}
+        thickness={0.12}
+        transmission={0.94}
+        roughness={0.05}
+        ior={1.1}
+        chromaticAberration={0.018}
+        anisotropy={0.08}
+        distortion={0.05}
+        distortionScale={0.12}
+        temporalDistortion={0.02}
         clearcoat={1}
-        clearcoatRoughness={0.06}
-        attenuationColor="#ffffff"
-        attenuationDistance={8}
+        clearcoatRoughness={0.04}
+        attenuationColor="#dde9ff"
+        attenuationDistance={6}
         color="#ffffff"
-        envMapIntensity={0.25}
+        envMapIntensity={0.45}
       />
     </mesh>
+  );
+}
+
+/* ============================================================================
+   PlanetGroup — agrupa orb + atmosfera + glow, rota lento en Y
+   --------------------------------------------------------------------------
+   El producto plano va aparte (estatico): la rotacion 360 ya viene en el
+   video webm. Esto evita que la zapatilla se vea "girando dos veces".
+   ============================================================================ */
+
+function PlanetGroup({ isMobile }: { isMobile: boolean }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame((_, dt) => {
+    if (ref.current) {
+      // rotacion super lenta en Y — efecto planeta
+      ref.current.rotation.y += dt * 0.08;
+    }
+  });
+  return (
+    <group ref={ref}>
+      <GlassSphere isMobile={isMobile} />
+      <AtmosphereShell isMobile={isMobile} />
+    </group>
   );
 }
 
@@ -483,9 +613,6 @@ function GlassSphere({ isMobile }: { isMobile: boolean }) {
 interface Props {
   productImage: string;
   chromaKey?: string | null;
-  /* Fallback Safari: secuencia PNG decimada del mismo producto que tiene
-     .webm con alpha. Si no se pasa y el browser no soporta WebM alpha,
-     el componente intenta cargar el .webm igual (degradacion silenciosa).  */
   pngSequence?: { base: string; count: number; fps?: number };
   isInView?: boolean;
 }
@@ -515,33 +642,41 @@ export default function GlassOrb3D({
         pointerEvents: "none",
       }}
     >
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[-2.5, 3, 4]} intensity={1.4} color="#fff5e8" />
-      <directionalLight position={[3, 1, -2]} intensity={0.6} color="#d4e2ff" />
-      <pointLight position={[0, 0, 4]} intensity={0.35} color="#ffffff" />
+      {/* Setup luminico — key warm + rim cool + bounce */}
+      <ambientLight intensity={0.55} />
+      <directionalLight position={[-2.5, 3, 4]} intensity={1.6} color="#fff5e8" />
+      <directionalLight position={[3, 1, -2]} intensity={0.8} color="#c8d8ff" />
+      <pointLight position={[0, 0, 4]} intensity={0.4} color="#ffffff" />
+      <pointLight position={[0, -1.5, 1]} intensity={0.25} color="#ffd9a8" />
 
-      {!isMobile && <Environment preset="apartment" background={false} />}
+      {!isMobile && <Environment preset="city" background={false} />}
 
+      {/* Glow interior (detras del producto) — additive */}
+      <InnerGlow />
+
+      {/* Producto plano flotante. Sin rotacion: el video webm ya tiene 360. */}
       <Float
-        speed={1.3}
-        rotationIntensity={0.12}
-        floatIntensity={0.4}
-        floatingRange={[-0.06, 0.06]}
+        speed={1.2}
+        rotationIntensity={0.08}
+        floatIntensity={0.35}
+        floatingRange={[-0.05, 0.05]}
       >
-        <group position={[0, 0, -0.3]}>
+        <group position={[0, 0, -0.1]}>
           <ProductPlane url={productImage} chromaKey={chromaKey} pngSequence={pngSequence} />
         </group>
       </Float>
 
-      <GlassSphere isMobile={isMobile} />
+      {/* Esfera + atmosfera (rotan juntas lento en Y) */}
+      <PlanetGroup isMobile={isMobile} />
 
+      {/* Sombra al piso debajo del planeta */}
       {!isMobile && (
         <ContactShadows
-          position={[0, -1.35, 0]}
-          opacity={0.35}
-          scale={3.5}
-          blur={2.6}
-          far={2.2}
+          position={[0, -1.4, 0]}
+          opacity={0.4}
+          scale={3.8}
+          blur={2.8}
+          far={2.4}
           color="#1a1814"
         />
       )}

@@ -202,19 +202,17 @@ export default function Collections() {
               }}
             />
 
-            {/* === GLASS ORB 3D (R3F + MeshTransmissionMaterial) ===
-                Esfera de vidrio renderizada en WebGL con refraccion real.
-                El producto va DENTRO como plane texturizado.
+            {/* === GLASS ORB 3D — planeta semitranslucido (R3F + Three.js) ===
+                Esfera de vidrio con atmosfera fresnel + glow interior. El
+                producto va DENTRO como plano texturizado.
 
-                Si el item tiene `video` (01/02/03 con golden-goose mp4
-                variantes), GlassOrb3D detecta la extension .mp4 y usa
-                VideoTexture + chroma key en fragment shader (por frame,
-                GPU). El fondo blanco horneado del MP4 se vuelve trans-
-                parente en GPU y la zapatilla queda flotando en el cristal.
+                Los items 01/02/03 son .webm VP9 con alpha REAL (yuva420p,
+                144 frames 360 grados de las Golden Goose Super Star sobre
+                fondo negro, extraidos con extract-black-bg.py). No hace
+                falta chroma key: el alpha viene horneado. Safari (que no
+                soporta VP9 alpha) tiene fallback automatico a PNG sequence.
 
-                Si el item NO tiene video (04), cae a la imagen estatica
-                con chroma key procesado en offscreen canvas (CPU una sola
-                vez al cargar).                                          */}
+                El item 04 cae a imagen estatica.                         */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={current.id}
@@ -228,7 +226,6 @@ export default function Collections() {
                   productImage={
                     ("video" in current && current.video) || current.image
                   }
-                  chromaKey="#ffffff"
                 />
               </motion.div>
             </AnimatePresence>
