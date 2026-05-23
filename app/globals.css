@@ -84,7 +84,12 @@
   --dots-pink-100-size: 18px 18px;
 
   /* — Tipografía — */
-  --font-display:    "Times New Roman", "Times", serif;
+  /* --font-display ahora apunta al MISMO stack que --font-marquee para
+     que TODOS los titulos display de la pagina usen la T-012 (cuando este
+     el .otf en /public/fonts/) o Audiowide como fallback gratis muy
+     similar. Antes era Times serif — clasico pero inconsistente con el
+     marquee del Hero. */
+  --font-display:    var(--font-marquee);
   --font-body:       "Helvetica Neue", "Inter", system-ui, sans-serif;
   --font-mono:       "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
   /* Tipografía display para el marquee superior y los titulos del Mission.
