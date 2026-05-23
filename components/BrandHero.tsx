@@ -83,8 +83,8 @@ export default function BrandHero({
           margin: 0,
           /* paddingRight reserva espacio horizontal por si el título es muy
              largo (e.g. LOUIS VUITTON) y queremos que no se solape con el
-             mascot. ~600px = 540 ancho del mono + un poco de aire.         */
-          paddingRight: "clamp(0px, 34vw, 600px)",
+             mascot. ~520px = 460 ancho del mono + un poco de aire.         */
+          paddingRight: "clamp(0px, 30vw, 520px)",
           fontWeight: 700,
           textTransform: "uppercase",
           overflowWrap: "anywhere",
@@ -93,11 +93,16 @@ export default function BrandHero({
         {brandName}
       </motion.h1>
 
-      {/* Mono mascot 3D — portrait (540x830 ≈ 30% más grande que 416x650).
-          top -10rem para que el body bottom termine justo en el divider line
-          bajo el counter strip (DISPLAYING ...) — no sigue hacia abajo dentro
-          del grid de cards.
-          En mobile pasa a position static + tamaño reducido vía media.        */}
+      {/* Mono mascot 3D — portrait. Antes usabamos top: -10rem y el mono
+          quedaba flotando por arriba, sin los pies tocando el divider line
+          bajo el stats row. Ahora lo anclamos al BOTTOM del header con
+          bottom: -3rem (compensa el padding-bottom 3rem del outer div) →
+          los pies del mono coinciden exactamente con la linea divisoria
+          entre el brand header y el catalog grid.
+          camera-target apunta a la cintura del modelo (0.9m) y radius 130%
+          (antes 110%) da el zoom-out justo para que entre full-body sin
+          recortes en alto.
+          En mobile pasa a position static + tamaño reducido via media.   */}
       <motion.div
         className="brand-mascot"
         initial={{ opacity: 0, scale: 0.85, x: 24 }}
@@ -105,12 +110,18 @@ export default function BrandHero({
         transition={{ duration: 1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
         style={{
           position: "absolute",
-          top: "-10rem",
+          top: "auto",
+          bottom: "-3rem",
           right: "2.5rem",
           zIndex: 6,
         }}
       >
-        <MonoMascot width={540} height={830} radius="110%" />
+        <MonoMascot
+          width={460}
+          height={640}
+          radius="130%"
+          cameraTarget="0m 0.85m 0m"
+        />
       </motion.div>
 
       <style jsx>{`
@@ -121,8 +132,8 @@ export default function BrandHero({
             display: block !important;
           }
           .brand-mascot > div {
-            width: 340px !important;
-            height: 520px !important;
+            width: 300px !important;
+            height: 420px !important;
           }
         }
       `}</style>
