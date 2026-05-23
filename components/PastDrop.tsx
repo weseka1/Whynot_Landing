@@ -413,19 +413,31 @@ export default function PastDrop() {
           >
             {site.pastDrop.eyebrow}
           </div>
+          {/* Titulo "DROP" como imagen — esta pre-renderizado con T-12 real
+              (el cliente paso el PNG por ChatGPT, lo procesamos con sharp:
+              blanco -> transparente, bbox crop, WebP q95). Asi el titulo
+              matchea exacto el look del marquee del Hero sin requerir el
+              archivo .otf de Studio Innate ($29). aria-label preserva
+              accesibilidad del texto. */}
           <h2
+            aria-label={site.pastDrop.title}
             style={{
-              fontFamily: "var(--font-marquee)",
-              fontSize: "clamp(2.2rem, 5.5vw, 4.5rem)",
-              lineHeight: 0.95,
-              letterSpacing: "0.04em",
-              color: "#0a0a14",
               margin: 0,
-              textTransform: "uppercase",
-              fontWeight: 700,
+              lineHeight: 0,
             }}
           >
-            {site.pastDrop.title}
+            <img
+              src="/assets/past-drop/drop-title.webp"
+              alt=""
+              aria-hidden
+              draggable={false}
+              style={{
+                display: "block",
+                width: "auto",
+                height: "clamp(2.4rem, 6vw, 5rem)",
+                userSelect: "none",
+              }}
+            />
           </h2>
         </div>
 
