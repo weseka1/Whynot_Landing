@@ -25,15 +25,20 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/* Solo Orbitron (700/900) — antes habia 4 familias (Audiowide, Bruno
-            Ace SC, Quantico, Orbitron); las primeras 3 estaban en fallback
-            chain pero nunca se usaban. Preconnect + display:swap = casi
-            instantaneo, fuente fallback hasta que carga (no bloquea paint). */}
+        {/* --font-marquee chain:
+              1) "T-12"/"T-012" local (definida en globals.css con @font-face,
+                 archivo en /public/fonts/) — la fuente verdadera del marquee
+                 "WHYNOT AMK EXCLUSIVE" del Hero. Studio Innate, premium.
+              2) Audiowide (Google Fonts) — el clon gratuito mas cercano,
+                 con los cortes/breaks caracteristicos de la T-12 (W, H, K,
+                 M, E, S). Bridge mientras no este la T-12 original.
+              3) Orbitron — geometrica cyber, fallback ultimo.
+            Preconnect + display:swap = no bloquea el primer paint.        */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Audiowide&family=Orbitron:wght@700;900&display=swap"
         />
 
         {/* Preload de assets criticos del Hero — el browser los pide en

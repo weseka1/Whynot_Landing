@@ -87,15 +87,17 @@
   --font-display:    "Times New Roman", "Times", serif;
   --font-body:       "Helvetica Neue", "Inter", system-ui, sans-serif;
   --font-mono:       "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
-  /* Tipografía display para el marquee superior.
+  /* Tipografía display para el marquee superior y los titulos del Mission.
      Orden de prioridad:
-       1) Orbitron (Google Fonts) — la que pediste, geométrica cyber
-       2) T-012 / T-12 local (ver /public/fonts/README.md) si la dropeás
-       3) Bruno Ace SC / Audiowide / Quantico → fallbacks */
-  /* Orbitron de Google Fonts (cargada con preload+onload async en layout).
-     T-012/T-12 son locales (@font-face arriba). Quitadas Bruno Ace SC,
-     Audiowide, Quantico — ya no se cargan desde Google Fonts. */
-  --font-marquee:    "Orbitron", "T-012", "T-12", "Impact", system-ui, sans-serif;
+       1) T-012 / T-12 local — la VERDADERA fuente del PNG "WHYNOT AMK
+          EXCLUSIVE" del Hero. Studio Innate, premium ($29). Solo se carga
+          si el archivo esta en /public/fonts/T-012.{otf,ttf,woff2}.
+       2) Audiowide (Google Fonts) — el clon gratis mas cercano: tiene los
+          mismos cortes caracteristicos en W, H, K, M, E, S, U, V, X. Bridge
+          mientras no este T-12.
+       3) Orbitron — fallback geometrico cyber.
+     Cargadas en layout.tsx con preconnect + display:swap. */
+  --font-marquee:    "T-012", "T-12", "Audiowide", "Orbitron", "Impact", system-ui, sans-serif;
 
   /* — Spacing — */
   --space-xs:        0.5rem;
