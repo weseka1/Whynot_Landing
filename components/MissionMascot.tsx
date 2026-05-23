@@ -21,15 +21,25 @@
    pilar — texto IZQ pone al mono a la DER, etc.) para ser drop-in.
    ============================================================================ */
 
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
+import { useAnimations, useGLTF } from "@react-three/drei";
 import { MotionValue, useMotionValueEvent } from "framer-motion";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
 
-const MONO_SRC = "/assets/3d/mono-cuerpo-completo.glb";
+/* mono-rigged.glb = mesh Meshy + esqueleto Mixamo (65 huesos) + textura Meshy
+   en WebP, draco-compressed → 39 MB → 1.55 MB (96% reduccion).
+   Si trae animaciones del FBX (no T-pose), el componente las reproduce con
+   useAnimations; si solo trae T-pose, la lógica procedural de poses sigue
+   animandolo (bobbing + spin + lean + squash). */
+const MONO_SRC = "/assets/3d/mono-rigged.glb";
 useGLTF.preload(MONO_SRC);
+
+/* Umbral: si la animacion del GLB dura menos que esto, asumimos que es
+   T-pose estatica (los FBX de Mixamo sin animacion eligida traen 2 frames =
+   ~0.03s) y NO la reproducimos — todo el movimiento queda procedural. */
+const ANIM_MIN_DURATION_S = 0.5;
 
 const PILLAR_COUNT  = 4;
 const PROGRESS_IN   = 0.08;
@@ -143,7 +153,7 @@ interface MonkeyProps {
 }
 
 function Monkey({ progressRef }: MonkeyProps) {
-  const { scene } = useGLTF(MONO_SRC);
+  const { scene, animations } = useGLTF(MONO_SRC);
   const ref = useRef<THREE.Group>(null);
   /* Acumulamos el spin frame por frame en lugar de calcular state.clock*spinSpeed
      porque spinSpeed cambia entre poses — si lo hicieramos directo, el angulo
@@ -153,21 +163,41 @@ function Monkey({ progressRef }: MonkeyProps) {
 
   /* Auto-fit del GLB a TARGET_SIZE y recentrado al origen — la posicion del
      <group> wrapper representa entonces el centro real del mono, sin sorpresas
-     por el pivot nativo del modelo. */
-  const cloned = useMemo(() => {
-    const c = scene.clone();
-    const bbox = new THREE.Box3().setFromObject(c);
+     por el pivot nativo del modelo.
+     CRITICO con modelos riggeados (skinned mesh): NO clonamos el scene porque
+     el skeleton del mesh apunta a los huesos por referencia. Si clonamos solo
+     con scene.clone(), el clon termina con un skin roto (skeleton hueérfano)
+     y el mesh se renderiza en T-pose colapsada o invisible. Usamos el scene
+     directo — ok porque este componente monta solo una instancia. */
+  useMemo(() => {
+    const bbox = new THREE.Box3().setFromObject(scene);
     const size = new THREE.Vector3();
     bbox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
     const fitScale = TARGET_SIZE / maxDim;
-    c.scale.setScalar(fitScale);
-    bbox.setFromObject(c);
+    scene.scale.setScalar(fitScale);
+    bbox.setFromObject(scene);
     const center = new THREE.Vector3();
     bbox.getCenter(center);
-    c.position.sub(center);
-    return c;
+    scene.position.sub(center);
   }, [scene]);
+
+  /* Reproducir la animacion del Mixamo SOLO si tiene duracion util.
+     Si el FBX descargado de Mixamo no tenia animacion elegida, baja con
+     T-pose estatica (~0.03s, 2 frames) — en ese caso skipeamos useAnimations
+     y todo el movimiento queda en la capa procedural (bobbing, spin, squash).
+     useAnimations debe llamarse SIEMPRE (es un hook) — el filtro va en el
+     useEffect que decide si reproducirla. */
+  const { actions, names } = useAnimations(animations, ref);
+  useEffect(() => {
+    if (!names.length) return;
+    const firstAction = actions[names[0]];
+    if (!firstAction) return;
+    const duration = firstAction.getClip().duration;
+    if (duration < ANIM_MIN_DURATION_S) return; // T-pose, skip
+    firstAction.reset().play();
+    firstAction.setLoop(THREE.LoopRepeat, Infinity);
+  }, [actions, names]);
 
   useFrame((state, dt) => {
     const obj = ref.current;
@@ -224,7 +254,7 @@ function Monkey({ progressRef }: MonkeyProps) {
 
   return (
     <group ref={ref}>
-      <primitive object={cloned} />
+      <primitive object={scene} />
     </group>
   );
 }
