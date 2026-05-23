@@ -38,9 +38,9 @@ export default function Page() {
         <Hero />
         <CloudBand />
         <Collections />
-        <FuturisticGallery />
         <Mission />
         <PastDrop />
+        <FuturisticGallery />
         <Anturax />
         <IdeaForm />
         <MeteoriteSection />
