@@ -131,9 +131,11 @@ export default function Mission() {
           </h2>
         </div>
 
-        {/* 4 pilares: cada uno 100vh, lado alternado */}
-        {site.mission.pillars.map((p, i) => {
-          const isRight = i % 2 === 1;  // 0=IZQ, 1=DER, 2=IZQ, 3=DER
+        {/* 4 pilares: cada uno 100vh, texto SIEMPRE a la izquierda — el
+            mono mascot ocupa el lado derecho fijo (ver MissionMascot que
+            tiene pillarSign devolviendo +1 para todos los pilares). */}
+        {site.mission.pillars.map((p) => {
+          const isRight = false;
           return (
             <motion.div
               key={p.id}
