@@ -92,7 +92,10 @@
        1) Orbitron (Google Fonts) — la que pediste, geométrica cyber
        2) T-012 / T-12 local (ver /public/fonts/README.md) si la dropeás
        3) Bruno Ace SC / Audiowide / Quantico → fallbacks */
-  --font-marquee:    "Orbitron", "T-012", "T-12", "Bruno Ace SC", "Audiowide", "Quantico", "Impact", system-ui, sans-serif;
+  /* Orbitron de Google Fonts (cargada con preload+onload async en layout).
+     T-012/T-12 son locales (@font-face arriba). Quitadas Bruno Ace SC,
+     Audiowide, Quantico — ya no se cargan desde Google Fonts. */
+  --font-marquee:    "Orbitron", "T-012", "T-12", "Impact", system-ui, sans-serif;
 
   /* — Spacing — */
   --space-xs:        0.5rem;

@@ -25,29 +25,19 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/*
-          Tipografías cargadas desde Google Fonts vía <link> directo.
-          Cambiar acá la familia si querés otro look — la variable
-          asociada vive en app/globals.css → --font-marquee.
-
-          Candidatas con look sci-fi / retro-futurista geométrico:
-            - Audiowide     ← actual (arcos + cortes característicos)
-            - Bruno Ace SC  ← stencil más marcado
-            - Quantico      ← más sobria, ancha
-            - Genos         ← variable, angular
-            - Russo One     ← más chunky
-            - Major Mono    ← display mono
-        */}
+        {/* Solo Orbitron (700/900) — antes habia 4 familias (Audiowide, Bruno
+            Ace SC, Quantico, Orbitron); las primeras 3 estaban en fallback
+            chain pero nunca se usaban. Preconnect + display:swap = casi
+            instantaneo, fuente fallback hasta que carga (no bloquea paint). */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Audiowide&family=Bruno+Ace+SC&family=Quantico:wght@700&family=Orbitron:wght@700;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap"
         />
 
         {/* Preload de assets criticos del Hero — el browser los pide en
             paralelo con el JS, no espera a que React monte el componente. */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           rel="preload"
           as="image"
@@ -71,6 +61,11 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        {/* model-viewer CDN — afterInteractive: carga DESPUES de que la
+            page sea interactive, sin bloquear el primer paint. El Hero
+            renderiza el <model-viewer> en el HTML; aunque el script no
+            este disponible aun, el web component se hidrata al cargar
+            (model-viewer es self-bootstrapping). */}
         <Script
           type="module"
           src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"

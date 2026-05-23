@@ -15,8 +15,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { site } from "@/data/site";
 import CornerFrame from "./CornerFrame";
 
-const MIN_TIME = 1200;
-const MAX_TIME = 5000;
+/* MIN_TIME 800ms (antes 1200): pantalla minima del preloader para no
+   flashear si la red es muy rapida. Bajado para reducir delay percibido.
+   MAX_TIME 3500ms (antes 5000): hard timeout si la red esta saturada.
+   3.5s es suficiente para 3G/4G, evita que el usuario espere de mas. */
+const MIN_TIME = 800;
+const MAX_TIME = 3500;
 
 /* Helpers de precarga — cada uno resuelve cuando el asset esta listo. */
 function loadImage(src: string): Promise<void> {
