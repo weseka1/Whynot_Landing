@@ -1,68 +1,108 @@
 "use client";
 
 /* ============================================================================
-   BRAND HERO — header de las brand pages del catálogo.
-   Reescrito: ahora muestra SOLO el logo dorado "WHY NOT" + el mono mascot
-   a la derecha. Antes traía:
-     - eyebrow BRAND_ARCHIVE · NN MODELS · NN COLORWAYS
-     - <h1> gigante con el brand name (AMIRI, ASICS, etc.)
-     - stats row (SPECIMENS / 360° READY / STATIC / STATUS)
-     - vertical accent line
-   El cliente pidió sacar todo eso — "todo lo que no sea relacionado con
-   las zapatillas o info de valor o de marketing". El brand name y los
-   counters son data interna, no aportan al consumer.
-
-   Mantengo la firma de props para no romper la pagina [brand]/page.tsx;
-   las props que ya no se usan se ignoran (totalModels/totalColorways/
-   total360). Si querés podes simplificar luego app/catalog/[brand]/
-   page.tsx para no pasarlas.
+   BRAND HERO — encabezado editorial gigante de la brand page
+   Marca como título italic gigante + counters técnicos en lila DICH.
    ============================================================================ */
 
 import { motion } from "framer-motion";
 import MonoMascot from "./MonoMascot";
 
+const DARK = "#0a0a14";
+const DARK_DIM = "rgba(10,10,20,0.65)";
+const YELLOW = "#f4dc3f";
+
 type Props = {
   brandName: string;
-  totalModels?: number;
-  totalColorways?: number;
-  total360?: number;
+  totalModels: number;
+  totalColorways: number;
+  total360: number;
 };
 
-export default function BrandHero({ brandName }: Props) {
+export default function BrandHero({
+  brandName,
+  totalModels,
+  totalColorways,
+  total360,
+}: Props) {
   return (
     <div
       style={{
         position: "relative",
-        padding: "2.5rem 2.5rem 3rem",
+        padding: "5rem 2.5rem 3rem",
         zIndex: 5,
       }}
     >
-      {/* Logo WHY NOT dorado — pre-renderizado por el cliente (PNG),
-          procesado con rembg birefnet-general-lite -> WebP transparente
-          (370 KB). Reemplaza el <h1>BRAND_NAME</h1> gigante anterior. */}
-      <motion.img
-        src="/assets/marquee/whynot-gold.webp"
-        alt={`WHY NOT — ${brandName} archive`}
-        initial={{ opacity: 0, y: 24, filter: "blur(16px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        draggable={false}
+      {/* Vertical accent line a la izq */}
+      <div
+        aria-hidden
         style={{
-          display: "block",
-          height: "clamp(7rem, 18vw, 14rem)",
-          width: "auto",
-          userSelect: "none",
-          /* paddingRight no aplica a img — usamos margin-right para
-             reservar espacio del mascot a la derecha y que el logo no
-             se solape en breakpoints intermedios.                       */
-          marginRight: "clamp(0px, 30vw, 520px)",
-          filter:
-            "drop-shadow(0 8px 30px rgba(255, 200, 80, 0.35)) drop-shadow(0 0 14px rgba(255, 215, 100, 0.25))",
+          position: "absolute",
+          top: "5rem",
+          left: "2.5rem",
+          width: 1,
+          height: 48,
+          background:
+            "linear-gradient(to bottom, transparent, rgba(10,10,20,0.7))",
         }}
       />
 
-      {/* Mono mascot 3D — anclado al bottom del header, pies en el divider
-          con el catalog grid. Sin cambios respecto del commit anterior. */}
+      {/* Eyebrow */}
+      <motion.div
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: "0.7rem",
+          letterSpacing: "0.3em",
+          textTransform: "uppercase",
+          color: DARK_DIM,
+          marginBottom: "0.8rem",
+          marginLeft: "1.5rem",
+          fontWeight: 600,
+        }}
+      >
+        BRAND_ARCHIVE · {String(totalModels).padStart(2, "0")} MODELS ·{" "}
+        {String(totalColorways).padStart(2, "0")} COLORWAYS
+      </motion.div>
+
+      {/* Brand title — flow normal, ocupa todo el ancho del padre.
+          El MonoMascot se posiciona ABSOLUTO a la derecha (ver más abajo)
+          para no robarle ancho al título.                                 */}
+      <motion.h1
+        initial={{ opacity: 0, y: 30, filter: "blur(20px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          fontFamily: "var(--font-marquee)",
+          fontSize: "clamp(3rem, 10vw, 10rem)",
+          lineHeight: 0.88,
+          letterSpacing: "0.02em",
+          color: DARK,
+          margin: 0,
+          /* paddingRight reserva espacio horizontal por si el título es muy
+             largo (e.g. LOUIS VUITTON) y queremos que no se solape con el
+             mascot. ~520px = 460 ancho del mono + un poco de aire.         */
+          paddingRight: "clamp(0px, 30vw, 520px)",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          overflowWrap: "anywhere",
+        }}
+      >
+        {brandName}
+      </motion.h1>
+
+      {/* Mono mascot 3D — portrait. Antes usabamos top: -10rem y el mono
+          quedaba flotando por arriba, sin los pies tocando el divider line
+          bajo el stats row. Ahora lo anclamos al BOTTOM del header con
+          bottom: -3rem (compensa el padding-bottom 3rem del outer div) →
+          los pies del mono coinciden exactamente con la linea divisoria
+          entre el brand header y el catalog grid.
+          camera-target apunta a la cintura del modelo (0.9m) y radius 130%
+          (antes 110%) da el zoom-out justo para que entre full-body sin
+          recortes en alto.
+          En mobile pasa a position static + tamaño reducido via media.   */}
       <motion.div
         className="brand-mascot"
         initial={{ opacity: 0, scale: 0.85, x: 24 }}
@@ -97,6 +137,55 @@ export default function BrandHero({ brandName }: Props) {
           }
         }
       `}</style>
+
+      {/* Stats row */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.3 }}
+        style={{
+          marginTop: "1.4rem",
+          display: "flex",
+          gap: "2.2rem",
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: "0.66rem",
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color: DARK_DIM,
+        }}
+      >
+        <StatBlock label="SPECIMENS" value={String(totalColorways).padStart(3, "0")} accent />
+        <StatBlock label="360° READY" value={String(total360).padStart(3, "0")} />
+        <StatBlock label="STATIC" value={String(totalColorways - total360).padStart(3, "0")} />
+        <StatBlock label="STATUS" value="ARCHIVED" />
+      </motion.div>
+    </div>
+  );
+}
+
+function StatBlock({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <span>{label}</span>
+      <span
+        style={{
+          color: DARK,
+          fontSize: "1.1rem",
+          letterSpacing: "0.1em",
+          fontWeight: accent ? 700 : 600,
+          textShadow: accent ? `0 0 12px ${YELLOW}50` : "none",
+        }}
+      >
+        {value}
+      </span>
     </div>
   );
 }
