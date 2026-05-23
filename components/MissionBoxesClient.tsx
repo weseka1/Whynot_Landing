@@ -1,12 +1,16 @@
 "use client";
 
-/* Wrapper client-only para cargar MissionBoxes sin SSR.
-   Three.js usa APIs del browser y no funciona durante el render server. */
+/* Wrapper client-only para cargar el stage 3D de Mission sin SSR.
+   Three.js usa APIs del browser y no funciona durante el render server.
+
+   Cambio: ahora carga MissionMascot (mono animado proceduralmente) en lugar
+   del cluster de cajas + anillos. MissionBoxes.tsx queda en el repo intacto
+   por si hay que revertir — basta con cambiar el import de abajo. */
 
 import dynamic from "next/dynamic";
 import type { MotionValue } from "framer-motion";
 
-const MissionBoxes = dynamic(() => import("./MissionBoxes"), {
+const MissionMascot = dynamic(() => import("./MissionMascot"), {
   ssr: false,
   loading: () => (
     <div
@@ -22,7 +26,7 @@ const MissionBoxes = dynamic(() => import("./MissionBoxes"), {
         fontSize: "0.75rem",
       }}
     >
-      LOADING BOXES…
+      LOADING MASCOT…
     </div>
   ),
 });
@@ -32,5 +36,5 @@ interface Props {
 }
 
 export default function MissionBoxesClient(props: Props) {
-  return <MissionBoxes {...props} />;
+  return <MissionMascot {...props} />;
 }
