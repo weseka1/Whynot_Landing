@@ -38,20 +38,29 @@ const PILLAR_COUNT  = 4;
 const PROGRESS_IN   = 0.08;
 const PROGRESS_OUT  = 0.92;
 
-const TARGET_SIZE     = 2.4;
-/* GROUP_Y_OFFSET=0 → centro del mono coincide con el centro del canvas, que
-   coincide con el centro vertical de cada pilar (donde esta el texto, por
-   flex alignItems:center del .Mission). Asi el mono "cae a la altura del
-   texto" en lugar de quedar abajo en el frame. */
-const GROUP_Y_OFFSET  = 0;
-const POSITION_DAMP   = 7;
-const OFFSET_DIVISOR  = 5;
-const TRANSITION_START = 0.40;
-const TRANSITION_END   = 1.00;
+/* TARGET_SIZE = altura del mono en unidades 3D. Base del fit es size.y
+   (no Math.max), asi el alto del mono es siempre TARGET_SIZE sin que la
+   T-pose ancha (brazos abiertos) compriman el alto visible. Con la
+   animacion los brazos bajan → el mono se ve mas grande proporcionalmente
+   sin tocar la escala. */
+const TARGET_SIZE     = 3.0;
+/* GROUP_Y_OFFSET negativo → baja al mono dentro del canvas para que la
+   cabeza no quede tapada por el header global de la pagina (FUTURE MODE
+   bar, ~80px). Bajado 0.4 unidades en world Y → la cabeza queda visible
+   debajo del header en todo viewport razonable. */
+const GROUP_Y_OFFSET  = -0.4;
+/* Magnitud lateral fijada — ya no varia por pilar. viewport.width/OFFSET
+   = cuanto a la derecha (sign siempre +1). Con OFFSET_DIVISOR=4.5 queda
+   un poco mas a la derecha que antes (era 5) — composicion mas ancha. */
+const OFFSET_DIVISOR  = 4.5;
 
-/* Crossfade de entrada/salida del clip — suavizado de cuando empieza y
-   cuando vuelve a quieto. Sin fadeIn el cambio se ve como un cut. */
-const ANIM_FADE_IN_S  = 0.12;
+/* Crossfade de entrada del clip — suaviza la transicion desde pose final
+   hacia frame 0 al re-disparar. */
+const ANIM_FADE_IN_S  = 0.15;
+
+/* timeScale < 1 → la animacion va mas lenta. 0.6 = 60% velocidad
+   (animacion 1.67x mas larga). Hace la caida mas "vistosa" y fluida. */
+const ANIM_TIME_SCALE = 0.6;
 
 /* Mono SIEMPRE a la derecha — todos los pilares con texto a la izquierda
    (sin alternancia izq/der). Antes alternaba +1/-1 segun el pilar. */
@@ -67,7 +76,14 @@ function Monkey({ progressRef }: MonkeyProps) {
   const { scene, animations } = useGLTF(MONO_SRC);
   const ref = useRef<THREE.Group>(null);
 
-  /* Auto-fit del GLB a TARGET_SIZE y recentrado al origen.
+  /* Auto-fit del GLB y recentrado al origen.
+     Base del fit = size.y (altura) en lugar de Math.max(x,y,z). Porque el
+     bbox se mide en T-pose (brazos abiertos en cruz) → size.x es enorme,
+     y Math.max usaba ese ancho como referencia, comprimiendo la altura
+     visible del mono. Con size.y forzamos que la ALTURA siempre quede en
+     TARGET_SIZE, asi el mono ocupa el frame vertical consistentemente y
+     no se ve mas chico despues de la animacion (cuando los brazos bajan
+     y el ancho del bbox se reduce).
      CRITICO con skinned mesh: NO clonamos el scene — rompe el binding del
      skeleton (mesh apunta a huesos por referencia; clonar deja el skin
      huerfano y el mesh colapsa o desaparece). Usamos scene directo — una
@@ -76,8 +92,7 @@ function Monkey({ progressRef }: MonkeyProps) {
     const bbox = new THREE.Box3().setFromObject(scene);
     const size = new THREE.Vector3();
     bbox.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const fitScale = TARGET_SIZE / maxDim;
+    const fitScale = TARGET_SIZE / (size.y || 1);
     scene.scale.setScalar(fitScale);
     bbox.setFromObject(scene);
     const center = new THREE.Vector3();
@@ -110,6 +125,7 @@ function Monkey({ progressRef }: MonkeyProps) {
     if (duration < ANIM_MIN_DURATION_S) return; // T-pose, no usar
     action.setLoop(THREE.LoopOnce, 1);
     action.clampWhenFinished = true;
+    action.timeScale = ANIM_TIME_SCALE;
 
     /* Saltar a la pose final como estado inicial. Necesitamos play() antes
        de tocar action.time porque el mixer solo evalua actions activas; sin
@@ -176,41 +192,27 @@ interface MascotStageProps {
 }
 
 function MascotStage({ progressRef }: MascotStageProps) {
-  /* lateralRef agrupa el mono y aplica el offset izq/der por pilar — esto
-     se mantiene del sistema original porque es estructural del layout
-     (cada pilar tiene texto en un lado y el mono va al otro). El movimiento
-     lateral lerp-da entre pilares para no saltar bruscamente. */
+  /* lateralRef agrupa el mono. Como ahora pillarSign() devuelve siempre +1,
+     el mono va a la misma posicion lateral en los 4 pilares. Lo posicionamos
+     al targetX FIJO en el primer frame (sin lerp) — el lerp solo introducia
+     un drift visible al montaje (0 → +viewport/4.5) que el usuario no quiere.
+     Anclado desde frame 1. */
   const lateralRef = useRef<THREE.Group>(null);
+  const initializedRef = useRef(false);
 
-  useFrame((state, dt) => {
+  useFrame((state) => {
     const group = lateralRef.current;
     if (!group) return;
 
-    const p = progressRef.current;
-    const t = THREE.MathUtils.clamp(
-      (p - PROGRESS_IN) / (PROGRESS_OUT - PROGRESS_IN),
-      0,
-      1
-    );
-    const activeIndex = t * PILLAR_COUNT;
-    const currentPillar = Math.min(Math.floor(activeIndex), PILLAR_COUNT - 1);
-    const tInPillar = activeIndex - currentPillar;
-
-    const signNow = pillarSign(currentPillar);
-    const signNext = currentPillar < PILLAR_COUNT - 1
-      ? pillarSign(currentPillar + 1)
-      : signNow;
-    const transitionT = THREE.MathUtils.smoothstep(
-      tInPillar,
-      TRANSITION_START,
-      TRANSITION_END
-    );
-    const signLerped = THREE.MathUtils.lerp(signNow, signNext, transitionT);
-    const offsetMagnitude = state.viewport.width / OFFSET_DIVISOR;
-    const targetX = signLerped * offsetMagnitude;
-
-    const k = 1 - Math.exp(-dt * POSITION_DAMP);
-    group.position.x += (targetX - group.position.x) * k;
+    const targetX = pillarSign(0) * (state.viewport.width / OFFSET_DIVISOR);
+    if (!initializedRef.current) {
+      group.position.x = targetX;
+      initializedRef.current = true;
+    } else {
+      /* Re-corregir en cada frame para mantenerse anclado cuando cambia
+         viewport.width (resize). Asignacion directa — sin lerp, sin drift. */
+      group.position.x = targetX;
+    }
   });
 
   return (

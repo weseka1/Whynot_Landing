@@ -111,10 +111,18 @@ export default function Mission() {
 
       {/* ============ CONTENIDO: título + 4 pilares alternados ============ */}
       <div style={{ position: "relative", zIndex: 2 }}>
-        {/* Título arriba */}
+        {/* Título arriba — minHeight 100vh para que ocupe un slot completo
+            del scroll. Asi el mono sticky se ve full-frame desde el primer
+            momento (sin quedar tapado por el header global ni cortado por
+            el padding chico que tenia antes). El titulo queda vertical
+            centrado en su slot, alineado con el mono. */}
         <div
           style={{
-            padding: "var(--space-2xl) var(--container-pad) var(--space-md)",
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: "var(--space-md) var(--container-pad)",
             maxWidth: "50%",
           }}
         >
