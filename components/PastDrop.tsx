@@ -394,7 +394,7 @@ export default function PastDrop() {
         <div
           style={{
             position: "absolute",
-            top: "9%",
+            top: "calc(9% - 1cm)", // subido 1cm respecto a top:9% original
             left: 0, right: 0,
             textAlign: "center",
             zIndex: 4,
@@ -460,6 +460,7 @@ export default function PastDrop() {
             userSelect: "none",
             perspective: "1600px",
             zIndex: 5,
+            transform: "translateY(1cm)", // bajado 1cm los circulos de zapas
           }}
         >
           {SPECS.map((spec, i) => (
