@@ -18,6 +18,7 @@ import Header       from "@/components/Header";
 import Hero         from "@/components/Hero";
 import CloudBand    from "@/components/CloudBand";
 import Collections  from "@/components/Collections";
+import FuturisticGallery from "@/components/FuturisticGallery";
 import Mission      from "@/components/Mission";
 import PastDrop     from "@/components/PastDrop";
 import Anturax      from "@/components/Anturax";
@@ -37,6 +38,7 @@ export default function Page() {
         <Hero />
         <CloudBand />
         <Collections />
+        <FuturisticGallery />
         <Mission />
         <PastDrop />
         <Anturax />
