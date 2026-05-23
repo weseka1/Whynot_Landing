@@ -83,8 +83,8 @@ export default function BrandHero({
           margin: 0,
           /* paddingRight reserva espacio horizontal por si el título es muy
              largo (e.g. LOUIS VUITTON) y queremos que no se solape con el
-             mascot. ~880px = 832 ancho del mono + un poco de aire.         */
-          paddingRight: "clamp(0px, 48vw, 880px)",
+             mascot. ~600px = 540 ancho del mono + un poco de aire.         */
+          paddingRight: "clamp(0px, 34vw, 600px)",
           fontWeight: 700,
           textTransform: "uppercase",
           overflowWrap: "anywhere",
@@ -93,9 +93,10 @@ export default function BrandHero({
         {brandName}
       </motion.h1>
 
-      {/* Mono mascot 3D — portrait XL a la derecha (832x1300 = doble del previo).
-          top -22rem compensa el offset proporcional del body en el container.
-          El espacio vacío del top queda detrás del TopHud sticky.
+      {/* Mono mascot 3D — portrait (540x830 ≈ 30% más grande que 416x650).
+          top -10rem para que el body bottom termine justo en el divider line
+          bajo el counter strip (DISPLAYING ...) — no sigue hacia abajo dentro
+          del grid de cards.
           En mobile pasa a position static + tamaño reducido vía media.        */}
       <motion.div
         className="brand-mascot"
@@ -104,12 +105,12 @@ export default function BrandHero({
         transition={{ duration: 1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
         style={{
           position: "absolute",
-          top: "-22rem",
+          top: "-10rem",
           right: "2.5rem",
           zIndex: 6,
         }}
       >
-        <MonoMascot width={832} height={1300} radius="110%" />
+        <MonoMascot width={540} height={830} radius="110%" />
       </motion.div>
 
       <style jsx>{`
@@ -120,8 +121,8 @@ export default function BrandHero({
             display: block !important;
           }
           .brand-mascot > div {
-            width: 400px !important;
-            height: 600px !important;
+            width: 340px !important;
+            height: 520px !important;
           }
         }
       `}</style>
