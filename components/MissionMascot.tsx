@@ -85,14 +85,21 @@ function Monkey({ progressRef }: MonkeyProps) {
     scene.position.sub(center);
   }, [scene]);
 
-  /* Guardamos la action del clip en una ref para dispararla on-demand
-     desde useFrame. NO se reproduce al montar — el usuario quiere quietud
-     hasta el primer cambio de pilar.
-     Configuracion:
-       - LoopOnce + repetitions=1     → se reproduce una sola vez
-       - clampWhenFinished=false      → al terminar, regresa a bind pose
-         (el rest natural del rig de Mixamo: brazos extendidos, todo neutro) */
-  const { actions, names } = useAnimations(animations, ref);
+  /* Setup de la action + inicializacion en el ULTIMO FRAME del clip.
+     El usuario quiere que la pose inicial sea la pose final de la animacion
+     (no T-pose) — por ejemplo, si el clip es una caida, el mono arranca ya
+     caido en el piso, y cada cambio de pilar repite la caida.
+
+     Tecnica: arrancar la action, saltar action.time al final del clip,
+     forzar mixer.update(0) para commitear esa pose al mesh, y pausar.
+     Asi visualmente el mono aparece directamente en el ultimo frame sin
+     ver la animacion ejecutarse al montar.
+
+     LoopOnce + clampWhenFinished=true:
+       - Una sola reproduccion por trigger
+       - Al terminar, la action queda en el ultimo frame (no rebobina) →
+         el mono queda en pose final hasta el proximo trigger. */
+  const { actions, mixer, names } = useAnimations(animations, ref);
   const actionRef = useRef<THREE.AnimationAction | null>(null);
 
   useEffect(() => {
@@ -102,14 +109,28 @@ function Monkey({ progressRef }: MonkeyProps) {
     const duration = action.getClip().duration;
     if (duration < ANIM_MIN_DURATION_S) return; // T-pose, no usar
     action.setLoop(THREE.LoopOnce, 1);
-    action.clampWhenFinished = false;
+    action.clampWhenFinished = true;
+
+    /* Saltar a la pose final como estado inicial. Necesitamos play() antes
+       de tocar action.time porque el mixer solo evalua actions activas; sin
+       play() la pose no se aplica al mesh.
+       mixer.update(0) fuerza una evaluacion instantanea con dt=0 — calcula
+       las transformaciones de huesos para action.time=duration sin avanzar
+       el reloj. Despues paused=true congela la action ahi hasta que el
+       usuario dispare un cambio de pilar. */
+    action.reset();
+    action.play();
+    action.time = duration;
+    mixer.update(0);
+    action.paused = true;
     actionRef.current = action;
-  }, [actions, names]);
+  }, [actions, mixer, names]);
 
   /* prevPillarRef = el ultimo currentPillar visto. Cuando cambia, disparamos
-     la animacion. Inicializado a -1 para que el primer pilar tambien dispare
-     al entrar al stage (sino el mono no se moveria nunca en el primer pilar). */
-  const prevPillarRef = useRef<number>(-1);
+     la animacion. Inicializado a 0 (no -1) porque el mono ya esta en su
+     pose final desde el mount — no queremos disparar al entrar al primer
+     pilar, solo cuando el usuario empieza a scrollear hacia abajo. */
+  const prevPillarRef = useRef<number>(0);
 
   useFrame(() => {
     const obj = ref.current;
@@ -131,10 +152,11 @@ function Monkey({ progressRef }: MonkeyProps) {
       prevPillarRef.current = currentPillar;
       const action = actionRef.current;
       if (action) {
-        /* reset() rebobina el clip al frame 0; fadeIn suaviza la entrada
-           para no cortar de quieto a movimiento como un cut. Si la action
-           ya estaba sonando (cambio rapido de pilar), reset+play la reinicia
-           desde el principio — efecto deseado. */
+        /* Re-disparar la animacion desde frame 0. action.reset() pone
+           time=0 y paused=false; fadeIn suaviza la transicion desde la
+           pose final (frame=duration) hacia frame=0. Al terminar, con
+           clampWhenFinished=true, queda en el ultimo frame → vuelve a
+           la misma pose final hasta el proximo cambio de pilar. */
         action.reset();
         action.fadeIn(ANIM_FADE_IN_S);
         action.play();
