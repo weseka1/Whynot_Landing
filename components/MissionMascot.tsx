@@ -1,18 +1,17 @@
 "use client";
 
 /* ============================================================================
-   MISSION MASCOT — mono 3D quieto al frente, animacion solo en transicion.
+   MISSION MASCOT — mono 3D anclado, animacion al parar de scrollear.
 
    Comportamiento:
-     - El mono esta de frente, en su pose natural (bind pose del rig Mixamo),
-       sin spin, sin bobbing, sin squash, sin tilt — completamente quieto.
-     - Cada vez que el scroll cruza al SIGUIENTE pilar (currentPillar cambia),
-       se DISPARA UNA VEZ la animacion del clip embebido en el GLB (Mixamo).
-     - Al terminar el clip, el mono vuelve a quedar quieto en pose natural
-       (clampWhenFinished=false → bind pose).
-     - Lo unico que mantenemos del sistema original es el offset lateral
-       izq/der por pilar (el mono "salta" al otro lado cuando el texto del
-       pilar cambia de lado), porque eso es estructural del layout.
+     - El mono esta SIEMPRE quieto en su pose final (clip terminado),
+       anclado a una posicion lateral y vertical fija.
+     - Durante el scroll: nada se mueve. El mono no responde.
+     - Cuando el usuario PARA de scrollear (debounce de SCROLL_IDLE_MS) y
+       quedo posado en un pilar distinto al del ultimo trigger, se dispara
+       la animacion UNA VEZ. Al terminar vuelve a quietud.
+     - El primer trigger es al primer stop dentro de la seccion, los siguientes
+       solo si cambia de pilar (no re-dispara si se queda quieto en el mismo).
 
    GLB esperado en /assets/3d/mono-rigged.glb:
      - mesh Meshy + skeleton Mixamo (65 huesos) + textura packed
@@ -39,19 +38,15 @@ const PROGRESS_IN   = 0.08;
 const PROGRESS_OUT  = 0.92;
 
 /* TARGET_SIZE = altura del mono en unidades 3D. Base del fit es size.y
-   (no Math.max), asi el alto del mono es siempre TARGET_SIZE sin que la
-   T-pose ancha (brazos abiertos) compriman el alto visible. Con la
-   animacion los brazos bajan → el mono se ve mas grande proporcionalmente
-   sin tocar la escala. */
-const TARGET_SIZE     = 3.0;
+   (no Math.max), asi la altura del mono es siempre TARGET_SIZE sin que la
+   T-pose ancha (brazos abiertos) compriman el alto visible. 2.2 deja al
+   mono mas chico y con mas margen alrededor — encuadre completo seguro. */
+const TARGET_SIZE     = 2.2;
 /* GROUP_Y_OFFSET negativo → baja al mono dentro del canvas para que la
-   cabeza no quede tapada por el header global de la pagina (FUTURE MODE
-   bar, ~80px). Bajado 0.4 unidades en world Y → la cabeza queda visible
-   debajo del header en todo viewport razonable. */
-const GROUP_Y_OFFSET  = -0.4;
-/* Magnitud lateral fijada — ya no varia por pilar. viewport.width/OFFSET
-   = cuanto a la derecha (sign siempre +1). Con OFFSET_DIVISOR=4.5 queda
-   un poco mas a la derecha que antes (era 5) — composicion mas ancha. */
+   cabeza no quede tapada por el header global FUTURE MODE (~80px). */
+const GROUP_Y_OFFSET  = -0.3;
+/* Magnitud lateral fijada — todos los pilares usan el mismo signo (+1).
+   viewport.width/OFFSET = cuantas unidades 3D a la derecha del centro. */
 const OFFSET_DIVISOR  = 4.5;
 
 /* Crossfade de entrada del clip — suaviza la transicion desde pose final
@@ -62,6 +57,13 @@ const ANIM_FADE_IN_S  = 0.15;
    (animacion 1.67x mas larga). Hace la caida mas "vistosa" y fluida. */
 const ANIM_TIME_SCALE = 0.6;
 
+/* SCROLL_IDLE_MS = cuanto tiempo sin scroll para considerar "parado". Al
+   pasar este tiempo desde el ultimo cambio de progress, evaluamos en que
+   pilar quedo el usuario y disparamos la animacion. 350ms = balance entre
+   responsive (no esperar mucho) y robusto (no triggear con micro-movimientos
+   del trackpad inertial scroll). */
+const SCROLL_IDLE_MS  = 350;
+
 /* Mono SIEMPRE a la derecha — todos los pilares con texto a la izquierda
    (sin alternancia izq/der). Antes alternaba +1/-1 segun el pilar. */
 function pillarSign(_pillarIdx: number): number {
@@ -69,10 +71,14 @@ function pillarSign(_pillarIdx: number): number {
 }
 
 interface MonkeyProps {
-  progressRef: React.MutableRefObject<number>;
+  /* triggerSignalRef: cuando el scroll se queda quieto y el pilar evaluado
+     es distinto al ultimo triggered, el wrapper exterior pone aca el pilar
+     a animar. El Monkey lo consume desde useFrame, dispara la animacion,
+     y resetea a -1 (consumed). */
+  triggerSignalRef: React.MutableRefObject<number>;
 }
 
-function Monkey({ progressRef }: MonkeyProps) {
+function Monkey({ triggerSignalRef }: MonkeyProps) {
   const { scene, animations } = useGLTF(MONO_SRC);
   const ref = useRef<THREE.Group>(null);
 
@@ -142,42 +148,27 @@ function Monkey({ progressRef }: MonkeyProps) {
     actionRef.current = action;
   }, [actions, mixer, names]);
 
-  /* prevPillarRef = el ultimo currentPillar visto. Cuando cambia, disparamos
-     la animacion. Inicializado a 0 (no -1) porque el mono ya esta en su
-     pose final desde el mount — no queremos disparar al entrar al primer
-     pilar, solo cuando el usuario empieza a scrollear hacia abajo. */
-  const prevPillarRef = useRef<number>(0);
-
+  /* useFrame consume el triggerSignalRef: cuando el wrapper exterior detecta
+     scroll-stop y pone un pilar en la signal, el Monkey lo lee, dispara la
+     animacion y resetea la signal a -1 (consumed). Entre triggers el mono
+     no se mueve — esta completamente anclado en pose final, sin lerp, sin
+     drift. La unica fuente de movimiento es la animacion del clip. */
   useFrame(() => {
-    const obj = ref.current;
-    if (!obj) return;
+    if (!ref.current) return;
+    const pendingPillar = triggerSignalRef.current;
+    if (pendingPillar < 0) return; // nada pendiente
 
-    const p = progressRef.current;
-    const t = THREE.MathUtils.clamp(
-      (p - PROGRESS_IN) / (PROGRESS_OUT - PROGRESS_IN),
-      0,
-      1
-    );
-    const activeIndex = t * PILLAR_COUNT;
-    const currentPillar = Math.min(Math.floor(activeIndex), PILLAR_COUNT - 1);
+    triggerSignalRef.current = -1; // consume el signal
+    const action = actionRef.current;
+    if (!action) return;
 
-    /* Detectar cambio de pilar → disparar animacion una vez.
-       Funciona en ambas direcciones (scroll down e up) — cada cruce de
-       umbral entre pilares es un trigger. */
-    if (currentPillar !== prevPillarRef.current) {
-      prevPillarRef.current = currentPillar;
-      const action = actionRef.current;
-      if (action) {
-        /* Re-disparar la animacion desde frame 0. action.reset() pone
-           time=0 y paused=false; fadeIn suaviza la transicion desde la
-           pose final (frame=duration) hacia frame=0. Al terminar, con
-           clampWhenFinished=true, queda en el ultimo frame → vuelve a
-           la misma pose final hasta el proximo cambio de pilar. */
-        action.reset();
-        action.fadeIn(ANIM_FADE_IN_S);
-        action.play();
-      }
-    }
+    /* Re-disparar desde frame 0. action.reset() pone time=0 y paused=false;
+       fadeIn suaviza la transicion desde la pose final (frame=duration)
+       hacia frame=0. clampWhenFinished=true → al terminar queda en el
+       ultimo frame igual que antes. */
+    action.reset();
+    action.fadeIn(ANIM_FADE_IN_S);
+    action.play();
   });
 
   return (
@@ -188,10 +179,10 @@ function Monkey({ progressRef }: MonkeyProps) {
 }
 
 interface MascotStageProps {
-  progressRef: React.MutableRefObject<number>;
+  triggerSignalRef: React.MutableRefObject<number>;
 }
 
-function MascotStage({ progressRef }: MascotStageProps) {
+function MascotStage({ triggerSignalRef }: MascotStageProps) {
   /* lateralRef agrupa el mono. Como ahora pillarSign() devuelve siempre +1,
      el mono va a la misma posicion lateral en los 4 pilares. Lo posicionamos
      al targetX FIJO en el primer frame (sin lerp) — el lerp solo introducia
@@ -218,7 +209,7 @@ function MascotStage({ progressRef }: MascotStageProps) {
   return (
     <group position={[0, GROUP_Y_OFFSET, 0]}>
       <group ref={lateralRef}>
-        <Monkey progressRef={progressRef} />
+        <Monkey triggerSignalRef={triggerSignalRef} />
       </group>
     </group>
   );
@@ -232,18 +223,61 @@ export default function MissionMascot({ progress }: MissionMascotProps) {
   const progressRef = useRef(0);
   const isMobile = useIsMobile();
 
+  /* triggerSignalRef: -1 = nada pendiente. Cuando el debounce se cumple,
+     ponemos aca el pilar evaluado; el Monkey lo lee en useFrame, dispara
+     la animacion, y resetea a -1. */
+  const triggerSignalRef = useRef<number>(-1);
+  /* lastTriggeredPillarRef: el ultimo pilar para el que efectivamente
+     disparamos animacion. Evita re-disparar si el usuario se queda quieto
+     en el mismo pilar. Inicializado a -1 → el primer stop dentro de la
+     seccion va a disparar siempre. */
+  const lastTriggeredPillarRef = useRef<number>(-1);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useMotionValueEvent(progress, "change", (v) => {
     progressRef.current = v;
+
+    /* Reset del debounce — cada cambio de scroll reinicia el timer. La
+       animacion solo se evalua despues de SCROLL_IDLE_MS sin actividad. */
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      /* Evaluar en que pilar quedo el usuario. Si el progress esta fuera
+         del rango activo (PROGRESS_IN..OUT), no disparamos — solo dentro
+         de la seccion Mission. */
+      const p = progressRef.current;
+      if (p < PROGRESS_IN || p > PROGRESS_OUT) return;
+      const t = THREE.MathUtils.clamp(
+        (p - PROGRESS_IN) / (PROGRESS_OUT - PROGRESS_IN),
+        0,
+        1
+      );
+      const activeIndex = t * PILLAR_COUNT;
+      const currentPillar = Math.min(
+        Math.floor(activeIndex),
+        PILLAR_COUNT - 1
+      );
+
+      if (currentPillar !== lastTriggeredPillarRef.current) {
+        lastTriggeredPillarRef.current = currentPillar;
+        triggerSignalRef.current = currentPillar; // signal al Monkey
+      }
+    }, SCROLL_IDLE_MS);
   });
+
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, []);
 
   return (
     <Canvas
-      /* Camera Y=0 → mira directo al origen (el centro del mono). Con
-         GROUP_Y_OFFSET=0, el mono queda exactamente en el centro vertical
-         del canvas, alineado con el texto del pilar (vertical-centered por
-         el flex layout de Mission.tsx). Z=5.5 + FOV 36° encuadra al mono
-         (2.4 unidades) llenando ~67% vertical del frame. */
-      camera={{ position: [0, 0, 5.5], fov: 36 }}
+      /* Camera mas alejada (Z=7.5, antes 5.5) + ligera elevacion (Y=0.4)
+         para que la cabeza del mono quede dentro del frame con margen.
+         FOV 36° + Z=7.5 → vertical half-extent ≈ 2.44 unidades; con
+         TARGET_SIZE=2.2 el mono ocupa ~45% del frame vertical y tiene
+         espacio arriba/abajo. */
+      camera={{ position: [0, 0.4, 7.5], fov: 36 }}
       dpr={isMobile ? 1 : [1, 1.5]}
       style={{ width: "100%", height: "100%", background: "transparent" }}
       gl={{ antialias: !isMobile, powerPreference: "high-performance" }}
@@ -258,7 +292,7 @@ export default function MissionMascot({ progress }: MissionMascotProps) {
       )}
 
       <Suspense fallback={null}>
-        <MascotStage progressRef={progressRef} />
+        <MascotStage triggerSignalRef={triggerSignalRef} />
       </Suspense>
     </Canvas>
   );
