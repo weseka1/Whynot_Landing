@@ -331,7 +331,7 @@ export default function PastDrop() {
       style={{
         position: "relative",
         minHeight: "260vh",
-        background: "#cdb5f0", // pale lavender (DICH PAST_DROP variant)
+        background: "#e0b3f5", // vibrant pink-lavender (mas vivo que el #cdb5f0 anterior)
         color: "#0a0a14",
         overflow: "hidden",
       }}
@@ -423,7 +423,9 @@ export default function PastDrop() {
             aria-label={site.pastDrop.title}
             style={{
               margin: 0,
-              lineHeight: 0,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
             <img
