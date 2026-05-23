@@ -21,7 +21,6 @@ import Collections  from "@/components/Collections";
 import FuturisticGallery from "@/components/FuturisticGallery";
 import Mission      from "@/components/Mission";
 import PastDrop     from "@/components/PastDrop";
-import Anturax      from "@/components/Anturax";
 import IdeaForm     from "@/components/IdeaForm";
 import MeteoriteSection from "@/components/MeteoriteClient";
 import WhyNotEnd    from "@/components/WhyNotEnd";
@@ -41,7 +40,6 @@ export default function Page() {
         <Mission />
         <PastDrop />
         <FuturisticGallery />
-        <Anturax />
         <IdeaForm />
         <MeteoriteSection />
         <WhyNotEnd />

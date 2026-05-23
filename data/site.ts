@@ -28,7 +28,6 @@ export const site = {
     { label: "Collections", href: "#section-collections" },
     { label: "Mission",     href: "#section-mission" },
     { label: "Past Drop",   href: "#section-past-drop" },
-    { label: "Anturax",     href: "#section-anturax" },
     { label: "Your Idea",   href: "#section-form" },
   ],
 
