@@ -98,20 +98,10 @@ export default async function BrandPage({ params }: Params) {
           WebkitBackdropFilter: "blur(10px)",
         }}
       >
-        <div style={{ display: "flex", gap: "1.2rem", alignItems: "center" }}>
-          <span
-            style={{
-              color: "#ff5436",
-              textShadow: "0 0 8px rgba(255,84,54,0.6)",
-              fontSize: "0.6rem",
-            }}
-          >
-            ●
-          </span>
-          <span>D://DATA_CORE / ARCHIVE</span>
-          <span style={{ opacity: 0.4 }}>•</span>
-          <span style={{ color: DARK, fontWeight: 600 }}>{brandName}</span>
-        </div>
+        {/* Breadcrumb removido — el cliente pidio sacar el dot rojo, el
+            "D://DATA_CORE / ARCHIVE" y la repeticion del brand name. Solo
+            queda el BackButton para navegacion (info funcional, no data). */}
+        <div />
         <BackButton
           fallbackHref="/#section-past-drop"
           label="← BACK TO ARCHIVE"
@@ -138,36 +128,9 @@ export default async function BrandPage({ params }: Params) {
         <PaginatedColorways entries={sorted} brandSlug={brandSlug} />
       </div>
 
-      {/* ============ BOTTOM HUD ============ */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 10,
-          padding: "0 2.5rem 1.5rem",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: "0.66rem",
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
-          color: DARK_DIM,
-        }}
-      >
-        <div style={{ display: "flex", gap: "0.8rem", alignItems: "center" }}>
-          <span style={{ color: DARK }}>▸</span>
-          <span style={{ color: DARK, fontWeight: 600 }}>
-            END OF {brandName} ARCHIVE
-          </span>
-        </div>
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <span>BA1RES_FOOTWEAR / ARCHIVE_v01</span>
-          <span style={{ opacity: 0.4 }}>//</span>
-          <span style={{ color: DARK, fontWeight: 600 }}>
-            {total} SPECIMENS · {total360} × 360°
-          </span>
-        </div>
-      </div>
+      {/* Bottom HUD removido — "END OF X ARCHIVE", "BA1RES_FOOTWEAR /
+          ARCHIVE_v01", "NN SPECIMENS · NN × 360°" eran metadata interna
+          que no aporta al consumer. Se quito por pedido del cliente. */}
 
       {/* Scanlines arriba de todo (look CRT) */}
       <Scanlines />
