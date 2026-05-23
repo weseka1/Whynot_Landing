@@ -40,26 +40,19 @@ const TARGET_SIZE         = 2.5;
 const ANIM_FADE_IN_S      = 0.15;
 const ANIM_TIME_SCALE     = 0.45;
 
-/* Y_DROP_FROM = altura inicial del mono fuera del frame por arriba.
-   Y_REST = posicion final/anchor del mono (centro del frame). */
+/* Y_DROP_FROM = altura inicial del mono en world Y (3D units) — bien arriba
+   del frame visible para que entre cayendo desde fuera del viewport del
+   canvas. Frame vertical aprox: [-2.4, +2.4] con cam Z=6.5 FOV 36°. +4
+   queda por encima del frame: el mono entra al frame durante la caida. */
 const Y_DROP_FROM = 4.0;
+/* Y_REST = posicion final/anchor del mono. 0 = centro del frame (su sitio
+   natural). */
 const Y_REST = 0;
 
-/* Y_DROP_DURATION_S = cuanto dura el tween de bajada (mono en pose final,
-   estatico, solo desplazandose en Y). Separado de la duracion del clip
-   porque el flujo es:
-     1) Mono baja desde Y_DROP_FROM en pose final, sin animar el rig (este
-        tween, easing easeInCubic = acelera = sensacion de gravedad)
-     2) Al tocar Y_REST, dispara el clip Mixamo (animacion de impacto/caida)
-   0.55s = ~half-second de caida libre, lo suficiente para que se sienta
-   un drop pero sin que se sienta lento. */
-const Y_DROP_DURATION_S = 0.55;
-
-/* easeInCubic — acelera hacia el final. Simula gravedad: empieza lento,
-   gana velocidad. El mono llega al punto con velocidad maxima → al
-   instante se ejecuta el clip de aterrizaje. */
-function easeInCubic(t: number): number {
-  return t * t * t;
+/* easeOutCubic — desacelera al final. Visualmente: el mono cae rapido al
+   principio (gravedad) y "frena" al aterrizar. Da sensacion de impacto. */
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
 }
 
 interface MonkeyProps {
@@ -145,35 +138,32 @@ function Monkey({ triggerSignalRef }: MonkeyProps) {
     const obj = ref.current;
     if (!obj) return;
 
-    /* Trigger: el wrapper exterior pone triggerSignalRef en true cuando el
-       pilar entra al viewport. Iniciamos SOLO el tween Y. El mono baja
-       en pose final, estatico (la action sigue paused). Al terminar el
-       tween, recien ahi disparamos el clip de Mixamo (efecto aterrizaje). */
+    /* Trigger: cuando el wrapper exterior pone triggerSignalRef en true,
+       arrancamos animacion + tween Y. El mono SALTA a Y_DROP_FROM (arriba)
+       instantaneamente y empieza a caer mientras se reproduce el clip. */
     if (triggerSignalRef.current) {
       triggerSignalRef.current = false;
+      const action = actionRef.current;
+      if (action) {
+        action.reset();
+        action.fadeIn(ANIM_FADE_IN_S);
+        action.play();
+      }
       obj.position.y = Y_DROP_FROM;
       tweenStartMsRef.current = performance.now();
     }
 
-    /* Fase 1 — Tween Y (caida estatica): el mono baja sin animarse el rig.
-       easeInCubic = acelera con gravedad. Al t=1, lanza el clip. */
+    /* Tween Y activo: avanzar segun tiempo. easeOutCubic = cae rapido,
+       frena al final → sensacion de aterrizaje con gravedad. */
     const startMs = tweenStartMsRef.current;
     if (startMs !== null) {
       const elapsed = (performance.now() - startMs) / 1000;
-      const t = THREE.MathUtils.clamp(elapsed / Y_DROP_DURATION_S, 0, 1);
-      const eased = easeInCubic(t);
+      const t = THREE.MathUtils.clamp(elapsed / clipDurationRef.current, 0, 1);
+      const eased = easeOutCubic(t);
       obj.position.y = THREE.MathUtils.lerp(Y_DROP_FROM, Y_REST, eased);
       if (t >= 1) {
         obj.position.y = Y_REST;
         tweenStartMsRef.current = null;
-        /* Fase 2 — Aterrizo: disparar el clip Mixamo en el momento exacto
-           de impacto. La animacion de pose se ejecuta en su lugar. */
-        const action = actionRef.current;
-        if (action) {
-          action.reset();
-          action.fadeIn(ANIM_FADE_IN_S);
-          action.play();
-        }
       }
     }
   });
