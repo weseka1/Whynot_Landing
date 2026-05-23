@@ -93,7 +93,7 @@ export default async function BrandPage({ params }: Params) {
           textTransform: "uppercase",
           color: DARK_DIM,
           background:
-            "linear-gradient(180deg, rgba(224,168,219,0.94) 0%, rgba(224,168,219,0.7) 70%, transparent 100%)",
+            "linear-gradient(180deg, rgba(205,181,240,0.94) 0%, rgba(205,181,240,0.7) 70%, transparent 100%)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
         }}

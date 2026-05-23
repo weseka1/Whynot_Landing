@@ -5,7 +5,7 @@
    del catálogo (landing, brand showroom, colorway page).
    ----------------------------------------------------------------------------
    Colores base:
-     LILAC      #e0a8db (fondo principal)
+     LILAC      #cdb5f0 (fondo principal — pale lavender)
      DARK       #0a0a14 (texto / bordes)
      DARK_DIM   rgba(10,10,20,0.65) (texto ambient)
      YELLOW     #f4dc3f (DICH accent)
@@ -22,7 +22,7 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 
-export const LILAC = "#e0a8db";
+export const LILAC = "#cdb5f0";
 export const DARK = "#0a0a14";
 export const DARK_DIM = "rgba(10,10,20,0.65)";
 export const YELLOW = "#f4dc3f";

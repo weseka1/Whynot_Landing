@@ -331,7 +331,7 @@ export default function PastDrop() {
       style={{
         position: "relative",
         minHeight: "260vh",
-        background: "#e0a8db", // lila DICH PAST_DROP
+        background: "#cdb5f0", // pale lavender (DICH PAST_DROP variant)
         color: "#0a0a14",
         overflow: "hidden",
       }}
