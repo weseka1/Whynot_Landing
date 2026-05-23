@@ -38,7 +38,7 @@ useGLTF.preload(MONO_SRC);
 const ANIM_MIN_DURATION_S = 0.5;
 const TARGET_SIZE         = 2.5;
 const ANIM_FADE_IN_S      = 0.15;
-const ANIM_TIME_SCALE     = 0.6;
+const ANIM_TIME_SCALE     = 0.45;
 
 /* Y_DROP_FROM = altura inicial del mono en world Y (3D units) — bien arriba
    del frame visible para que entre cayendo desde fuera del viewport del
