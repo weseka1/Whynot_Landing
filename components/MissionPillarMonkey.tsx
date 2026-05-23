@@ -1,48 +1,142 @@
 "use client";
 
 /* ============================================================================
-   MISSION PILLAR MONKEY — un mono 3D embedded EN el flujo del pilar.
+   MISSION PILLAR MONKEY v3 — R3F per-pilar (un mono por pilar, in-DOM).
 
-   Implementacion v2: usa el web component <model-viewer> (Google) en lugar
-   de R3F. Cada instancia es independiente, sin problemas de skeleton-binding
-   compartido entre clones. Sin WebGL context multi-instance overhead.
+   Por que R3F y no model-viewer: el setup R3F del MissionMascot anterior
+   se veia bien (textura, animacion, iluminacion). Lo que fallaba era multi-
+   instancia por el cache de useGLTF + skeleton binding compartido. Esta
+   version resuelve eso usando SkeletonUtils.clone CON updateMatrixWorld
+   antes del bbox — el problema anterior era medir el bbox sobre un clone
+   sin world matrix actualizada, daba escalas incorrectas (mono enorme o
+   cámara dentro del modelo).
 
-   Comportamiento:
-     - El mono es parte del DOM normal (NO sticky). Se desplaza con su pilar
-       al hacer scroll — entra desde abajo, sale por arriba.
-     - Carga inicial en pose FINAL del clip (paused en currentTime=duration).
-     - Cuando el pilar esta >= 30% visible (IntersectionObserver), dispara
-       la animacion una vez: currentTime=0 + play(). Al terminar (sin loop),
-       model-viewer se queda en el ultimo frame.
-     - Al salir completamente del viewport, reset del trigger → puede volver
-       a disparar en scroll up.
+   Comportamiento (igual que antes):
+     - El mono es parte del DOM normal del pilar. NO sticky.
+     - Cuando entra al viewport (>=30%), dispara la animacion una vez.
+     - Al salir completamente, reset del trigger → vuelve a disparar al
+       reentrar (scroll up funciona).
+     - Mono inicial en pose FINAL del clip (no T-pose). Root motion stripped.
 
-   El <script> de model-viewer y el preload del GLB ya estan en app/layout.tsx
+   Optimizacion:
+     - frameloop="always" — necesario para el AnimationMixer.
+     - 4 canvases R3F en una pagina son manejables (<16 WebGL contexts).
+     - Lazy mount via IntersectionObserver con margin grande (300px) — el
+       canvas solo se crea cuando el pilar esta cerca del viewport.
    ============================================================================ */
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { useAnimations, useGLTF } from "@react-three/drei";
+import { clone as cloneSkeletal } from "three/examples/jsm/utils/SkeletonUtils.js";
+import * as THREE from "three";
+import { useIsMobile } from "./useIsMobile";
 
 const MONO_SRC = "/assets/3d/mono-rigged.glb";
+useGLTF.preload(MONO_SRC);
 
-/* Animacion: si el clip se llama distinto al cargar, model-viewer expone
-   el array `availableAnimations`. Para Mixamo es "Armature|mixamo.com|Layer0"
-   pero por simplicidad NO seteamos animationName explicito — model-viewer
-   usa la primera animacion del GLB por default. */
+const ANIM_MIN_DURATION_S = 0.5;
+const TARGET_SIZE         = 2.5;
+const ANIM_FADE_IN_S      = 0.15;
+const ANIM_TIME_SCALE     = 0.6;
+
+interface MonkeyProps {
+  triggerSignalRef: React.MutableRefObject<boolean>;
+}
+
+function Monkey({ triggerSignalRef }: MonkeyProps) {
+  const { scene, animations } = useGLTF(MONO_SRC);
+  const ref = useRef<THREE.Group>(null);
+
+  /* SkeletonUtils.clone clona scene + skeleton + skinned-mesh binding —
+     necesario para multi-instancia del mismo GLB cacheado. CRITICO:
+     llamar updateMatrixWorld(true) en el clone ANTES de calcular el bbox,
+     sino el bbox sale con world matrix sin actualizar y la escala/centro
+     son incorrectos (resultado: mono enorme con la camara dentro). */
+  const cloned = useMemo(() => {
+    const c = cloneSkeletal(scene);
+    c.updateMatrixWorld(true);
+    const bbox = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    const fitScale = size.y > 0 ? TARGET_SIZE / size.y : 1;
+    c.scale.setScalar(fitScale);
+    c.updateMatrixWorld(true);
+    bbox.setFromObject(c);
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+    c.position.sub(center);
+    return c;
+  }, [scene]);
+
+  /* Strip root motion del clip — eliminar tracks de posicion del bone raiz
+     para que el mono no se desplace en world space (queremos que la pose
+     se anime pero el mono se quede en su lugar). */
+  const cleanedAnimations = useMemo(() => {
+    return animations.map((clip) => {
+      const cleaned = clip.clone();
+      cleaned.tracks = cleaned.tracks.filter((track) => {
+        const name = track.name.toLowerCase();
+        const isPosition = name.endsWith(".position");
+        const isRootish =
+          name.includes("hips") ||
+          name.includes("armature") ||
+          name.includes("rootnode") ||
+          name.startsWith(".bones[0]");
+        return !(isPosition && isRootish);
+      });
+      return cleaned;
+    });
+  }, [animations]);
+
+  const { actions, mixer, names } = useAnimations(cleanedAnimations, ref);
+  const actionRef = useRef<THREE.AnimationAction | null>(null);
+
+  useEffect(() => {
+    if (!names.length) return;
+    const action = actions[names[0]];
+    if (!action) return;
+    const duration = action.getClip().duration;
+    if (duration < ANIM_MIN_DURATION_S) return;
+    action.setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
+    action.timeScale = ANIM_TIME_SCALE;
+    /* Pose final como pose inicial: ir al ultimo frame y pausar. */
+    action.reset();
+    action.play();
+    action.time = duration;
+    mixer.update(0);
+    action.paused = true;
+    actionRef.current = action;
+  }, [actions, mixer, names]);
+
+  useFrame(() => {
+    if (!triggerSignalRef.current) return;
+    triggerSignalRef.current = false;
+    const action = actionRef.current;
+    if (!action) return;
+    action.reset();
+    action.fadeIn(ANIM_FADE_IN_S);
+    action.play();
+  });
+
+  return (
+    <group ref={ref}>
+      <primitive object={cloned} />
+    </group>
+  );
+}
 
 export default function MissionPillarMonkey() {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const modelRef = useRef<HTMLElement | null>(null);
-
-  /* shouldMount: lazy — no monta el web component hasta que el pilar esta
-     proximo al viewport (200px margin). Cada pilar paga el costo de su
-     mono solo si el usuario realmente llega ahi. */
+  const triggerSignalRef = useRef<boolean>(false);
+  const hasTriggeredRef = useRef<boolean>(false);
+  const isMobile = useIsMobile();
   const [shouldMount, setShouldMount] = useState(false);
-  /* hasTriggeredRef: trackea si ya se disparo la animacion en la actual
-     "entrada" al viewport. Reset al salir completamente. */
-  const hasTriggeredRef = useRef(false);
 
-  /* IntersectionObserver #1: lazy-mount cuando se acerca al viewport. */
+  /* Lazy mount: 300px de margin para precargar antes de llegar. */
   useEffect(() => {
+    if (shouldMount) return;
     const el = wrapperRef.current;
     if (!el) return;
     if (typeof IntersectionObserver === "undefined") {
@@ -56,39 +150,23 @@ export default function MissionPillarMonkey() {
           io.disconnect();
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: "300px" }
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [shouldMount]);
 
-  /* IntersectionObserver #2: trigger de la animacion al estar 30%+ visible.
-     Solo arma este observer despues del mount del model-viewer, sino no
-     hay ref al modelRef. */
+  /* Trigger por viewport entry: cuando >=30% visible, dispara animacion. */
   useEffect(() => {
-    if (!shouldMount) return;
     const el = wrapperRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-
     const io = new IntersectionObserver(
       ([entry]) => {
-        const model = modelRef.current as any;
-        if (entry.intersectionRatio >= 0.3) {
-          if (!hasTriggeredRef.current && model) {
-            hasTriggeredRef.current = true;
-            /* Disparar la animacion: rebobina y play. model-viewer reproduce
-               la primera animacion del GLB por default. Cuando termina (sin
-               loop) se queda en el ultimo frame. */
-            try {
-              model.currentTime = 0;
-              model.play({ repetitions: 1 });
-            } catch {
-              /* model puede no estar listo todavia — no critico */
-            }
-          }
+        if (entry.intersectionRatio >= 0.3 && !hasTriggeredRef.current) {
+          hasTriggeredRef.current = true;
+          triggerSignalRef.current = true;
         } else if (entry.intersectionRatio === 0) {
-          /* Reset al salir completamente — al volver a entrar, dispara de
-             nuevo. Permite scroll-up + scroll-down repetidos. */
+          /* Reset al salir completamente → puede re-disparar al volver. */
           hasTriggeredRef.current = false;
         }
       },
@@ -96,42 +174,7 @@ export default function MissionPillarMonkey() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [shouldMount]);
-
-  /* Setup inicial del model-viewer cuando se monta: dejar el mono en la
-     POSE FINAL del clip (no T-pose). Esperamos al evento "load" del modelo
-     para tener la animacion disponible.
-     - autoplay esta off (no queremos loop)
-     - Al load: timeScale lento (0.6) + ir al ultimo frame y pausar */
-  useEffect(() => {
-    if (!shouldMount) return;
-    const model = modelRef.current as any;
-    if (!model) return;
-
-    const onLoad = () => {
-      try {
-        /* timeScale: model-viewer no expone directo — usamos la velocidad
-           via el atributo. Para reduccionar velocidad de la animacion,
-           model-viewer no tiene un API directo igual que three.js. Lo
-           dejamos a velocidad normal por simplicidad. */
-        const duration = model.duration; // segundos
-        if (typeof duration === "number" && duration > 0) {
-          model.currentTime = duration;
-          model.pause();
-        }
-      } catch {
-        /* swallow */
-      }
-    };
-
-    model.addEventListener("load", onLoad);
-    /* Por si el modelo ya cargo antes de attachear el listener */
-    if (model.loaded) onLoad();
-
-    return () => {
-      model.removeEventListener("load", onLoad);
-    };
-  }, [shouldMount]);
+  }, []);
 
   return (
     <div
@@ -145,32 +188,41 @@ export default function MissionPillarMonkey() {
       aria-hidden
     >
       {!shouldMount ? null : (
-        /* @ts-ignore — web component declarado en types/model-viewer.d.ts */
-        <model-viewer
-          ref={modelRef as any}
-          src={MONO_SRC}
-          alt="WHYNOT pillar mono"
-          /* Camara: orbit horizontal frontal (0deg), polar 80deg para mirar
-             ligeramente desde arriba, distancia 4m. camera-target apunta a
-             la cintura del mono (Y=0.9). */
-          camera-orbit="0deg 80deg 4.5m"
-          camera-target="0m 0.9m 0m"
-          field-of-view="32deg"
-          /* Interaccion off — el usuario no puede rotar/zoom */
-          disable-zoom
-          interaction-prompt="none"
-          /* Sin animation-loop → al terminar el clip queda en el ultimo
-             frame (lo que queremos). */
-          shadow-intensity="0"
-          exposure="1.1"
-          loading="eager"
+        <Canvas
+          frameloop="always"
+          camera={{ position: [0, 0.4, 6.5], fov: 36 }}
+          dpr={isMobile ? 1 : [1, 1.5]}
           style={{
             width: "100%",
             height: "100%",
             background: "transparent",
-            "--poster-color": "transparent",
-          } as React.CSSProperties}
-        />
+          }}
+          gl={{
+            antialias: !isMobile,
+            powerPreference: "high-performance",
+            alpha: true,
+          }}
+        >
+          <ambientLight intensity={0.65} />
+          <directionalLight
+            position={[5, 6, 5]}
+            intensity={1.4}
+            color="#ffd9b8"
+          />
+          {!isMobile && (
+            <>
+              <directionalLight
+                position={[-4, -2, -3]}
+                intensity={0.45}
+                color="#5da3ff"
+              />
+              <pointLight position={[0, 0, 5]} intensity={0.4} color="#ffffff" />
+            </>
+          )}
+          <Suspense fallback={null}>
+            <Monkey triggerSignalRef={triggerSignalRef} />
+          </Suspense>
+        </Canvas>
       )}
     </div>
   );
