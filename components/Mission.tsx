@@ -63,7 +63,8 @@ export default function Mission() {
       ref={sectionRef}
       style={{
         position: "relative",
-        background: "var(--color-bg)",
+        background: "#cdb5f0", // pale lavender — match PastDrop / catalog pages
+        color: "#0a0a14",      // texto dark para legibilidad sobre lavender
         /* SIN overflow:hidden — rompe el sticky */
       }}
     >
