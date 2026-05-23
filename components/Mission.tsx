@@ -59,9 +59,13 @@ export default function Mission() {
         >
           <span className="system-text">{site.mission.eyebrow}</span>
           <h2
-            className="display"
             style={{
+              fontFamily: "var(--font-marquee)",
+              fontWeight: 900,
               fontSize: "clamp(3rem, 9vw, 8rem)",
+              lineHeight: 0.9,
+              letterSpacing: "-0.04em",
+              textTransform: "uppercase",
               marginTop: "var(--space-sm)",
               color: "var(--color-accent)",
             }}
@@ -126,11 +130,13 @@ export default function Mission() {
               </span>
               <h3
                 style={{
-                  fontFamily: "var(--font-display)",
+                  fontFamily: "var(--font-marquee)",
+                  fontWeight: 900,
                   fontSize: "clamp(2.5rem, 6vw, 5rem)",
                   lineHeight: 0.95,
                   marginBottom: "var(--space-md)",
-                  letterSpacing: "-0.02em",
+                  letterSpacing: "-0.03em",
+                  textTransform: "uppercase",
                   maxWidth: 600,
                 }}
               >
