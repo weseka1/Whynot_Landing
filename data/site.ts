@@ -4,6 +4,18 @@
  * Créditos legales viven en /data/credits.ts (no tocar sin permiso).
  */
 
+type Social = {
+  instagram?: { handle: string; url: string };
+  whatsapp?:  { display: string; url: string };
+};
+
+type Pillar = {
+  id:     string;
+  label:  string;
+  copy:   string;
+  social?: Social;
+};
+
 export const site = {
   brand: {
     name: "DICH",
@@ -79,6 +91,16 @@ export const site = {
         id:    ".003 RELEASE",
         label: "Tres canales, un hilo",
         copy:  "Instagram · WhatsApp · Web. Entrás por donde te queda mejor — la conversación no se rompe entre canales.",
+        social: {
+          instagram: {
+            handle: "@whynot_exclusive",
+            url:    "https://www.instagram.com/whynot_exclusive/",
+          },
+          whatsapp: {
+            display: "+54 9 291 441-3200",
+            url:     "https://wa.me/5492914413200",
+          },
+        },
       },
       {
         id:    ".004 ARCHIVE",

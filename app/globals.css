@@ -207,6 +207,51 @@ body::before {
 .accent { color: var(--color-accent); }
 
 /* --------------------------------------------------------------------------
+   Mission social pills — Instagram + WhatsApp del pilar .003 RELEASE
+   Pills outline con scanline interna + glow al hover.
+   -------------------------------------------------------------------------- */
+.mission-social-pill {
+  position: relative;
+}
+.mission-social-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0.05) 0px,
+    rgba(0,0,0,0.05) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  pointer-events: none;
+  opacity: 0.6;
+  mix-blend-mode: multiply;
+}
+.mission-social-pill:hover,
+.mission-social-pill:focus-visible {
+  transform: translateY(-2px);
+  outline: none;
+}
+.mission-social-ig:hover,
+.mission-social-ig:focus-visible {
+  color: #e1306c;
+  box-shadow:
+    0 0 0 1px rgba(225,48,108,0.45),
+    0 0 24px rgba(225,48,108,0.35),
+    0 0 60px rgba(225,48,108,0.25);
+}
+.mission-social-wa:hover,
+.mission-social-wa:focus-visible {
+  color: #25d366;
+  box-shadow:
+    0 0 0 1px rgba(37,211,102,0.55),
+    0 0 24px rgba(37,211,102,0.40),
+    0 0 60px rgba(37,211,102,0.28);
+}
+
+/* --------------------------------------------------------------------------
    DICH-style backgrounds (clases utilitarias)
    -------------------------------------------------------------------------- */
 
