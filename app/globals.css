@@ -473,24 +473,6 @@ model-viewer {
   }
 }
 
-/* Site header: mix-blend-mode SOLO en desktop (es un repaint costoso del
-   area debajo del fixed header en cada scroll, mas notorio en mobile).
-   En mobile usamos color directo legible sobre cualquier fondo. */
-@media (hover: hover) and (pointer: fine) and (min-width: 1024px) {
-  .site-header {
-    mix-blend-mode: difference;
-    color: #fff;
-  }
-}
-@media not all and (min-width: 1024px) {
-  .site-header {
-    background: linear-gradient(180deg, rgba(10,9,8,0.65), rgba(10,9,8,0));
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: var(--color-fg);
-  }
-}
-
 /* Touch devices: forzar hide del LiquidCursor */
 @media (hover: none) and (pointer: coarse) {
   .liquid-cursor,

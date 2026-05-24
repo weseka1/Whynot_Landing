@@ -18,7 +18,6 @@ export default function Header() {
   return (
     <>
       <header
-        className="site-header"
         style={{
           position: "fixed",
           top: 0,
@@ -29,9 +28,7 @@ export default function Header() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          /* mix-blend-mode: difference es bonito sobre fondos variables pero
-             en mobile cuesta un repaint extra del area debajo del header.
-             Lo dejamos solo desktop (ver globals.css .site-header).      */
+          mixBlendMode: "difference",
         }}
       >
         <span className="system-text">{site.brand.tagline.toUpperCase()}</span>
