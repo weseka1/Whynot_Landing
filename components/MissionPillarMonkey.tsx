@@ -32,10 +32,8 @@ import { clone as cloneSkeletal } from "three/examples/jsm/utils/SkeletonUtils.j
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
 
-const MONO_SRC_DEFAULT = "/assets/3d/mono-rigged.glb";
-const MONO_SRC_GOTILA  = "/assets/3d/gotila-esenssial.glb";
-useGLTF.preload(MONO_SRC_DEFAULT);
-useGLTF.preload(MONO_SRC_GOTILA);
+const MONO_SRC = "/assets/3d/mono-rigged.glb";
+useGLTF.preload(MONO_SRC);
 
 const ANIM_MIN_DURATION_S = 0.5;
 const TARGET_SIZE         = 2.5;
@@ -59,11 +57,10 @@ function easeOutCubic(t: number): number {
 
 interface MonkeyProps {
   triggerSignalRef: React.MutableRefObject<boolean>;
-  modelSrc: string;
 }
 
-function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
-  const { scene, animations } = useGLTF(modelSrc);
+function Monkey({ triggerSignalRef }: MonkeyProps) {
+  const { scene, animations } = useGLTF(MONO_SRC);
   const ref = useRef<THREE.Group>(null);
 
   /* SkeletonUtils.clone clona scene + skeleton + skinned-mesh binding —
@@ -115,13 +112,6 @@ function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
   const tweenStartMsRef = useRef<number | null>(null);
   const clipDurationRef = useRef<number>(1);
 
-  /* Posicion inicial del wrapper: ARRIBA del frame, fuera del viewport del
-     canvas. Se setea siempre (haya o no clip de animacion) para que modelos
-     estaticos tambien arranquen ocultos hasta que el trigger los suelte. */
-  useEffect(() => {
-    if (ref.current) ref.current.position.y = Y_DROP_FROM;
-  }, []);
-
   useEffect(() => {
     if (!names.length) return;
     const action = actions[names[0]];
@@ -138,6 +128,10 @@ function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
     action.paused = true;
     actionRef.current = action;
     clipDurationRef.current = duration / ANIM_TIME_SCALE;
+    /* Posicion inicial del wrapper: ARRIBA del frame, fuera del viewport
+       del canvas. El mono no se ve al cargar — recien entra al frame
+       cuando el trigger inicie el tween de caida. */
+    if (ref.current) ref.current.position.y = Y_DROP_FROM;
   }, [actions, mixer, names]);
 
   useFrame(() => {
@@ -181,14 +175,7 @@ function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
   );
 }
 
-interface MissionPillarMonkeyProps {
-  /** Override del modelo a renderizar. Default = mono-rigged. */
-  modelSrc?: string;
-}
-
-export default function MissionPillarMonkey({
-  modelSrc = MONO_SRC_DEFAULT,
-}: MissionPillarMonkeyProps = {}) {
+export default function MissionPillarMonkey() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerSignalRef = useRef<boolean>(false);
   const hasTriggeredRef = useRef<boolean>(false);
@@ -281,7 +268,7 @@ export default function MissionPillarMonkey({
             </>
           )}
           <Suspense fallback={null}>
-            <Monkey triggerSignalRef={triggerSignalRef} modelSrc={modelSrc} />
+            <Monkey triggerSignalRef={triggerSignalRef} />
           </Suspense>
         </Canvas>
       )}
