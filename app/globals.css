@@ -737,6 +737,67 @@ model-viewer {
   }
 }
 
+/* ==========================================================================
+   CATALOG BRAND PAGE — overrides agresivos para mobile.
+   (Movidos desde styled-jsx porque framer-motion + jsx pueden no
+    compilar la regla y queremos garantia.)
+   ========================================================================== */
+@media (max-width: 1100px) {
+  /* Grid del catalogo: 3 cols -> 2 cols a partir de tablet portrait */
+  .paginated-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+}
+@media (max-width: 768px) {
+  /* Wrapper del BrandHero — padding mas humano en mobile.                 */
+  .brand-hero-wrap {
+    padding: 3rem 1.25rem 1.5rem !important;
+  }
+  /* Title: paddingRight 30vw -> 38vw (reserva espacio del mascot a la
+     derecha) + font mas chico para que entre con "LOUIS VUITTON".        */
+  .brand-title {
+    padding-right: 38vw !important;
+    font-size: clamp(2.25rem, 11vw, 4.5rem) !important;
+    line-height: 0.9 !important;
+  }
+  /* Mascot: queda a la DERECHA del titulo (position absolute), tamano
+     reducido para que no overflowee ni tape el title. NO position:relative
+     (esa version le quedaba "encima" del texto al usuario).               */
+  .brand-mascot {
+    position: absolute !important;
+    top: 4rem !important;
+    bottom: auto !important;
+    right: 0.5rem !important;
+    margin: 0 !important;
+    z-index: 6 !important;
+  }
+  .brand-mascot > div {
+    width: 200px !important;
+    height: 280px !important;
+  }
+  /* Grid catalogo: 2 cols (era 1 col en <=640px). El usuario pidio 2 cards
+     para que se vean mas grandes.                                         */
+  .paginated-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.875rem !important;
+  }
+}
+@media (max-width: 480px) {
+  .brand-title {
+    padding-right: 42vw !important;
+    font-size: clamp(2rem, 12vw, 3.5rem) !important;
+  }
+  .brand-mascot > div {
+    width: 160px !important;
+    height: 230px !important;
+  }
+  .brand-mascot {
+    top: 5rem !important;
+    right: 0.4rem !important;
+  }
+}
+
 /* ============== MOBILE CHICO (<=480px) ================================== */
 @media (max-width: 480px) {
   body { font-size: 14px; }

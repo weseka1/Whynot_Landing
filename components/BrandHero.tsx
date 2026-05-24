@@ -128,40 +128,10 @@ export default function BrandHero({
         />
       </motion.div>
 
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .brand-hero-wrap {
-            padding: 3rem 1.25rem 1.5rem !important;
-          }
-          .brand-title {
-            /* En mobile el mascot pasa a estar abajo del titulo (no a la
-               derecha), asi que no necesitamos reservar paddingRight para
-               el mono. paddingRight 0 = titulo full-width.                 */
-            padding-right: 0 !important;
-            font-size: clamp(2.5rem, 11vw, 5rem) !important;
-          }
-          .brand-mascot {
-            position: relative !important;
-            top: auto !important;
-            bottom: auto !important;
-            right: auto !important;
-            margin: 1.75rem auto 0 !important;
-            display: block !important;
-            z-index: 1 !important;
-          }
-          .brand-mascot > div {
-            width: min(280px, 70vw) !important;
-            height: min(380px, 95vw) !important;
-            margin-inline: auto;
-          }
-        }
-        @media (max-width: 480px) {
-          .brand-mascot > div {
-            width: min(240px, 75vw) !important;
-            height: min(320px, 100vw) !important;
-          }
-        }
-      `}</style>
+      {/* NOTA: Los overrides mobile del BrandHero (.brand-title /
+          .brand-mascot / .brand-hero-wrap / .paginated-grid) viven en
+          app/globals.css — los movimos ahi porque framer-motion + styled-jsx
+          pueden no compilar la regla, y queriamos garantia de que aplique. */}
 
       {/* Stats row */}
       <motion.div
