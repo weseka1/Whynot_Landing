@@ -548,19 +548,22 @@ model-viewer {
   #section-mission > div:nth-of-type(2) > div:first-child h2 {
     font-size: clamp(2.5rem, 11vw, 4.5rem) !important;
   }
-  /* OCULTAR el mono dorado del header en mobile (libera 1 WebGL context).
-     El texto "Somos WhyNot" queda full-width igual.                       */
+  /* OCULTAR TODOS los monos 3D del Mission en mobile.
+     Decision conservadora despues de ver crashes intermitentes.
+     En mobile dejamos solo:
+       - Hero: <model-viewer> (1 WebGL context, lazy script CDN)
+       - Meteorite: <Canvas> R3F (1 WebGL context, lazy-mounted via IO)
+     Total: 2 WebGL contexts. Imposible cruzar el limite del browser.
+     El IntersectionObserver interno de MissionPillarMonkey nunca ve los
+     wrappers ocultos como intersecting → shouldMount=false → no Canvas R3F
+     → no se crea WebGL context, no se descarga ningun GLB del Mission.
+
+     Tradeoff: en mobile el Mission queda como una seccion de texto
+     premium con tipografia gigante. Los monos vuelven en >=769px. */
   #section-mission > div:nth-of-type(2) > div:first-child > div:nth-child(2) {
     display: none !important;
   }
-  /* OCULTAR monos del pilar 1 (.001 SOURCE — Louis) y pilar 4 (.004
-     ARCHIVE — Streetwear) en mobile. Dejamos visibles el .002 BUILD
-     (mono rigged default) y el .003 RELEASE (Supreme Simian blanco).
-     Total contexts en mobile: Hero(1) + Mission(2) + Meteorite(1) = 4.
-     Estructura del padre: <div HEADER>(child 1) + <div data-pillar>(2..5).
-     Pillar 1 = nth-child(2), pillar 4 = nth-child(5).                    */
-  #section-mission > div:nth-of-type(2) > [data-pillar]:nth-child(2) [data-pillar-monkey],
-  #section-mission > div:nth-of-type(2) > [data-pillar]:nth-child(5) [data-pillar-monkey] {
+  #section-mission [data-pillar-monkey] {
     display: none !important;
   }
 
