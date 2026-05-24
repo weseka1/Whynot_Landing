@@ -119,30 +119,43 @@ def main():
     print(f"   FBX mesh: {source_mesh.name} ({len(source_mesh.data.vertices)} verts)")
     print(f"   Armature: {armature.name} ({len(armature.data.bones)} bones)")
 
-    print("[4/7] Auto-fit del OBJ mesh para coincidir tamaño con FBX...")
-    # El OBJ y el FBX pueden venir con escalas distintas. Ajustamos el OBJ
-    # para que su bbox Y matche el del FBX antes de transferir weights —
-    # asi Data Transfer puede mapear vertices por proximidad.
+    print("[4/7] Auto-fit del FBX (armature + source_mesh) hacia el OBJ...")
+    # CRITICO: escalamos el FBX al tamaño del OBJ (no al reves), porque el
+    # OBJ ya esta en escala glTF estandar (metros, ~1.8m de alto). Si
+    # escalamos el OBJ hacia el FBX (que viene en cm de Mixamo), el GLB
+    # exportado queda gigante respecto a los otros monos del sitio y el
+    # auto-fit del componente MissionPillarMonkey lo trata mal.
     import mathutils
     fbx_bbox = [source_mesh.matrix_world @ mathutils.Vector(c)
                 for c in source_mesh.bound_box]
     obj_bbox = [target_mesh.matrix_world @ mathutils.Vector(c)
                 for c in target_mesh.bound_box]
-    fbx_size_y = max(b.z for b in fbx_bbox) - min(b.z for b in fbx_bbox)
-    obj_size_y = max(b.z for b in obj_bbox) - min(b.z for b in obj_bbox)
-    if obj_size_y > 0 and fbx_size_y > 0:
-        scale_factor = fbx_size_y / obj_size_y
-        target_mesh.scale = (scale_factor, scale_factor, scale_factor)
-        print(f"   Escalando OBJ por {scale_factor:.3f} para matchear FBX")
-    # Centrar el OBJ a la misma posicion del FBX mesh
+    fbx_size_z = max(b.z for b in fbx_bbox) - min(b.z for b in fbx_bbox)
+    obj_size_z = max(b.z for b in obj_bbox) - min(b.z for b in obj_bbox)
+    if fbx_size_z > 0 and obj_size_z > 0:
+        scale_factor = obj_size_z / fbx_size_z
+        # Escalar el armature (y por jerarquia el source_mesh) hacia escala OBJ
+        armature.scale = (scale_factor, scale_factor, scale_factor)
+        print(f"   Escalando armature+FBX por {scale_factor:.4f} para "
+              f"matchear escala OBJ (~metros)")
+    # Centrar el FBX a la misma posicion del OBJ mesh
     bpy.context.view_layer.update()
-    obj_bbox = [target_mesh.matrix_world @ mathutils.Vector(c)
-                for c in target_mesh.bound_box]
+    fbx_bbox = [source_mesh.matrix_world @ mathutils.Vector(c)
+                for c in source_mesh.bound_box]
     obj_center = sum(obj_bbox, mathutils.Vector()) / 8
     fbx_center = sum(fbx_bbox, mathutils.Vector()) / 8
-    delta = fbx_center - obj_center
-    target_mesh.location += delta
+    delta = obj_center - fbx_center
+    armature.location += delta
     bpy.context.view_layer.update()
+
+    # Aplicar la transform al armature para que las animaciones queden bakeadas
+    # a la nueva escala (sino el armature deform va a aplicar la escala como
+    # multiplier sobre el mesh y se rompe el rig al exportar)
+    bpy.ops.object.select_all(action="DESELECT")
+    armature.select_set(True)
+    source_mesh.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
     print("[5/7] Transfiriendo weights del FBX mesh al OBJ mesh (Data Transfer)...")
     # Data Transfer modifier copia vertex groups por proximidad nearest-face
