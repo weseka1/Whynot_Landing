@@ -214,7 +214,11 @@ export default function PastDrop() {
   /* ---------- Drag handlers (con disambiguación click vs drag) ----------
      Si el puntero se movió más de DRAG_THRESHOLD_PX entre down y up → fue
      drag → no navegar. Si fue click puro → navegar al href del activo.    */
-  const DRAG_THRESHOLD_PX = 8;
+  /* Threshold pixel para distinguir tap de swipe. En mobile, los dedos
+     mueven al menos 3-4px sin querer. Bajamos de 8 a 4 para que el swipe
+     se detecte temprano y NO se interprete como click → asi se puede
+     deslizar para cambiar de specimen en lugar de abrir el catalogo.    */
+  const DRAG_THRESHOLD_PX = 4;
   const dragRef = useRef<{
     startX: number;
     baseOffset: number;
@@ -456,7 +460,16 @@ export default function PastDrop() {
             position: "absolute",
             inset: 0,
             cursor: "grab",
-            touchAction: "none",
+            /* touchAction "pan-y": permite que el browser maneje el scroll
+               vertical (para que la pagina siga scrolleando con el dedo)
+               PERO captura el pan horizontal → nuestros pointerdown/move/up
+               disparan limpio cuando el usuario desliza horizontal para
+               cambiar de specimen. "none" bloqueaba el scroll vertical
+               y ademas en algunos browsers mobile cancelaba el pointer-
+               move antes de que el threshold (4px) se cumpliera, asi que
+               se interpretaba como tap → ibamos al catalogo en vez de
+               cambiar de zapa.                                            */
+            touchAction: "pan-y",
             userSelect: "none",
             perspective: "1600px",
             zIndex: 5,

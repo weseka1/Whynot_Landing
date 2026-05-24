@@ -497,16 +497,16 @@ model-viewer {
     /* Si el browser respeta el clamp, el marquee imagen ya se reduce.   */
   }
 
-  /* model-viewer wrapper del Hero: lo "enmarcamos" con padding generoso en
-     mobile para que el mono no ocupe TODA la pantalla y quede en proporcion
-     con la nube/marquee. model-viewer renderiza dentro del area util del
-     wrapper → si reducimos esa area, el modelo se ve mas chico en pantalla
-     (sin tocar field-of-view ni camera-orbit del componente). */
+  /* model-viewer wrapper del Hero: padding asimetrico para que el mono
+     quede ANCLADO AL HORIZONTE (zona donde la nube tapa la transicion
+     hero->collections). Mas padding-top y menos padding-bottom = modelo
+     visualmente "parado" sobre las nubes en lugar de flotando al medio.
+     NO se toca field-of-view ni camera-orbit del componente.            */
   #hero > div:nth-child(5) {
-    padding-top: 18vh !important;
-    padding-bottom: 22vh !important;
-    padding-left: 8vw !important;
-    padding-right: 8vw !important;
+    padding-top: 28vh !important;
+    padding-bottom: 4vh !important;
+    padding-left: 6vw !important;
+    padding-right: 6vw !important;
   }
 
   /* UI overlay del Hero: paddings mas humanos. */
@@ -548,24 +548,16 @@ model-viewer {
   #section-mission > div:nth-of-type(2) > div:first-child h2 {
     font-size: clamp(2.5rem, 11vw, 4.5rem) !important;
   }
-  /* OCULTAR TODOS los monos 3D del Mission en mobile.
-     Decision conservadora despues de ver crashes intermitentes.
-     En mobile dejamos solo:
-       - Hero: <model-viewer> (1 WebGL context, lazy script CDN)
-       - Meteorite: <Canvas> R3F (1 WebGL context, lazy-mounted via IO)
-     Total: 2 WebGL contexts. Imposible cruzar el limite del browser.
-     El IntersectionObserver interno de MissionPillarMonkey nunca ve los
-     wrappers ocultos como intersecting → shouldMount=false → no Canvas R3F
-     → no se crea WebGL context, no se descarga ningun GLB del Mission.
+  /* Monos del Mission visibles en mobile (4 pilares + header dorado).
+     El IntersectionObserver lazy-mount + frameloop:demand de drei mantienen
+     solo 1-2 canvas activos a la vez (los que estan en viewport). Total
+     WebGL contexts simultaneos: Hero(1) + Mission visibles(~2) +
+     Meteorite(1) = ~4. Dentro del limite de mobile.
 
-     Tradeoff: en mobile el Mission queda como una seccion de texto
-     premium con tipografia gigante. Los monos vuelven en >=769px. */
-  #section-mission > div:nth-of-type(2) > div:first-child > div:nth-child(2) {
-    display: none !important;
-  }
-  #section-mission [data-pillar-monkey] {
-    display: none !important;
-  }
+     Division entre pilares: queremos que la linea (borderTop del siguiente
+     pilar) coincida visualmente con donde el mono "aterriza". Reducimos
+     el wrapper a 45vh y quitamos padding-bottom del pilar para que la
+     linea quede justo despues del wrapper del mono. */
 
   /* Pilares: stack vertical texto-arriba mono-abajo en mobile.
      Nota: en el codigo el div interior es flex con justifyContent center
@@ -574,7 +566,10 @@ model-viewer {
   #section-mission [data-pillar] {
     flex-direction: column !important;
     min-height: auto !important;
-    padding-block: var(--space-md) !important;
+    /* padding-block: 0 -> la division (borderTop del siguiente pilar)
+       cae justo donde termina el wrapper del mono, alineado con la
+       altura visual donde el mono aterriza.                              */
+    padding-block: var(--space-md) 0 !important;
   }
   #section-mission [data-pillar] > div {
     flex: 0 0 auto !important;
@@ -584,12 +579,13 @@ model-viewer {
     padding: var(--space-md) var(--container-pad) !important;
     text-align: left !important;
   }
-  /* Mono 3D wrapper del pilar — altura limitada, full width, opacity full
-     (queda abajo del texto, no detras). */
+  /* Mono 3D wrapper del pilar — altura proporcionada al mono que cae:
+     45vh es suficiente para mostrar la caida completa pero deja la
+     "tierra" (el bottom del wrapper) cerca de donde aterriza. */
   #section-mission [data-pillar] [data-pillar-monkey] {
-    height: 55vh;
-    min-height: 320px;
-    max-height: 500px;
+    height: 45vh;
+    min-height: 280px;
+    max-height: 440px;
     width: 100% !important;
   }
   /* Mission pillar headings mas chicos en mobile. */
@@ -681,8 +677,22 @@ model-viewer {
   }
 
   /* ====================================================================
-     METEORITE / ARTIFACT (3D)
+     METEORITE / ARTIFACT (3D Balenciaga 3XL)
      ==================================================================== */
+  /* Reducir altura del canvas wrapper (era minHeight 520px → en mobile
+     se ve la zapa enorme porque el viewport es chico). Forzamos a un
+     alto razonable en proporcion con el ancho del telefono.            */
+  #section-meteorite > div:nth-of-type(2) {
+    min-height: 380px !important;
+    height: 56vh;
+    max-height: 520px;
+  }
+  /* Padding extra al wrapper del canvas para "achicar" el modelo en
+     pantalla (R3F renderiza al tamano del canvas; canvas mas chico
+     = modelo se ve mas chico relativo al viewport).                   */
+  #section-meteorite > div:nth-of-type(2) canvas {
+    /* Canvas absoluto a 100%, OK */
+  }
   /* Bottom info: 3 cols → 1 col, todo izquierdo. */
   #section-meteorite > div:last-child {
     grid-template-columns: 1fr !important;

@@ -66,7 +66,7 @@ export default function CloudBand() {
           y,
         }}
       >
-        {/* lateral izquierdo */}
+        {/* lateral izquierdo (~+10% mas grande: 35% → 38.5%) */}
         <img
           src="/nuves/cloud-center.webp"
           alt=""
@@ -76,14 +76,14 @@ export default function CloudBand() {
             left: "5%",
             top: 0,
             transform: "translateY(-50%)",
-            width: "35%",
+            width: "38.5%",
             height: "auto",
             zIndex: 4,
             display: "block",
           }}
         />
 
-        {/* back central wide */}
+        {/* back central wide (~+10%: 45% → 49.5%) */}
         <img
           src="/nuves/cloud-center.webp"
           alt=""
@@ -93,14 +93,14 @@ export default function CloudBand() {
             left: "50%",
             top: 0,
             transform: "translate(-50%, -50%)",
-            width: "45%",
+            width: "49.5%",
             height: "auto",
             zIndex: 4,
             display: "block",
           }}
         />
 
-        {/* lateral derecho */}
+        {/* lateral derecho (~+10%: 30% → 33%) */}
         <img
           src="/nuves/cloud-2.webp"
           alt=""
@@ -110,14 +110,14 @@ export default function CloudBand() {
             right: "5%",
             top: 0,
             transform: "translateY(-50%)",
-            width: "30%",
+            width: "33%",
             height: "auto",
             zIndex: 4,
             display: "block",
           }}
         />
 
-        {/* refuerzo central plano */}
+        {/* refuerzo central plano (~+10%: 28% → 30.8%) */}
         <img
           src="/nuves/cloud-center-bottom.webp"
           alt=""
@@ -127,7 +127,7 @@ export default function CloudBand() {
             left: "50%",
             top: 0,
             transform: "translate(-50%, -50%)",
-            width: "28%",
+            width: "30.8%",
             height: "auto",
             zIndex: 5,
             display: "block",

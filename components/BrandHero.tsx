@@ -27,6 +27,7 @@ export default function BrandHero({
 }: Props) {
   return (
     <div
+      className="brand-hero-wrap"
       style={{
         position: "relative",
         padding: "5rem 2.5rem 3rem",
@@ -71,6 +72,7 @@ export default function BrandHero({
           El MonoMascot se posiciona ABSOLUTO a la derecha (ver más abajo)
           para no robarle ancho al título.                                 */}
       <motion.h1
+        className="brand-title"
         initial={{ opacity: 0, y: 30, filter: "blur(20px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
@@ -83,7 +85,9 @@ export default function BrandHero({
           margin: 0,
           /* paddingRight reserva espacio horizontal por si el título es muy
              largo (e.g. LOUIS VUITTON) y queremos que no se solape con el
-             mascot. ~520px = 460 ancho del mono + un poco de aire.         */
+             mascot. ~520px = 460 ancho del mono + un poco de aire.
+             En mobile el mascot pasa abajo del titulo (style-jsx) y este
+             padding se anula -> ver .brand-title abajo.                    */
           paddingRight: "clamp(0px, 30vw, 520px)",
           fontWeight: 700,
           textTransform: "uppercase",
@@ -126,14 +130,35 @@ export default function BrandHero({
 
       <style jsx>{`
         @media (max-width: 768px) {
+          .brand-hero-wrap {
+            padding: 3rem 1.25rem 1.5rem !important;
+          }
+          .brand-title {
+            /* En mobile el mascot pasa a estar abajo del titulo (no a la
+               derecha), asi que no necesitamos reservar paddingRight para
+               el mono. paddingRight 0 = titulo full-width.                 */
+            padding-right: 0 !important;
+            font-size: clamp(2.5rem, 11vw, 5rem) !important;
+          }
           .brand-mascot {
-            position: static !important;
-            margin: 1.5rem auto 0;
+            position: relative !important;
+            top: auto !important;
+            bottom: auto !important;
+            right: auto !important;
+            margin: 1.75rem auto 0 !important;
             display: block !important;
+            z-index: 1 !important;
           }
           .brand-mascot > div {
-            width: 300px !important;
-            height: 420px !important;
+            width: min(280px, 70vw) !important;
+            height: min(380px, 95vw) !important;
+            margin-inline: auto;
+          }
+        }
+        @media (max-width: 480px) {
+          .brand-mascot > div {
+            width: min(240px, 75vw) !important;
+            height: min(320px, 100vw) !important;
           }
         }
       `}</style>
