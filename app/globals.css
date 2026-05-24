@@ -764,28 +764,33 @@ model-viewer {
     padding: 0.75rem 1rem 1rem !important;
     min-height: 460px;
   }
-  /* Title: paddingRight reserva el ancho del mascot a la derecha. */
+  /* Title: paddingRight reserva el ancho del mascot a la derecha
+     (mascot ahora min 60vw → title se reserva 58vw para no solaparse).  */
   .brand-hero-wrap .brand-title {
-    padding-right: 48vw !important;
-    font-size: clamp(2.5rem, 12vw, 5rem) !important;
+    padding-right: 58vw !important;
+    font-size: clamp(2.25rem, 11vw, 4.5rem) !important;
     line-height: 0.88 !important;
     margin-top: 0.25rem !important;
   }
   /* Mascot: ANCLADO ARRIBA. Selector con specificity reforzada
-     (.brand-hero-wrap .brand-mascot) para ganar contra inline styles.    */
+     (.brand-hero-wrap .brand-mascot) para ganar contra inline styles.
+     top: 0.5rem para alinear visualmente la cabeza del mono cerca del
+     stats row (ARCHIVED queda a la altura del torso del mono).          */
   .brand-hero-wrap .brand-mascot {
     position: absolute !important;
-    top: 0 !important;
+    top: 0.5rem !important;
     bottom: auto !important;
     right: 0 !important;
     left: auto !important;
     margin: 0 !important;
     z-index: 6 !important;
   }
-  /* Tamaño +10% del anterior (290 -> 320, 45vw -> 50vw, 400 -> 440).    */
+  /* Tamaño +20% del anterior (320 -> 384, 50vw -> 60vw, 440 -> 528).
+     Mas grande = el mascot ocupa mas pantalla y la cabeza queda mas
+     visible a la altura del title + stats.                              */
   .brand-hero-wrap .brand-mascot > div {
-    width: min(320px, 50vw) !important;
-    height: min(440px, 60vh) !important;
+    width: min(384px, 60vw) !important;
+    height: min(528px, 70vh) !important;
   }
   /* CALIDAD DE RENDER del mascot. Forzamos max-pixel-ratio 2.5 para que
      internamente renderice a resolucion mas alta y luego downscale →
@@ -812,19 +817,19 @@ model-viewer {
     min-height: 400px;
   }
   .brand-hero-wrap .brand-title {
-    padding-right: 50vw !important;
-    font-size: clamp(2.1rem, 13vw, 3.8rem) !important;
+    padding-right: 60vw !important;
+    font-size: clamp(1.9rem, 11.5vw, 3.4rem) !important;
   }
   .brand-hero-wrap .brand-mascot > div {
-    width: min(255px, 52vw) !important;
-    height: min(360px, 52vh) !important;
+    width: min(306px, 62vw) !important;
+    height: min(432px, 62vh) !important;
   }
   .brand-hero-wrap .brand-mascot {
-    top: 0 !important;
+    top: 0.5rem !important;
     right: 0 !important;
   }
   .brand-stats {
-    padding-right: 46vw !important;
+    padding-right: 52vw !important;
   }
 }
 
