@@ -79,15 +79,21 @@ export default function Preloader() {
     /* Cuando cada job termina, sumamos al contador. */
     jobs.forEach((p) => p.then(() => { done++; }));
 
-    /* Helper: cierra el preloader y avisa al PixelReveal para que arranque
-       su animacion de revelado en el mismo instante (handoff visual). */
+    /* Helper: cierra el preloader y, una vez que el fade-out de
+       framer-motion (500ms) termina, avisa al PixelReveal para que
+       arranque su ola de revelado. Asi quedan secuenciales: primero el
+       preloader se va, despues la grilla se abre desde el centro. */
     const close = () => {
       if (cancelled) return;
       setPct(100);
       setTimeout(() => {
         if (cancelled) return;
         setVisible(false);
-        window.dispatchEvent(new CustomEvent("whynot:preloader-hidden"));
+        /* 500ms = duracion del exit fade del AnimatePresence de abajo. */
+        setTimeout(() => {
+          if (cancelled) return;
+          window.dispatchEvent(new CustomEvent("whynot:preloader-hidden"));
+        }, 500);
       }, 350);
     };
 
