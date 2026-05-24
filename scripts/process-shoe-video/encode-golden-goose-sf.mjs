@@ -19,7 +19,11 @@ import path from "node:path";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(SCRIPT_DIR, "..", "..");
 
-const SRC_ROOT = path.join(PROJECT_ROOT, "Golden goose - SF", "Golden goose - SF");
+/* Si existe la carpeta refinada por AI (refine-alpha-ai.py), usarla;
+   sino caer a las PNGs originales (sin refinar).                       */
+const REFINED_ROOT = path.join(PROJECT_ROOT, "Golden goose - SF refined");
+const RAW_ROOT     = path.join(PROJECT_ROOT, "Golden goose - SF", "Golden goose - SF");
+const SRC_ROOT = existsSync(REFINED_ROOT) ? REFINED_ROOT : RAW_ROOT;
 const OUT_DIR = path.join(PROJECT_ROOT, "public", "assets", "hero");
 
 const VARIANTS = [
