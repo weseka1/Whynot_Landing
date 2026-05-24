@@ -32,18 +32,12 @@ function SectionSkeleton({ id, h = "100vh" }: { id?: string; h?: string }) {
   );
 }
 
-/* IMPORT DIRECTO (NO dynamic) para Mission y MeteoriteClient:
-   Mission ya hace dynamic() interno por cada MissionPillarMonkey (5 canvas
-   R3F) y MeteoriteClient ya hace lazy mount con IntersectionObserver. Si
-   encima envolvemos en otro dynamic, el primer paso es renderizar un
-   skeleton — si el chunk tarda en hidratar, da impresion de "monos
-   desaparecidos". Mejor: que entren al bundle inicial y dejar que los
-   IntersectionObservers internos hagan el lazy real. */
-import Mission         from "@/components/Mission";
-import MeteoriteClient from "@/components/MeteoriteClient";
-
 const Collections = dynamic(() => import("@/components/Collections"), {
   loading: () => <SectionSkeleton id="section-collections" />,
+});
+const Mission = dynamic(() => import("@/components/Mission"), {
+  ssr: false,
+  loading: () => <SectionSkeleton id="section-mission" h="60vh" />,
 });
 const PastDrop = dynamic(() => import("@/components/PastDrop"), {
   loading: () => <SectionSkeleton id="section-past-drop" h="80vh" />,
@@ -53,6 +47,10 @@ const FuturisticGallery = dynamic(() => import("@/components/FuturisticGallery")
 });
 const IdeaForm = dynamic(() => import("@/components/IdeaForm"), {
   loading: () => <SectionSkeleton id="section-form" h="60vh" />,
+});
+const MeteoriteSection = dynamic(() => import("@/components/MeteoriteClient"), {
+  ssr: false,
+  loading: () => <SectionSkeleton id="section-meteorite" />,
 });
 const WhyNotEnd = dynamic(() => import("@/components/WhyNotEnd"), {
   loading: () => <SectionSkeleton id="section-whynot-end" h="60vh" />,
@@ -82,7 +80,7 @@ export default function Page() {
         <PastDrop />
         <FuturisticGallery />
         <IdeaForm />
-        <MeteoriteClient />
+        <MeteoriteSection />
         <WhyNotEnd />
       </main>
 
