@@ -298,11 +298,17 @@ export default function Mission() {
               }}
               aria-hidden
             >
-              {/* Pilar .002 BUILD usa el gorila streetwear (rig Mixamo + clip
-                  de caida embebido); el resto el mono rigged default. */}
+              {/* Por pilar:
+                  - .002 BUILD (i=1): gorila streetwear
+                  - .003 RELEASE (i=2): mono blanco (Supreme Simian)
+                  - resto: mono rigged default */}
               <MissionPillarMonkey
                 modelSrc={
-                  i === 1 ? "/assets/3d/gotila-esenssial.glb" : undefined
+                  i === 1
+                    ? "/assets/3d/gotila-esenssial.glb"
+                    : i === 2
+                    ? "/assets/3d/mono-blanco.glb"
+                    : undefined
                 }
               />
             </div>

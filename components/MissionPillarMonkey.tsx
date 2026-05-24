@@ -34,8 +34,10 @@ import { useIsMobile } from "./useIsMobile";
 
 const MONO_SRC_DEFAULT = "/assets/3d/mono-rigged.glb";
 const MONO_SRC_GOTILA  = "/assets/3d/gotila-esenssial.glb";
+const MONO_SRC_BLANCO  = "/assets/3d/mono-blanco.glb";
 useGLTF.preload(MONO_SRC_DEFAULT);
 useGLTF.preload(MONO_SRC_GOTILA);
+useGLTF.preload(MONO_SRC_BLANCO);
 
 const ANIM_MIN_DURATION_S = 0.5;
 const TARGET_SIZE         = 2.5;
