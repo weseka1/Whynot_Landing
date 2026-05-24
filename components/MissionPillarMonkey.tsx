@@ -255,16 +255,16 @@ export default function MissionPillarMonkey({
         height: "100%",
         position: "relative",
         pointerEvents: "none",
-        /* CSS containment: aísla layout/paint de este sub-árbol del resto
-           de la página → menos invalidaciones globales por scroll. */
-        contain: "layout paint size",
       }}
       aria-hidden
     >
       {!shouldMount ? null : (
         <Canvas
-          /* frameloop dinámico: ahorra GPU al salir del viewport. */
-          frameloop={isInView ? "always" : "never"}
+          /* frameloop "always" para que el AnimationMixer siempre tenga
+             ticks. (Probamos pausar fuera de viewport pero pasaba que el
+             primer mount entraba con isInView=false hasta que el observer
+             reportara, dejando el mono congelado en pose inicial.) */
+          frameloop="always"
           camera={{ position: [0, 0.4, 6.5], fov: 36 }}
           dpr={isMobile ? 1 : [1, 1.5]}
           style={{
