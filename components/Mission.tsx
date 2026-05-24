@@ -229,7 +229,7 @@ export default function Mission() {
         {/* 4 pilares: texto a la izquierda (50%), mono 3D a la derecha (50%).
             Cada pilar se autoanima al entrar al viewport. Layout flex
             two-column con vertical-center del texto. */}
-        {site.mission.pillars.map((p) => (
+        {site.mission.pillars.map((p, i) => (
           <motion.div
             key={p.id}
             data-pillar
@@ -309,7 +309,13 @@ export default function Mission() {
               }}
               aria-hidden
             >
-              <MissionPillarMonkey />
+              {/* Pilar .002 BUILD usa el gorila streetwear (rig Mixamo + clip
+                  de caida embebido); el resto el mono rigged default. */}
+              <MissionPillarMonkey
+                modelSrc={
+                  i === 1 ? "/assets/3d/gotila-esenssial.glb" : undefined
+                }
+              />
             </div>
           </motion.div>
         ))}
