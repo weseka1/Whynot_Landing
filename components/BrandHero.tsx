@@ -112,14 +112,12 @@ export default function BrandHero({
         initial={{ opacity: 0, scale: 0.85, x: 24 }}
         animate={{ opacity: 1, scale: 1, x: 0 }}
         transition={{ duration: 1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        /* Posicion y tamaño viven en globals.css (.brand-mascot media
-           queries). El inline solo trae zIndex porque el animate de
-           framer-motion ya escribe transform aqui y conviene mantenerlo
-           limpio para que el CSS gane sin peleas de specificity.        */
+        /* Posicion (top/right/bottom/left/transform-overrides) y tamaño
+           viven en globals.css (.brand-mascot — default desktop +
+           @media mobile). Inline solo position absolute + zIndex para
+           que el primer paint ya posicione el mascot sin layout shift.   */
         style={{
           position: "absolute",
-          right: "2.5rem",
-          bottom: "-3rem",
           zIndex: 6,
         }}
       >
