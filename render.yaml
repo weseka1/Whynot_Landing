@@ -18,10 +18,8 @@ services:
     # Publish directory (Next.js export sale a /out, no /dist)
     staticPublishPath: ./out
 
+    # Headers básicos para mejor performance
     headers:
-      # ------------------------------------------------------------------
-      # CACHING — assets inmutables 1 año; HTML revalidate per-deploy.
-      # ------------------------------------------------------------------
       - path: /_next/static/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
@@ -34,47 +32,6 @@ services:
       - path: /nuves/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
-      - path: /videos-360/*
-        name: Cache-Control
-        value: public, max-age=31536000, immutable
-      - path: /fonts/*
-        name: Cache-Control
-        value: public, max-age=31536000, immutable
-      # HTML: revalidate en cada request (no inmutable porque pueden cambiar
-      # con cada deploy y queremos que el browser refresque).
-      - path: /*
-        name: Cache-Control
-        value: public, max-age=0, must-revalidate
-
-      # ------------------------------------------------------------------
-      # SECURITY HEADERS — defensa en profundidad a nivel host.
-      # Estos no se pueden poner desde Next con output:"export", por eso
-      # van acá. El layout también pone copia vía <meta> donde aplica.
-      # ------------------------------------------------------------------
-      - path: /*
-        name: Strict-Transport-Security
-        value: max-age=63072000; includeSubDomains; preload
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: X-Frame-Options
-        value: DENY
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
-      - path: /*
-        name: Permissions-Policy
-        value: camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()
-      - path: /*
-        name: Cross-Origin-Opener-Policy
-        value: same-origin
-      - path: /*
-        name: Cross-Origin-Resource-Policy
-        value: same-site
-      - path: /*
-        name: X-DNS-Prefetch-Control
-        value: "on"
 
     # Rewrite: fallback de paths para SPA (trailing slash routing)
     routes:

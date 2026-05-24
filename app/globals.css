@@ -8,15 +8,37 @@
 @tailwind utilities;
 
 /* --------------------------------------------------------------------------
-   FUENTES — Audiowide + Orbitron se auto-hostean vía next/font/google
-   en app/layout.tsx, expuestas como --font-audiowide / --font-orbitron.
-   T-012 (Studio Innate) sigue habilitada como @font-face SOLO si el .woff2
-   está físicamente en /public/fonts/. Si falta, no se intentan URLs adicionales
-   (evitamos 6 requests 404 por carga).
+   FUENTES LOCALES
+   Studio Innate / Blackbox Grafx T-12 (alias T-012). Usada en el marquee
+   del Hero. Para activarla: drop del archivo en /public/fonts/T-012.otf
+   (o T-12.otf, las dos rutas se intentan). Ver /public/fonts/README.md.
+   Mientras no esté el archivo, el fallback de --font-marquee usa
+   Bruno Ace SC (Google Fonts).
    -------------------------------------------------------------------------- */
 @font-face {
   font-family: "T-012";
-  src: url("/fonts/T-012.woff2") format("woff2");
+  src:
+    url("/fonts/T-012.woff2") format("woff2"),
+    url("/fonts/T-012.otf")   format("opentype"),
+    url("/fonts/T-012.ttf")   format("truetype"),
+    url("/fonts/T-12.woff2")  format("woff2"),
+    url("/fonts/T-12.otf")    format("opentype"),
+    url("/fonts/T-12.ttf")    format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+/* Alias por compatibilidad (algunos exportes traen el nombre interno
+   como "T-12" sin el cero, otros con). Apuntan al mismo archivo. */
+@font-face {
+  font-family: "T-12";
+  src:
+    url("/fonts/T-012.woff2") format("woff2"),
+    url("/fonts/T-012.otf")   format("opentype"),
+    url("/fonts/T-012.ttf")   format("truetype"),
+    url("/fonts/T-12.woff2")  format("woff2"),
+    url("/fonts/T-12.otf")    format("opentype"),
+    url("/fonts/T-12.ttf")    format("truetype");
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
@@ -80,7 +102,7 @@
           mientras no este T-12.
        3) Orbitron — fallback geometrico cyber.
      Cargadas en layout.tsx con preconnect + display:swap. */
-  --font-marquee:    "T-012", var(--font-audiowide, "Audiowide"), var(--font-orbitron, "Orbitron"), "Impact", system-ui, sans-serif;
+  --font-marquee:    "T-012", "T-12", "Audiowide", "Orbitron", "Impact", system-ui, sans-serif;
 
   /* — Spacing — */
   --space-xs:        0.5rem;
@@ -128,18 +150,12 @@ html, body {
 }
 
 body {
-  /* dvh = dynamic viewport height: resuelve el bug clásico de 100vh en
-     iOS donde la barra inferior reaparece y "rompe" el alto. Fallback a vh
-     en browsers sin dvh. */
   min-height: 100vh;
-  min-height: 100dvh;
   overflow-x: hidden;
   /* Smooth scrolling (respeta prefers-reduced-motion abajo) */
   scroll-behavior: smooth;
   /* Optimiza scroll en iOS */
   -webkit-overflow-scrolling: touch;
-  /* Mejora el touch en mobile: tap delays cero */
-  touch-action: manipulation;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -480,45 +496,3 @@ model-viewer {
     display: none !important;
   }
 }
-
-/* --------------------------------------------------------------------------
-   FOCUS ACCESIBLE — outline visible solo cuando navegan por teclado.
-   :focus-visible respeta input modality: mouse no muestra outline (estético),
-   teclado sí (a11y). Cumple WCAG 2.4.7. -------------------------------- */
-:focus { outline: none; }
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-  border-radius: 2px;
-}
-
-/* --------------------------------------------------------------------------
-   ACCESIBILIDAD — selección y scrollbar consistentes con la paleta. */
-::selection {
-  background: var(--color-accent);
-  color: var(--color-bg);
-}
-
-/* Scrollbar dark — Webkit + Firefox. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-line) var(--color-bg);
-}
-*::-webkit-scrollbar { width: 10px; height: 10px; }
-*::-webkit-scrollbar-track { background: var(--color-bg); }
-*::-webkit-scrollbar-thumb {
-  background: var(--color-line);
-  border-radius: 999px;
-}
-*::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
-
-/* --------------------------------------------------------------------------
-   PRINT — limpiar todo, dejar solo texto legible. -------------------- */
-@media print {
-  * { background: transparent !important; color: #000 !important; }
-  canvas, video, model-viewer, .liquid-cursor, header[style*="fixed"] {
-    display: none !important;
-  }
-}
-
-
