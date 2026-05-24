@@ -13,7 +13,7 @@ import ffmpegStatic from "ffmpeg-static";
 import sharp from "sharp";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, statSync, copyFileSync, unlinkSync } from "node:fs";
 import path from "node:path";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -50,8 +50,34 @@ async function encodeVariant({ folder, slug }) {
   const srcDir = path.join(SRC_ROOT, folder);
   if (!existsSync(srcDir)) throw new Error(`no encontre ${srcDir}`);
 
+  /* Limpia "duplicados" tipo "00000095 (1).png" que algunos exporters
+     (Photopea, Windows Explorer) generan al re-guardar. Si no se borran,
+     ffmpeg los puede levantar mal o saltar el orden.                      */
+  for (const f of readdirSync(srcDir)) {
+    if (/\(\d+\)\.png$/i.test(f)) {
+      unlinkSync(path.join(srcDir, f));
+      console.log(`  [clean] borrado duplicado: ${f}`);
+    }
+  }
+
   const frames = readdirSync(srcDir).filter((f) => /^\d+\.png$/i.test(f)).sort();
   if (frames.length === 0) throw new Error(`sin PNGs en ${srcDir}`);
+
+  /* Rellena gaps en el numbering copiando el frame anterior. ffmpeg con
+     -start_number + %08d corta el video en el primer gap, asi que un
+     frame faltante (ej: 00000140 perdido) arruina la secuencia entera.
+     Solucion: copiamos el frame N-1 al hueco. 1 frame congelado a 30fps
+     es imperceptible.                                                     */
+  const nums = frames.map((f) => parseInt(f, 10)).sort((a, b) => a - b);
+  for (let n = nums[0] + 1; n < nums[nums.length - 1]; n++) {
+    if (!nums.includes(n)) {
+      const prev = String(n - 1).padStart(8, "0") + ".png";
+      const gap  = String(n).padStart(8, "0") + ".png";
+      copyFileSync(path.join(srcDir, prev), path.join(srcDir, gap));
+      console.log(`  [fill] gap frame ${gap} ← ${prev}`);
+      nums.push(n);
+    }
+  }
 
   /* ffmpeg con secuencia numerada arranca en -start_number y usa %08d.
      Los archivos van 00000001..00000144 → patron %08d con start 1.        */
