@@ -4,27 +4,15 @@
  * Créditos legales viven en /data/credits.ts (no tocar sin permiso).
  */
 
-type Social = {
-  instagram?: { handle: string; url: string };
-  whatsapp?:  { display: string; url: string };
-};
-
-type Pillar = {
-  id:     string;
-  label:  string;
-  copy:   string;
-  social?: Social;
-};
-
-/* Canales de contacto en bloques de "How It Works": cada uno tiene un
-   tipo que mapea a un icono SVG en HowItWorks.tsx. */
+/* Canal de contacto: cada pilar opcionalmente tiene una lista de
+   channels[] que se renderiza como pills con icono inline en Mission.tsx. */
 type Channel = {
   type:    "whatsapp" | "instagram" | "web" | "whatsapp-channel";
   display: string;
   url:     string;
 };
 
-type HowItWorksBlock = {
+type Pillar = {
   id:        string;
   label:     string;
   copy:      string;
@@ -85,94 +73,56 @@ export const site = {
     ],
   },
 
-  /* ---------------- MISSION ---------------- */
+  /* ---------------- MISSION ----------------
+     5 pilares con texto a la izquierda + mono dorado 3D que se repite
+     a la derecha de cada uno. Cubren el flow completo: como comprar,
+     canales oficiales, envios CABA/GBA, envios al interior, dudas/asesor. */
   mission: {
     eyebrow:  "// OUR MISSION",
     title:    "Somos WhyNot",
-    subtitle: "Conocenos. Cuatro pilares. Una forma distinta de comprar.",
+    subtitle: "Conocenos. Una forma distinta de comprar.",
     pillars: [
       {
-        id:    ".001 SOURCE",
-        label: "Asesoría 1:1",
-        copy:  "Curaduría humana por Instagram y WhatsApp. Te ayudamos a elegir como si fuera para nosotros — cero bots, cero scripts. Respuesta real, en el momento.",
-      },
-      {
-        id:    ".002 BUILD",
-        label: "Unboxing a medida",
-        copy:  "¿Viste algo que te gustó? Mandanos la captura. Te devolvemos un video unboxing del producto, grabado para vos, antes de tomar la decisión.",
-      },
-      {
-        id:    ".003 RELEASE",
-        label: "Tres canales, un hilo",
-        copy:  "Instagram · WhatsApp · Web. Entrás por donde te queda mejor — la conversación no se rompe entre canales.",
-        social: {
-          instagram: {
-            handle: "@whynot_exclusive",
-            url:    "https://www.instagram.com/whynot_exclusive/",
-          },
-          whatsapp: {
-            display: "+54 9 11 7629-5915",
-            url:     "https://wa.me/5491176295915",
-          },
-        },
-      },
-      {
-        id:    ".004 ARCHIVE",
-        label: "Llegada garantizada",
-        copy:  "CABA y GBA: entrega en el día, pago contra-entrega. Interior del país: 2 a 4 días hábiles, directo a tu puerta.",
-      },
-    ],
-  },
-
-  /* ---------------- HOW IT WORKS ----------------
-     5 bloques que extienden la Mission: van justo despues de los 4
-     pilares, mismo fondo lavanda + mismo mono dorado 3D que se repite.
-     Cada bloque opcionalmente tiene channels[] (botones a IG/WA/Web/
-     Canal de WA) renderizados como pills futuristas.                    */
-  howItWorks: {
-    eyebrow: "// HOW IT WORKS",
-    blocks: [
-      {
-        id:    ".005 COMPRA",
+        id:    ".001 COMPRA",
         label: "¿Cómo comprar?",
         copy:  "Asesoramiento online personalizado. Te respondemos en el momento por el canal que prefieras.",
         channels: [
-          { type: "instagram", display: "@whynot_exclusive",       url: "https://www.instagram.com/whynot_exclusive/" },
-          { type: "whatsapp",  display: "+54 9 11 7629-5915",      url: "https://wa.me/5491176295915" },
+          { type: "instagram", display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
+          { type: "whatsapp",  display: "+54 9 11 7629-5915", url: "https://wa.me/5491176295915" },
         ],
       },
       {
-        id:    ".006 CANALES",
+        id:    ".002 CANALES",
         label: "¿Cuáles son nuestros canales oficiales?",
         copy:  "Entrá por donde te quede mejor — la conversación no se rompe entre canales.",
         channels: [
-          { type: "whatsapp",         display: "+54 9 11 7629-5915", url: "https://wa.me/5491176295915" },
-          { type: "instagram",        display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
+          { type: "whatsapp",         display: "+54 9 11 7629-5915",  url: "https://wa.me/5491176295915" },
+          { type: "instagram",        display: "@whynot_exclusive",    url: "https://www.instagram.com/whynot_exclusive/" },
           { type: "web",              display: "www.whynotamk.com.ar", url: "https://www.whynotamk.com.ar" },
           /* TODO: reemplazar el "#" cuando me pases la URL del Canal de WhatsApp. */
-          { type: "whatsapp-channel", display: "Canal WhatsApp",     url: "#" },
+          { type: "whatsapp-channel", display: "Canal WhatsApp",       url: "#" },
         ],
       },
       {
-        id:    ".007 CABA",
+        id:    ".003 CABA",
         label: "¿Sos de CABA o GBA?",
         copy:  "Los envíos son en el día. Y SÍ, podés abonar TODO al recibir 🫵🏼. Contactate con nosotros para coordinarlo 🫡",
       },
       {
-        id:    ".008 ARGENTINA",
+        id:    ".004 ARGENTINA",
         label: "¡Llegamos a TODO Argentina! 🇦🇷",
         copy:  "De la mano de OCA y Correo Argentino despachamos tu pedido a cualquier parte del país. Entrega de 2 a 3 días hábiles 🔥 (excepción Tierra del Fuego: 5 a 7 días 📦).",
       },
       {
-        id:    ".009 DUDAS",
+        id:    ".005 DUDAS",
         label: "¿Tenés dudas?",
         copy:  "Contactate con un asesor de ventas. Podés pedir un video unboxing del producto antes de la compra.",
         channels: [
-          { type: "whatsapp",  display: "Chat WhatsApp",      url: "https://wa.me/5491176295915" },
-          { type: "instagram", display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
+          { type: "whatsapp",  display: "Chat WhatsApp",     url: "https://wa.me/5491176295915" },
+          { type: "instagram", display: "@whynot_exclusive", url: "https://www.instagram.com/whynot_exclusive/" },
         ],
       },
-    ] as HowItWorksBlock[],
+    ] as Pillar[],
   },
 
   /* ---------------- PAST DROP (Sirius) ---------------- */

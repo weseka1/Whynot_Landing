@@ -31,32 +31,19 @@ const MissionPillarMonkey = dynamic(() => import("./MissionPillarMonkey"), {
 });
 
 /* ----------------------------------------------------------------------------
-   SocialButtons — pills futuristas para Instagram + WhatsApp. Solo se
-   renderiza en el pilar que tiene data.social en site.ts (.003 RELEASE).
-   - Pills con borde + glow-on-hover (box-shadow expandida)
-   - Iconos SVG inline (sin deps, sin font icons)
-   - Scanline interno (gradient repeat) para textura "transmision"
-   - Color: cyan-ish para IG, neon-green oficial para WA, los dos sobre
-     fondo translucido. Hover: glow + slide del label.
+   ChannelButtons — pills futuristas para los 4 tipos de canal:
+     - instagram, whatsapp, web, whatsapp-channel
+   Iconos SVG inline (sin deps), borde + glow-on-hover via CSS.
    ---------------------------------------------------------------------------- */
-type SocialData = {
-  instagram?: { handle: string; url: string };
-  whatsapp?:  { display: string; url: string };
+type Channel = {
+  type:    "whatsapp" | "instagram" | "web" | "whatsapp-channel";
+  display: string;
+  url:     string;
 };
 
 function InstagramIcon({ size = 22 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
       <path d="M16 11.37a4 4 0 1 1-4.74-4.74A4 4 0 0 1 16 11.37z" />
       <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" stroke="none" />
@@ -66,19 +53,53 @@ function InstagramIcon({ size = 22 }: { size?: number }) {
 
 function WhatsAppIcon({ size = 22 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M17.6 6.32A8.78 8.78 0 0 0 12.05 4a8.85 8.85 0 0 0-8.85 8.85c0 1.56.41 3.08 1.18 4.42L3.13 21.5l4.34-1.14a8.84 8.84 0 0 0 4.58 1.25h.01a8.85 8.85 0 0 0 8.85-8.85 8.78 8.78 0 0 0-2.31-5.94zm-5.55 13.6h-.01a7.36 7.36 0 0 1-3.74-1.03l-.27-.16-2.78.73.75-2.72-.17-.28a7.37 7.37 0 0 1-1.13-3.91 7.36 7.36 0 0 1 12.56-5.2 7.3 7.3 0 0 1 2.15 5.2 7.36 7.36 0 0 1-7.36 7.36zm4.04-5.5c-.22-.11-1.31-.65-1.52-.72-.2-.07-.35-.11-.5.11s-.57.72-.7.87c-.13.15-.26.17-.48.06a6.05 6.05 0 0 1-1.79-1.1 6.68 6.68 0 0 1-1.24-1.54c-.13-.22-.01-.34.1-.45.1-.1.22-.26.33-.39.11-.13.15-.22.22-.37.07-.15.04-.28-.02-.39-.06-.11-.5-1.2-.68-1.64-.18-.43-.36-.37-.5-.38h-.42c-.15 0-.39.06-.59.28-.2.22-.78.76-.78 1.85s.8 2.15.91 2.3c.11.15 1.57 2.4 3.8 3.36.53.23.94.36 1.27.46.53.17 1.01.15 1.4.09.43-.06 1.31-.54 1.5-1.05.18-.52.18-.96.13-1.05-.05-.09-.2-.15-.42-.26z" />
     </svg>
   );
 }
 
-function SocialButtons({ social }: { social: SocialData }) {
+function WebIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3a13 13 0 0 1 0 18a13 13 0 0 1 0 -18" />
+    </svg>
+  );
+}
+
+function WhatsAppChannelIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 11l13 -6v14l-13 -6z" />
+      <path d="M16 8a4 4 0 0 1 0 8" />
+      <path d="M8 11v2a4 4 0 0 0 4 4" />
+    </svg>
+  );
+}
+
+function ChannelIcon({ type }: { type: Channel["type"] }) {
+  switch (type) {
+    case "instagram":        return <InstagramIcon />;
+    case "whatsapp":         return <WhatsAppIcon />;
+    case "web":              return <WebIcon />;
+    case "whatsapp-channel": return <WhatsAppChannelIcon />;
+  }
+}
+
+function ChannelButtons({ channels }: { channels: Channel[] }) {
+  /* Mapea el type a la suffix del className para que el CSS existente
+     (mission-social-ig / mission-social-wa en globals.css) siga funcionando
+     y los nuevos (mission-social-web / mission-social-wa-channel) puedan
+     estilarse si hace falta. */
+  const cls: Record<Channel["type"], string> = {
+    instagram:          "mission-social-ig",
+    whatsapp:           "mission-social-wa",
+    web:                "mission-social-web",
+    "whatsapp-channel": "mission-social-wa-channel",
+  };
+
   return (
     <div
       style={{
@@ -88,13 +109,15 @@ function SocialButtons({ social }: { social: SocialData }) {
         gap: "0.85rem",
       }}
     >
-      {social?.instagram && (
+      {channels.map((c) => (
         <a
-          href={social.instagram.url}
+          key={c.type + c.url}
+          href={c.url}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Instagram ${social.instagram.handle}`}
-          className="mission-social-pill mission-social-ig"
+          data-sound-hover
+          aria-label={`${c.type} ${c.display}`}
+          className={`mission-social-pill ${cls[c.type]}`}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -102,8 +125,7 @@ function SocialButtons({ social }: { social: SocialData }) {
             padding: "10px 18px 10px 14px",
             borderRadius: 999,
             border: "1px solid currentColor",
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.0))",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.0))",
             color: "#0a0a14",
             fontFamily: "var(--font-mono)",
             fontSize: "0.85rem",
@@ -112,47 +134,13 @@ function SocialButtons({ social }: { social: SocialData }) {
             textDecoration: "none",
             position: "relative",
             overflow: "hidden",
-            transition:
-              "transform var(--speed-fast, 0.15s), box-shadow var(--speed-fast, 0.15s), color var(--speed-fast, 0.15s)",
+            transition: "transform var(--speed-fast, 0.15s), box-shadow var(--speed-fast, 0.15s), color var(--speed-fast, 0.15s)",
           }}
         >
-          <InstagramIcon />
-          <span>{social.instagram.handle}</span>
+          <ChannelIcon type={c.type} />
+          <span>{c.display}</span>
         </a>
-      )}
-
-      {social?.whatsapp && (
-        <a
-          href={social.whatsapp.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`WhatsApp ${social.whatsapp.display}`}
-          className="mission-social-pill mission-social-wa"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "10px 18px 10px 14px",
-            borderRadius: 999,
-            border: "1px solid currentColor",
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.0))",
-            color: "#0a0a14",
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.85rem",
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            textDecoration: "none",
-            position: "relative",
-            overflow: "hidden",
-            transition:
-              "transform var(--speed-fast, 0.15s), box-shadow var(--speed-fast, 0.15s), color var(--speed-fast, 0.15s)",
-          }}
-        >
-          <WhatsAppIcon />
-          <span>{social.whatsapp.display}</span>
-        </a>
-      )}
+      ))}
     </div>
   );
 }
@@ -241,7 +229,7 @@ export default function Mission() {
         {/* 4 pilares: texto a la izquierda (50%), mono 3D a la derecha (50%).
             Cada pilar se autoanima al entrar al viewport. Layout flex
             two-column con vertical-center del texto. */}
-        {site.mission.pillars.map((p, i) => (
+        {site.mission.pillars.map((p) => (
           <motion.div
             key={p.id}
             data-pillar
@@ -304,14 +292,16 @@ export default function Mission() {
                 {p.copy}
               </p>
 
-              {"social" in p && p.social ? (
-                <SocialButtons social={p.social} />
+              {p.channels && p.channels.length > 0 ? (
+                <ChannelButtons channels={p.channels} />
               ) : null}
             </div>
 
             {/* COLUMNA DERECHA — mono 3D embedded en el pilar. Se desplaza
-                con el scroll (no es sticky); cada instancia dispara su
-                animacion cuando este pilar entra al viewport. */}
+                con el scroll; cada instancia dispara su animacion cuando
+                este pilar entra al viewport.
+                Los 5 pilares usan TODOS el mono dorado (golden) — repite
+                la figura del header de "Somos WhyNot" intencionalmente. */}
             <div
               data-pillar-monkey
               style={{
@@ -321,23 +311,7 @@ export default function Mission() {
               }}
               aria-hidden
             >
-              {/* Por pilar (orden actual):
-                  - .001 SOURCE  (i=0): mono Louis Vuitton (Ape White LV)
-                  - .002 BUILD   (i=1): mono rigged default (Midnight Gorilla)
-                  - .003 RELEASE (i=2): mono blanco (Supreme Simian)
-                  - .004 ARCHIVE (i=3): gorila streetwear
-                  Header de la seccion lleva el mono dorado (Golden Couture). */}
-              <MissionPillarMonkey
-                modelSrc={
-                  i === 0
-                    ? "/assets/3d/mono-louis.glb"
-                    : i === 2
-                    ? "/assets/3d/mono-blanco.glb"
-                    : i === 3
-                    ? "/assets/3d/gotila-esenssial.glb"
-                    : undefined
-                }
-              />
+              <MissionPillarMonkey modelSrc="/assets/3d/mono-dorado.glb" />
             </div>
           </motion.div>
         ))}

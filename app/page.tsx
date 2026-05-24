@@ -36,9 +36,6 @@ function SectionSkeleton({ id, h = "100vh" }: { id?: string; h?: string }) {
 const Collections = dynamic(() => import("@/components/Collections"), {
   loading: () => <SectionSkeleton id="section-collections" />,
 });
-const HowItWorks = dynamic(() => import("@/components/HowItWorks"), {
-  loading: () => <SectionSkeleton id="section-how-it-works" />,
-});
 const PastDrop = dynamic(() => import("@/components/PastDrop"), {
   loading: () => <SectionSkeleton id="section-past-drop" h="80vh" />,
 });
@@ -72,7 +69,6 @@ export default function Page() {
         <CloudBand />
         <Collections />
         <Mission />
-        <HowItWorks />
         <PastDrop />
         <FuturisticGallery />
         <IdeaForm />
