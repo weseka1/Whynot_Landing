@@ -16,6 +16,21 @@ type Pillar = {
   social?: Social;
 };
 
+/* Canales de contacto en bloques de "How It Works": cada uno tiene un
+   tipo que mapea a un icono SVG en HowItWorks.tsx. */
+type Channel = {
+  type:    "whatsapp" | "instagram" | "web" | "whatsapp-channel";
+  display: string;
+  url:     string;
+};
+
+type HowItWorksBlock = {
+  id:        string;
+  label:     string;
+  copy:      string;
+  channels?: Channel[];
+};
+
 export const site = {
   brand: {
     name: "DICH",
@@ -96,8 +111,8 @@ export const site = {
             url:    "https://www.instagram.com/whynot_exclusive/",
           },
           whatsapp: {
-            display: "+54 9 291 441-3200",
-            url:     "https://wa.me/5492914413200",
+            display: "+54 9 11 7629-5915",
+            url:     "https://wa.me/5491176295915",
           },
         },
       },
@@ -107,6 +122,57 @@ export const site = {
         copy:  "CABA y GBA: entrega en el día, pago contra-entrega. Interior del país: 2 a 4 días hábiles, directo a tu puerta.",
       },
     ],
+  },
+
+  /* ---------------- HOW IT WORKS ----------------
+     5 bloques que extienden la Mission: van justo despues de los 4
+     pilares, mismo fondo lavanda + mismo mono dorado 3D que se repite.
+     Cada bloque opcionalmente tiene channels[] (botones a IG/WA/Web/
+     Canal de WA) renderizados como pills futuristas.                    */
+  howItWorks: {
+    eyebrow: "// HOW IT WORKS",
+    blocks: [
+      {
+        id:    ".005 COMPRA",
+        label: "¿Cómo comprar?",
+        copy:  "Asesoramiento online personalizado. Te respondemos en el momento por el canal que prefieras.",
+        channels: [
+          { type: "instagram", display: "@whynot_exclusive",       url: "https://www.instagram.com/whynot_exclusive/" },
+          { type: "whatsapp",  display: "+54 9 11 7629-5915",      url: "https://wa.me/5491176295915" },
+        ],
+      },
+      {
+        id:    ".006 CANALES",
+        label: "¿Cuáles son nuestros canales oficiales?",
+        copy:  "Entrá por donde te quede mejor — la conversación no se rompe entre canales.",
+        channels: [
+          { type: "whatsapp",         display: "+54 9 11 7629-5915", url: "https://wa.me/5491176295915" },
+          { type: "instagram",        display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
+          { type: "web",              display: "www.whynotamk.com.ar", url: "https://www.whynotamk.com.ar" },
+          /* TODO: reemplazar el "#" cuando me pases la URL del Canal de WhatsApp. */
+          { type: "whatsapp-channel", display: "Canal WhatsApp",     url: "#" },
+        ],
+      },
+      {
+        id:    ".007 CABA",
+        label: "¿Sos de CABA o GBA?",
+        copy:  "Los envíos son en el día. Y SÍ, podés abonar TODO al recibir 🫵🏼. Contactate con nosotros para coordinarlo 🫡",
+      },
+      {
+        id:    ".008 ARGENTINA",
+        label: "¡Llegamos a TODO Argentina! 🇦🇷",
+        copy:  "De la mano de OCA y Correo Argentino despachamos tu pedido a cualquier parte del país. Entrega de 2 a 3 días hábiles 🔥 (excepción Tierra del Fuego: 5 a 7 días 📦).",
+      },
+      {
+        id:    ".009 DUDAS",
+        label: "¿Tenés dudas?",
+        copy:  "Contactate con un asesor de ventas. Podés pedir un video unboxing del producto antes de la compra.",
+        channels: [
+          { type: "whatsapp",  display: "Chat WhatsApp",      url: "https://wa.me/5491176295915" },
+          { type: "instagram", display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
+        ],
+      },
+    ] as HowItWorksBlock[],
   },
 
   /* ---------------- PAST DROP (Sirius) ---------------- */
