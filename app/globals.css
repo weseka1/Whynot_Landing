@@ -750,32 +750,33 @@ model-viewer {
   }
 }
 @media (max-width: 768px) {
-  /* Wrapper del BrandHero — padding mas humano en mobile + min-height
-     para que el mascot anclado al BOTTOM tenga espacio.                  */
+  /* Wrapper del BrandHero. Padding-top mas grande porque el mascot va a
+     estar anclado ARRIBA (top: 0). Necesita espacio horizontal y vertical
+     para no tapar el eyebrow "D://DATA_CORE / ARCHIVE · AMIRI · BACK".   */
   .brand-hero-wrap {
-    padding: 3rem 1.25rem 2rem !important;
-    min-height: 420px;
+    padding: 2rem 1.25rem 1.5rem !important;
+    min-height: 460px;
   }
-  /* Title: paddingRight reserva espacio del mascot a la derecha + font
-     mas chico para que entre con "LOUIS VUITTON".                        */
+  /* Title: paddingRight reserva el ancho del mascot a la derecha. */
   .brand-title {
     padding-right: 44vw !important;
     font-size: clamp(2.5rem, 12vw, 5rem) !important;
     line-height: 0.88 !important;
+    margin-top: 0.5rem !important;
   }
-  /* Mascot: queda a la DERECHA del titulo, anclado al BOTTOM del wrapper
-     (no flotando al medio). Mas grande que antes para que se vea bien.   */
+  /* Mascot: ANCLADO ARRIBA a la derecha (al lado del "BACK TO ARCHIVE",
+     no abajo en la zona de stats). Top mas chico = mascot mas alto.     */
   .brand-mascot {
     position: absolute !important;
-    top: auto !important;
-    bottom: 0 !important;
+    top: 1.5rem !important;
+    bottom: auto !important;
     right: 0.25rem !important;
     margin: 0 !important;
     z-index: 6 !important;
   }
   .brand-mascot > div {
     width: min(290px, 45vw) !important;
-    height: min(400px, 60vh) !important;
+    height: min(400px, 56vh) !important;
   }
   /* CALIDAD DE RENDER del mascot: por default model-viewer rasteriza al
      DPR del canvas que se le da (chico = pixelado en mobile DPR 3x).
@@ -784,8 +785,18 @@ model-viewer {
   .brand-mascot model-viewer {
     --max-pixel-ratio: 2.5;
   }
-  /* Grid catalogo: 2 cols (era 1 col en <=640px). El usuario pidio 2 cards
-     para que se vean mas grandes.                                         */
+  /* Stats row: bajar MUCHO el margin-top para que no se solape con el
+     mascot que ahora esta arriba. min(290px, 45vw) + top 1.5rem ~
+     mascot baja hasta aprox 22-24rem; stats row debe estar mas abajo.   */
+  .brand-stats {
+    margin-top: 1.5rem !important;
+    flex-wrap: wrap !important;
+    gap: 1.2rem 1.6rem !important;
+    /* padding-right reserva espacio para que el mascot que baja desde
+       arriba no pise los STATUS labels mas a la derecha.                */
+    padding-right: 38vw !important;
+  }
+  /* Grid catalogo: 2 cols (era 1 col en <=640px). */
   .paginated-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 0.875rem !important;
@@ -793,7 +804,7 @@ model-viewer {
 }
 @media (max-width: 480px) {
   .brand-hero-wrap {
-    min-height: 360px;
+    min-height: 400px;
   }
   .brand-title {
     padding-right: 46vw !important;
@@ -801,10 +812,14 @@ model-viewer {
   }
   .brand-mascot > div {
     width: min(230px, 48vw) !important;
-    height: min(330px, 50vh) !important;
+    height: min(330px, 46vh) !important;
   }
   .brand-mascot {
     right: 0.2rem !important;
+    top: 1.25rem !important;
+  }
+  .brand-stats {
+    padding-right: 42vw !important;
   }
 }
 
