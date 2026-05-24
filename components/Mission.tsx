@@ -321,19 +321,20 @@ export default function Mission() {
               }}
               aria-hidden
             >
-              {/* Por pilar:
-                  - .001 SOURCE  (i=0): mono rigged default (Midnight Gorilla)
-                  - .002 BUILD   (i=1): gorila streetwear
+              {/* Por pilar (orden actual):
+                  - .001 SOURCE  (i=0): mono Louis Vuitton (Ape White LV)
+                  - .002 BUILD   (i=1): mono rigged default (Midnight Gorilla)
                   - .003 RELEASE (i=2): mono blanco (Supreme Simian)
-                  - .004 ARCHIVE (i=3): mono Louis Vuitton */}
+                  - .004 ARCHIVE (i=3): gorila streetwear
+                  Header de la seccion lleva el mono dorado (Golden Couture). */}
               <MissionPillarMonkey
                 modelSrc={
-                  i === 1
-                    ? "/assets/3d/gotila-esenssial.glb"
+                  i === 0
+                    ? "/assets/3d/mono-louis.glb"
                     : i === 2
                     ? "/assets/3d/mono-blanco.glb"
                     : i === 3
-                    ? "/assets/3d/mono-louis.glb"
+                    ? "/assets/3d/gotila-esenssial.glb"
                     : undefined
                 }
               />
