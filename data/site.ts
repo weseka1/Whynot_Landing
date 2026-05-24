@@ -123,6 +123,13 @@ export const site = {
         ],
       },
     ] as Pillar[],
+
+    /* Cierre: despues del ultimo pilar, el mono dorado solo y centrado
+       con una frase grande abajo. Funciona como sello/firma de la
+       seccion completa. */
+    closing: {
+      phrase: "¡Estamos para ayudarte a encontrar tu mejor DROP! 🫵🏼🫡",
+    },
   },
 
   /* ---------------- PAST DROP (Sirius) ---------------- */

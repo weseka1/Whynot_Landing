@@ -229,7 +229,7 @@ export default function Mission() {
         {/* 4 pilares: texto a la izquierda (50%), mono 3D a la derecha (50%).
             Cada pilar se autoanima al entrar al viewport. Layout flex
             two-column con vertical-center del texto. */}
-        {site.mission.pillars.map((p) => (
+        {site.mission.pillars.map((p, i) => (
           <motion.div
             key={p.id}
             data-pillar
@@ -298,10 +298,16 @@ export default function Mission() {
             </div>
 
             {/* COLUMNA DERECHA — mono 3D embedded en el pilar. Se desplaza
-                con el scroll; cada instancia dispara su animacion cuando
-                este pilar entra al viewport.
-                Los 5 pilares usan TODOS el mono dorado (golden) — repite
-                la figura del header de "Somos WhyNot" intencionalmente. */}
+                con el scroll (no es sticky); cada instancia dispara su
+                animacion cuando este pilar entra al viewport.
+
+                Asignacion por pilar (orden actual, 5 pilares):
+                  - .001 COMPRA     (i=0): mono dorado (se repite con header)
+                  - .002 CANALES    (i=1): default (Midnight Gorilla rigged)
+                  - .003 CABA       (i=2): mono blanco (Supreme Simian)
+                  - .004 ARGENTINA  (i=3): gorila streetwear (Esenssial)
+                  - .005 DUDAS      (i=4): mono Louis Vuitton — era el .001
+                                          original, ahora cierra como ultimo. */}
             <div
               data-pillar-monkey
               style={{
@@ -311,10 +317,71 @@ export default function Mission() {
               }}
               aria-hidden
             >
-              <MissionPillarMonkey modelSrc="/assets/3d/mono-dorado.glb" />
+              <MissionPillarMonkey
+                modelSrc={
+                  i === 0
+                    ? "/assets/3d/mono-dorado.glb"
+                    : i === 2
+                    ? "/assets/3d/mono-blanco.glb"
+                    : i === 3
+                    ? "/assets/3d/gotila-esenssial.glb"
+                    : i === 4
+                    ? "/assets/3d/mono-louis.glb"
+                    : undefined /* i=1 (.002 CANALES) → default rigged */
+                }
+              />
             </div>
           </motion.div>
         ))}
+
+        {/* CIERRE — mono dorado solo y centrado + frase grande abajo.
+            Funciona como sello/firma despues de los 5 pilares. */}
+        <motion.div
+          data-mission-closing
+          initial={{ opacity: 0, y: 60 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.3 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "var(--space-xl) var(--container-pad)",
+            borderTop: "1px solid var(--color-line)",
+            textAlign: "center",
+          }}
+        >
+          {/* Mono dorado solo, centrado y mas grande que en los pilares */}
+          <div
+            style={{
+              width: "min(560px, 70vw)",
+              height: "min(560px, 60vh)",
+              position: "relative",
+              pointerEvents: "none",
+              marginBottom: "var(--space-lg)",
+            }}
+            aria-hidden
+          >
+            <MissionPillarMonkey modelSrc="/assets/3d/mono-dorado.glb" />
+          </div>
+
+          <p
+            style={{
+              fontFamily: "var(--font-marquee)",
+              fontWeight: 900,
+              fontSize: "clamp(1.6rem, 3.4vw, 3rem)",
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              textTransform: "uppercase",
+              color: "#000",
+              maxWidth: 900,
+            }}
+          >
+            {site.mission.closing.phrase}
+          </p>
+        </motion.div>
       </div>
     </section>
   );
