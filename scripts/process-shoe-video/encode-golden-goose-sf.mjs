@@ -19,11 +19,13 @@ import path from "node:path";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(SCRIPT_DIR, "..", "..");
 
-/* Prefiere v2 (VITMatte + halo killer), luego v1, luego raw. */
+/* Prefiere v3 (isnet+VITMatte+erode 2px+despill), luego v2, v1, raw. */
+const REFINED_V3_ROOT = path.join(PROJECT_ROOT, "Golden goose - SF refined v3");
 const REFINED_V2_ROOT = path.join(PROJECT_ROOT, "Golden goose - SF refined v2");
 const REFINED_ROOT    = path.join(PROJECT_ROOT, "Golden goose - SF refined");
 const RAW_ROOT        = path.join(PROJECT_ROOT, "Golden goose - SF", "Golden goose - SF");
-const SRC_ROOT = existsSync(REFINED_V2_ROOT) ? REFINED_V2_ROOT
+const SRC_ROOT = existsSync(REFINED_V3_ROOT) ? REFINED_V3_ROOT
+               : existsSync(REFINED_V2_ROOT) ? REFINED_V2_ROOT
                : existsSync(REFINED_ROOT)    ? REFINED_ROOT
                : RAW_ROOT;
 const OUT_DIR = path.join(PROJECT_ROOT, "public", "assets", "hero");
