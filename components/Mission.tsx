@@ -185,11 +185,7 @@ export default function Mission() {
           }}
         >
           <span className="system-text">{site.mission.eyebrow}</span>
-          {/* Look chrome holografico: gradient peach -> magenta -> cyan
-              con clip al texto + tri-layer drop-shadow neon (magenta wide
-              halo + cyan medio + peach interior). Sobre fondo lavanda
-              #cdb5f0 se ve con contraste de neón cyber. WebkitBackgroundClip
-              y WebkitTextFillColor cubren Safari/iOS sin polyfill.        */}
+          {/* Título "SOMOS WHYNOT" en T-12 negro plano sobre lavanda. */}
           <h2
             style={{
               fontFamily: "var(--font-marquee)",
@@ -199,14 +195,7 @@ export default function Mission() {
               letterSpacing: "-0.04em",
               textTransform: "uppercase",
               marginTop: "var(--space-sm)",
-              backgroundImage:
-                "linear-gradient(135deg, #f4a982 0%, #d946ef 45%, #06b6d4 100%)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              color: "transparent",
-              filter:
-                "drop-shadow(0 4px 28px rgba(217,70,239,0.45)) drop-shadow(0 0 12px rgba(6,182,212,0.35)) drop-shadow(0 0 6px rgba(244,169,130,0.4))",
+              color: "#000",
             }}
           >
             {site.mission.title}
