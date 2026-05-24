@@ -173,46 +173,69 @@ export default function Mission() {
       <XDecoration seed={7} count={20} />
 
       <div style={{ position: "relative", zIndex: 2 }}>
-        {/* Título arriba — minHeight 100vh, vertical-centrado. */}
+        {/* Header del Mission section: texto "SOMOS WHYNOT" a la izquierda
+            (50%) + mono dorado 3D a la derecha (50%). Mismo layout
+            two-column que los pilares — asegura consistencia visual y que
+            el mono se vea con la misma escala que los otros 4. */}
         <div
           style={{
             minHeight: "100vh",
             display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            padding: "var(--space-md) var(--container-pad)",
-            maxWidth: "50%",
+            alignItems: "stretch",
           }}
         >
-          <span className="system-text">{site.mission.eyebrow}</span>
-          {/* Título "SOMOS WHYNOT" en T-12 negro plano sobre lavanda. */}
-          <h2
+          {/* COLUMNA IZQUIERDA — eyebrow + título + subtitle */}
+          <div
             style={{
-              fontFamily: "var(--font-marquee)",
-              fontWeight: 900,
-              fontSize: "clamp(3rem, 9vw, 8rem)",
-              lineHeight: 0.9,
-              letterSpacing: "-0.04em",
-              textTransform: "uppercase",
-              marginTop: "var(--space-sm)",
-              color: "#000",
+              flex: "1 1 50%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              padding: "var(--space-md) var(--container-pad)",
             }}
           >
-            {site.mission.title}
-          </h2>
-          {site.mission.subtitle && (
-            <p
+            <span className="system-text">{site.mission.eyebrow}</span>
+            {/* Título "SOMOS WHYNOT" en T-12 negro plano sobre lavanda. */}
+            <h2
               style={{
-                marginTop: "var(--space-md)",
-                maxWidth: 520,
-                fontSize: "clamp(1rem, 1.4vw, 1.25rem)",
-                lineHeight: 1.5,
-                color: "rgba(10,10,20,0.7)",
+                fontFamily: "var(--font-marquee)",
+                fontWeight: 900,
+                fontSize: "clamp(3rem, 9vw, 8rem)",
+                lineHeight: 0.9,
+                letterSpacing: "-0.04em",
+                textTransform: "uppercase",
+                marginTop: "var(--space-sm)",
+                color: "#000",
               }}
             >
-              {site.mission.subtitle}
-            </p>
-          )}
+              {site.mission.title}
+            </h2>
+            {site.mission.subtitle && (
+              <p
+                style={{
+                  marginTop: "var(--space-md)",
+                  maxWidth: 520,
+                  fontSize: "clamp(1rem, 1.4vw, 1.25rem)",
+                  lineHeight: 1.5,
+                  color: "rgba(10,10,20,0.7)",
+                }}
+              >
+                {site.mission.subtitle}
+              </p>
+            )}
+          </div>
+
+          {/* COLUMNA DERECHA — mono dorado, dispara animacion al entrar */}
+          <div
+            style={{
+              flex: "1 1 50%",
+              position: "relative",
+              pointerEvents: "none",
+            }}
+            aria-hidden
+          >
+            <MissionPillarMonkey modelSrc="/assets/3d/mono-dorado.glb" />
+          </div>
         </div>
 
         {/* 4 pilares: texto a la izquierda (50%), mono 3D a la derecha (50%).
