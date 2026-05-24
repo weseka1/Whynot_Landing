@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "npx -y serve@latest out -l ${PORT:-3000}",
     "lint": "next lint",
     "optimize:assets": "node scripts/optimize-assets.mjs",
     "optimize:glb": "node scripts/optimize-glb.mjs",
