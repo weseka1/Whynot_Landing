@@ -33,6 +33,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { site } from "@/data/site";
+import HoloFX from "./HoloFX";
+
+/* Mapeo del id del item activo a la paleta de acento del HoloFX. Los ids
+   01/02/03 son las 3 Golden Goose; el 04 (extra capsule) usa el dorado.   */
+function accentFor(id: string): "white" | "silver" | "gold" {
+  if (id === "01") return "white";
+  if (id === "02") return "silver";
+  return "gold";
+}
 
 /* Stats tecnicos que rodean el circulo (HUD AR scanner). Cambiar libremente. */
 const TECH_STATS_LEFT = [
@@ -183,6 +192,21 @@ export default function Collections() {
               <ArCornerBracket key={p} pos={p} />
             ))}
 
+            {/* --- HoloFX BACK: halo conico + anillos hologr. + particulas + sonar
+                Detras del producto (z:0). El accent se intercambia segun item. */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`fx-back-${current.id}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+              >
+                <HoloFX accent={accentFor(current.id)} layer="back" />
+              </motion.div>
+            </AnimatePresence>
+
             {/* --- Sombra al piso debajo del producto (da peso a la esfera) --- */}
             <div
               aria-hidden
@@ -259,6 +283,10 @@ export default function Collections() {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* --- HoloFX FRONT: scan line sweep que cruza el producto.
+                Va por encima del video pero por debajo de los corners. */}
+            <HoloFX accent={accentFor(current.id)} layer="front" />
           </div>
 
           {/* === Coordenadas debajo del circulo === */}
