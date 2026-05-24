@@ -1,31 +1,58 @@
 /* ============================================================================
-   PAGE — orden de secciones siguiendo la composición de DICH:
-     1) Preloader
-     2) Header (+ MenuOverlay)
-     3) Hero            #hero
-     4) Collections     #section-collections   (Oraniths · 4 cards · ticker)
-     5) Mission         #section-mission       (3 pilares .001/.002/.003)
-     6) Past Drop       #section-past-drop     (Sirius · coords · badges grid)
-     7) Anturax         #section-anturax       (toggle DARK/LIGHT)
-     8) Idea Form       #section-form          ("Send Signal")
-     9) Footer          (créditos · legal — NO TOCAR sin permiso)
-
-   + LiquidCursor a nivel global: lente que distorsiona al pasar el mouse.
+   PAGE — composicion de la home.
+   - Above-the-fold (Preloader, Header, Hero, CloudBand): import directo.
+   - Mission y MeteoriteSection: import directo (tienen 3D y ya hacen su
+     propio lazy mount interno con IntersectionObserver — envolverlos en
+     dynamic() rompe los monos).
+   - Resto de secciones below-the-fold (Collections, PastDrop,
+     FuturisticGallery, IdeaForm, WhyNotEnd, Footer): dynamic con skeleton
+     para no inflar el bundle inicial.
+   - LiquidCursor: dynamic con ssr:false (depende de window.matchMedia).
    ============================================================================ */
 
-import Preloader    from "@/components/Preloader";
-import Header       from "@/components/Header";
-import Hero         from "@/components/Hero";
-import CloudBand    from "@/components/CloudBand";
-import Collections  from "@/components/Collections";
-import FuturisticGallery from "@/components/FuturisticGallery";
-import Mission      from "@/components/Mission";
-import PastDrop     from "@/components/PastDrop";
-import IdeaForm     from "@/components/IdeaForm";
+import dynamic from "next/dynamic";
+import Preloader        from "@/components/Preloader";
+import Header           from "@/components/Header";
+import Hero             from "@/components/Hero";
+import CloudBand        from "@/components/CloudBand";
+import Mission          from "@/components/Mission";
 import MeteoriteSection from "@/components/MeteoriteClient";
-import WhyNotEnd    from "@/components/WhyNotEnd";
-import Footer       from "@/components/Footer";
-import LiquidCursor from "@/components/LiquidCursor";
+
+function SectionSkeleton({ id, h = "100vh" }: { id?: string; h?: string }) {
+  return (
+    <section
+      id={id}
+      aria-hidden
+      style={{
+        minHeight: h,
+        background: "var(--color-bg)",
+      }}
+    />
+  );
+}
+
+const Collections = dynamic(() => import("@/components/Collections"), {
+  loading: () => <SectionSkeleton id="section-collections" />,
+});
+const PastDrop = dynamic(() => import("@/components/PastDrop"), {
+  loading: () => <SectionSkeleton id="section-past-drop" h="80vh" />,
+});
+const FuturisticGallery = dynamic(() => import("@/components/FuturisticGallery"), {
+  loading: () => <SectionSkeleton id="section-futuristic-gallery" h="60vh" />,
+});
+const IdeaForm = dynamic(() => import("@/components/IdeaForm"), {
+  loading: () => <SectionSkeleton id="section-form" h="60vh" />,
+});
+const WhyNotEnd = dynamic(() => import("@/components/WhyNotEnd"), {
+  loading: () => <SectionSkeleton id="section-whynot-end" h="60vh" />,
+});
+const Footer = dynamic(() => import("@/components/Footer"), {
+  loading: () => null,
+});
+const LiquidCursor = dynamic(() => import("@/components/LiquidCursor"), {
+  ssr: false,
+  loading: () => null,
+});
 
 export default function Page() {
   return (

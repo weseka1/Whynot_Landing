@@ -2,10 +2,74 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 
+/* ============================================================================
+   ROOT LAYOUT
+   - Mantiene EXACTAMENTE los preloads originales (sky + marquee text + GLB
+     del Hero) — NO los toca porque son criticos para que el modelo del Hero
+     y el LCP carguen como esperabas.
+   - Agrega: metadata SEO completa, OG, Twitter Card, JSON-LD, manifest,
+     icons, robots, formatDetection completo.
+   - Agrega: CSP estricta + security headers via meta (defensa en
+     profundidad; los headers HTTP "reales" estan en render.yaml).
+   ============================================================================ */
+
+const SITE_URL = "https://whynot-landing.onrender.com";
+const SITE_NAME = "WHYNOT";
+const SITE_TITLE = "WHYNOT — Future Fashion System";
+const SITE_DESC = "Luxury sneaker drops. Encrypted couture. A cyber-fashion operating system.";
+
 export const metadata: Metadata = {
-  title: "WHYNOT — Future Fashion System",
-  description: "Editable skeleton — cyber luxury fashion system.",
-  formatDetection: { telephone: false },
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: SITE_DESC,
+  applicationName: SITE_NAME,
+  formatDetection: { telephone: false, email: false, address: false },
+  keywords: [
+    "WHYNOT", "luxury sneakers", "future fashion", "drops",
+    "Golden Goose", "Balenciaga 3XL", "cyber couture",
+  ],
+  authors: [{ name: "WHYNOT" }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "fashion",
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESC,
+    url: SITE_URL,
+    locale: "es_AR",
+    images: [
+      {
+        url: "/assets/hero/character.webp",
+        width: 1200,
+        height: 1200,
+        alt: "WHYNOT — Future Fashion System",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESC,
+    images: ["/assets/hero/character.webp"],
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 /* Viewport en Next 14 va como export separado, no dentro de metadata */
@@ -15,7 +79,53 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: "cover",
   themeColor: "#0a0908",
+  colorScheme: "dark",
 };
+
+/* JSON-LD structured data — Organization + WebSite */
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}#org`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/assets/hero/character.webp`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}#site`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESC,
+      publisher: { "@id": `${SITE_URL}#org` },
+    },
+  ],
+};
+
+/* CSP via meta. Permisiva para:
+   - 'unsafe-inline' en style/script: tailwind inline + scripts inline de Next
+   - fonts.googleapis + fonts.gstatic: Audiowide/Orbitron
+   - ajax.googleapis: model-viewer CDN (web component que carga el Hero)
+   - gstatic.com: Draco decoder usado por drei (Meteorite)
+   - data: y blob: en img/media para svgs inline y posibles canvas-toBlob
+   Notas: 'frame-ancestors' en meta NO funciona — eso va en render.yaml
+   como X-Frame-Options. */
+const CSP = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "script-src 'self' 'unsafe-inline' https://ajax.googleapis.com",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "connect-src 'self' https://www.gstatic.com https://ajax.googleapis.com",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+].join("; ");
 
 export default function RootLayout({
   children,
@@ -25,6 +135,16 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        {/* SECURITY meta (defensa en profundidad; render.yaml duplica como
+            headers HTTP reales) */}
+        <meta httpEquiv="Content-Security-Policy" content={CSP} />
+        <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
+        <meta name="referrer" content="strict-origin-when-cross-origin" />
+        <meta
+          httpEquiv="Permissions-Policy"
+          content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+        />
+
         {/* --font-marquee chain:
               1) "T-12"/"T-012" local (definida en globals.css con @font-face,
                  archivo en /public/fonts/) — la fuente verdadera del marquee
@@ -42,7 +162,9 @@ export default function RootLayout({
         />
 
         {/* Preload de assets criticos del Hero — el browser los pide en
-            paralelo con el JS, no espera a que React monte el componente. */}
+            paralelo con el JS, no espera a que React monte el componente.
+            ESTOS PRELOADS NO SE TOCAN: son los que aseguran que el modelo
+            3D del Hero y el LCP carguen bien. */}
         <link
           rel="preload"
           as="image"
@@ -62,6 +184,12 @@ export default function RootLayout({
           as="fetch"
           href="/assets/3d/mono.glb"
           crossOrigin=""
+        />
+
+        {/* JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
       <body>

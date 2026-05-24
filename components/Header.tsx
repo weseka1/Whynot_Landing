@@ -18,6 +18,7 @@ export default function Header() {
   return (
     <>
       <header
+        className="site-header"
         style={{
           position: "fixed",
           top: 0,
@@ -28,7 +29,8 @@ export default function Header() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          mixBlendMode: "difference",
+          /* mix-blend-mode movido a CSS .site-header — solo desktop, en
+             mobile usamos blur+gradient (mas barato, mejor legibilidad). */
         }}
       >
         <span className="system-text">{site.brand.tagline.toUpperCase()}</span>

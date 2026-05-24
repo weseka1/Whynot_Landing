@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Internos de Next y assets binarios pesados que no aportan SEO
+Disallow: /_next/
+Disallow: /videos-360/
+
+Sitemap: https://whynot-landing.onrender.com/sitemap.xml

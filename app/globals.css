@@ -150,12 +150,17 @@ html, body {
 }
 
 body {
+  /* 100dvh fallback: en iOS el 100vh "salta" cuando aparece/desaparece la
+     barra inferior. dvh = dynamic viewport height resuelve ese bug. */
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   /* Smooth scrolling (respeta prefers-reduced-motion abajo) */
   scroll-behavior: smooth;
   /* Optimiza scroll en iOS */
   -webkit-overflow-scrolling: touch;
+  /* Touch sin double-tap zoom delay (mantiene pinch-zoom). */
+  touch-action: manipulation;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -496,3 +501,62 @@ model-viewer {
     display: none !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   HEADER MIX-BLEND-MODE (controlado por clase, no inline)
+   mix-blend-mode:difference cuesta un repaint de toda el area debajo del
+   header fijo en cada scroll. Solo lo dejamos en desktop con hover-fine;
+   en mobile/touch usamos un gradiente con backdrop-blur (composite layer,
+   gratis) y color directo legible.
+   -------------------------------------------------------------------------- */
+@media (hover: hover) and (pointer: fine) and (min-width: 1024px) {
+  .site-header {
+    mix-blend-mode: difference;
+    color: #fff;
+  }
+}
+@media not all and (min-width: 1024px), (hover: none) {
+  .site-header {
+    background: linear-gradient(180deg, rgba(10,9,8,0.55), rgba(10,9,8,0));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--color-fg);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   FOCUS ACCESIBLE — outline solo con teclado (WCAG 2.4.7). ----------- */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   SELECCION + SCROLLBAR — consistencia visual con la paleta. ----------*/
+::selection {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) var(--color-bg);
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: var(--color-bg); }
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+
+/* --------------------------------------------------------------------------
+   PRINT — esconder media pesado, dejar texto. ------------------------ */
+@media print {
+  * { background: transparent !important; color: #000 !important; }
+  canvas, video, model-viewer, .liquid-cursor, header[style*="fixed"], .site-header {
+    display: none !important;
+  }
+}
+

@@ -1,41 +1,43 @@
 "use client";
 
 /* ============================================================================
-   LIQUID CURSOR — versión con trail/halo
-   - Una lente principal pequeña que distorsiona el backdrop con
-     <feTurbulence> + <feDisplacementMap>.
-   - Detrás, una cadena de "trail blobs" más chicos y traslúcidos que la
-     siguen con lag creciente → genera la estela / halo.
-   - Cadena de lerp: cada blob persigue al anterior, no al cursor.
-     Eso produce una estela orgánica que se "estira" al mover rápido y
-     se concentra al detenerse.
-
-   Tunear:
-     - LEAD_SIZE   → tamaño de la lente principal
-     - TRAIL_COUNT → cantidad de blobs de estela
-     - LERP_*      → suavidad / largo de la estela
-     - scale       → intensidad de la distorsión (feDisplacementMap)
+   LIQUID CURSOR v2 — optimizado, NO toca nada del 3D del sitio.
+   - Antes: 7 capas (lead + 6 trail) cada una con backdrop-filter:url(#lens),
+     y el filter era feTurbulence(baseFreq=0.018, octaves=2) + feDisplacementMap.
+     Resultado: cada capa releia el backbuffer por debajo de cada area de
+     lente + procesaba turbulence — multiplica el costo por 7 en cada move.
+   - Ahora: solo la LEAD lleva backdrop-filter. Los trails son halos
+     radiales (composite layer, sin lectura de backbuffer). feTurbulence
+     simplificado (baseFreq=0.04, octaves=1) → 2-3x mas barato.
+   - Trail 6 → 3.
+   - rAF se auto-pausa cuando el cursor esta quieto > 250ms.
+   - Guards: solo si hover:hover + pointer:fine + width>=1024 + no
+     prefers-reduced-motion. Mobile/touch nunca instancia el rAF.
    ============================================================================ */
 
 import { useEffect, useRef, useState } from "react";
 
-const LEAD_SIZE   = 90;
-const TRAIL_COUNT = 6;
-const LERP_LEAD   = 0.28;   // velocidad con la que la lente principal alcanza al mouse
-const LERP_TRAIL  = 0.18;   // velocidad con la que cada blob persigue al anterior
+const LEAD_SIZE   = 80;
+const TRAIL_COUNT = 3;
+const LERP_LEAD   = 0.32;
+const LERP_TRAIL  = 0.20;
 
 export default function LiquidCursor() {
   const refs = useRef<(HTMLDivElement | null)[]>([]);
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.innerWidth < 1024) return;
     setEnabled(true);
 
     let raf = 0;
     let tx = -LEAD_SIZE, ty = -LEAD_SIZE;
+    let hidden = false;
+    let lastMove = 0;
 
-    // Posición de cada elemento (lead + trail). Empiezan fuera de pantalla.
     const positions = Array.from(
       { length: TRAIL_COUNT + 1 },
       () => ({ x: -LEAD_SIZE, y: -LEAD_SIZE })
@@ -44,41 +46,41 @@ export default function LiquidCursor() {
     const onMove = (e: MouseEvent) => {
       tx = e.clientX;
       ty = e.clientY;
+      lastMove = performance.now();
     };
 
     const loop = () => {
-      // Lead persigue al mouse
       positions[0].x += (tx - positions[0].x) * LERP_LEAD;
       positions[0].y += (ty - positions[0].y) * LERP_LEAD;
-
-      // Cada trail persigue al anterior con menos velocidad → estela
       for (let i = 1; i < positions.length; i++) {
         positions[i].x += (positions[i - 1].x - positions[i].x) * LERP_TRAIL;
         positions[i].y += (positions[i - 1].y - positions[i].y) * LERP_TRAIL;
       }
-
-      // Aplicar transforms (sin re-render React)
       refs.current.forEach((el, i) => {
         if (!el) return;
-        const size = LEAD_SIZE - i * 10;       // cada blob un poco más chico
+        const size = LEAD_SIZE - i * 14;
         el.style.transform = `translate3d(${positions[i].x - size / 2}px, ${positions[i].y - size / 2}px, 0)`;
       });
 
+      /* Auto-pausa si lleva > 250ms sin movimiento y la lente ya converge. */
+      const dx = tx - positions[0].x;
+      const dy = ty - positions[0].y;
+      const idle = performance.now() - lastMove > 250;
+      if (idle && Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) { raf = 0; return; }
       raf = requestAnimationFrame(loop);
     };
 
-    const start = () => { if (!raf) raf = requestAnimationFrame(loop); };
+    const start = () => { if (!raf && !hidden) raf = requestAnimationFrame(loop); };
     const stop  = () => { if (raf) { cancelAnimationFrame(raf); raf = 0; } };
 
-    /* Pausa cuando la tab esta oculta — sin mouse no hay cambios visibles. */
-    const onVis = () => { document.hidden ? stop() : start(); };
-    document.addEventListener("visibilitychange", onVis);
+    const onAnyMove = (e: MouseEvent) => { onMove(e); start(); };
 
-    window.addEventListener("mousemove", onMove, { passive: true });
-    start();
+    const onVis = () => { hidden = document.hidden; hidden ? stop() : start(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("mousemove", onAnyMove, { passive: true });
 
     return () => {
-      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mousemove", onAnyMove);
       document.removeEventListener("visibilitychange", onVis);
       stop();
     };
@@ -88,26 +90,25 @@ export default function LiquidCursor() {
 
   return (
     <>
-      {/* Filtro SVG: ruido + displacement = distorsión líquida */}
       <svg
         width="0"
         height="0"
-        style={{ position: "fixed", inset: 0, pointerEvents: "none" }}
+        style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: -1 }}
         aria-hidden
       >
         <defs>
-          <filter id="liquid-lens" x="-30%" y="-30%" width="160%" height="160%">
+          <filter id="liquid-lens" x="-20%" y="-20%" width="140%" height="140%">
             <feTurbulence
               type="fractalNoise"
-              baseFrequency="0.018"
-              numOctaves="2"
+              baseFrequency="0.04"
+              numOctaves="1"
               seed="4"
               result="turb"
             />
             <feDisplacementMap
               in="SourceGraphic"
               in2="turb"
-              scale="55"
+              scale="40"
               xChannelSelector="R"
               yChannelSelector="G"
             />
@@ -115,17 +116,15 @@ export default function LiquidCursor() {
         </defs>
       </svg>
 
-      {/* Lead + trail */}
       {Array.from({ length: TRAIL_COUNT + 1 }, (_, i) => {
-        const size = LEAD_SIZE - i * 10;
-        const opacity = 1 - i * 0.14;
+        const size = LEAD_SIZE - i * 14;
         const isLead = i === 0;
-
         return (
           <div
             key={i}
             ref={(el) => { refs.current[i] = el; }}
             aria-hidden
+            className="liquid-cursor"
             style={{
               position: "fixed",
               top: 0,
@@ -134,16 +133,16 @@ export default function LiquidCursor() {
               height: size,
               borderRadius: "50%",
               pointerEvents: "none",
-              zIndex: 40 - i,        /* lead encima */
-              backdropFilter: "url(#liquid-lens)",
-              WebkitBackdropFilter: "url(#liquid-lens)",
-              opacity,
-              // Halo sólo en la lente principal
+              zIndex: 40 - i,
+              backdropFilter: isLead ? "url(#liquid-lens)" : "none",
+              WebkitBackdropFilter: (isLead ? "url(#liquid-lens)" : "none") as any,
+              background: isLead
+                ? "transparent"
+                : `radial-gradient(circle, rgba(255,220,200,${0.18 - i * 0.04}) 0%, transparent 70%)`,
               boxShadow: isLead
                 ? "0 0 30px 4px rgba(255, 220, 200, 0.18), inset 0 0 0 1px rgba(255,255,255,0.08)"
                 : "none",
               willChange: "transform",
-              mixBlendMode: "normal",
             }}
           />
         );
