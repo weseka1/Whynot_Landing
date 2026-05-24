@@ -497,10 +497,16 @@ model-viewer {
     /* Si el browser respeta el clamp, el marquee imagen ya se reduce.   */
   }
 
-  /* model-viewer wrapper del Hero: en mobile menos paddingTop (estaba 8vh)
-     para que el mono se vea mas centrado en pantallas chicas.            */
+  /* model-viewer wrapper del Hero: lo "enmarcamos" con padding generoso en
+     mobile para que el mono no ocupe TODA la pantalla y quede en proporcion
+     con la nube/marquee. model-viewer renderiza dentro del area util del
+     wrapper → si reducimos esa area, el modelo se ve mas chico en pantalla
+     (sin tocar field-of-view ni camera-orbit del componente). */
   #hero > div:nth-child(5) {
-    padding-top: 2vh !important;
+    padding-top: 18vh !important;
+    padding-bottom: 22vh !important;
+    padding-left: 8vw !important;
+    padding-right: 8vw !important;
   }
 
   /* UI overlay del Hero: paddings mas humanos. */
@@ -525,6 +531,14 @@ model-viewer {
 
   /* ====================================================================
      MISSION — header + pilares
+     CRITICO MOBILE: en mobile cada Canvas R3F consume un WebGL context.
+     Hero (model-viewer) + 5 Mission (header dorado + 4 pilares) + 1
+     MeteoriteSection = 7 WebGL contexts. El limite tipico en mobile es
+     8 (Chrome) / 4-8 (iOS Safari) → cuando se excede, el browser mata
+     contexts → crash "client-side exception". Fix: escondemos algunos
+     wrappers en mobile via display:none. El IntersectionObserver interno
+     de MissionPillarMonkey nunca los reporta como intersecting →
+     shouldMount=false → no se crea Canvas → no se crea WebGL context.
      ==================================================================== */
   /* Header titulo "Somos WhyNot" — full width, bien centrado. */
   #section-mission > div:nth-of-type(2) > div:first-child > div:first-child {
@@ -533,6 +547,21 @@ model-viewer {
   }
   #section-mission > div:nth-of-type(2) > div:first-child h2 {
     font-size: clamp(2.5rem, 11vw, 4.5rem) !important;
+  }
+  /* OCULTAR el mono dorado del header en mobile (libera 1 WebGL context).
+     El texto "Somos WhyNot" queda full-width igual.                       */
+  #section-mission > div:nth-of-type(2) > div:first-child > div:nth-child(2) {
+    display: none !important;
+  }
+  /* OCULTAR monos del pilar 1 (.001 SOURCE — Louis) y pilar 4 (.004
+     ARCHIVE — Streetwear) en mobile. Dejamos visibles el .002 BUILD
+     (mono rigged default) y el .003 RELEASE (Supreme Simian blanco).
+     Total contexts en mobile: Hero(1) + Mission(2) + Meteorite(1) = 4.
+     Estructura del padre: <div HEADER>(child 1) + <div data-pillar>(2..5).
+     Pillar 1 = nth-child(2), pillar 4 = nth-child(5).                    */
+  #section-mission > div:nth-of-type(2) > [data-pillar]:nth-child(2) [data-pillar-monkey],
+  #section-mission > div:nth-of-type(2) > [data-pillar]:nth-child(5) [data-pillar-monkey] {
+    display: none !important;
   }
 
   /* Pilares: stack vertical texto-arriba mono-abajo en mobile.
