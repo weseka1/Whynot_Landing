@@ -12,6 +12,7 @@
 
 import dynamic from "next/dynamic";
 import Preloader        from "@/components/Preloader";
+import PixelReveal      from "@/components/PixelReveal";
 import Header           from "@/components/Header";
 import Hero             from "@/components/Hero";
 import CloudBand        from "@/components/CloudBand";
@@ -58,6 +59,7 @@ export default function Page() {
   return (
     <>
       <Preloader />
+      <PixelReveal />
       <Header />
 
       <main>

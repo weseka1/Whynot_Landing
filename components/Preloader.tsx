@@ -79,24 +79,28 @@ export default function Preloader() {
     /* Cuando cada job termina, sumamos al contador. */
     jobs.forEach((p) => p.then(() => { done++; }));
 
+    /* Helper: cierra el preloader y avisa al PixelReveal para que arranque
+       su animacion de revelado en el mismo instante (handoff visual). */
+    const close = () => {
+      if (cancelled) return;
+      setPct(100);
+      setTimeout(() => {
+        if (cancelled) return;
+        setVisible(false);
+        window.dispatchEvent(new CustomEvent("whynot:preloader-hidden"));
+      }, 350);
+    };
+
     /* Cierre: cuando todos terminaron Y paso MIN_TIME. */
     Promise.all(jobs).then(() => {
       if (cancelled) return;
       const elapsed = performance.now() - start;
       const wait = Math.max(0, MIN_TIME - elapsed);
-      setTimeout(() => {
-        if (cancelled) return;
-        setPct(100);
-        setTimeout(() => setVisible(false), 350);
-      }, wait);
+      setTimeout(close, wait);
     });
 
     /* Hard timeout: si la red tarda demasiado, cerramos igual. */
-    const hard = setTimeout(() => {
-      if (cancelled) return;
-      setPct(100);
-      setTimeout(() => setVisible(false), 350);
-    }, MAX_TIME);
+    const hard = setTimeout(close, MAX_TIME);
 
     return () => {
       cancelled = true;
