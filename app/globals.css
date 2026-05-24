@@ -750,51 +750,48 @@ model-viewer {
   }
 }
 @media (max-width: 768px) {
-  /* Wrapper del BrandHero. Padding-top mas grande porque el mascot va a
-     estar anclado ARRIBA (top: 0). Necesita espacio horizontal y vertical
-     para no tapar el eyebrow "D://DATA_CORE / ARCHIVE · AMIRI · BACK".   */
-  .brand-hero-wrap {
-    padding: 2rem 1.25rem 1.5rem !important;
+  /* Wrapper del BrandHero. Padding-top chico (0.5rem) porque el mascot
+     va anclado al TOP (0), justo abajo del TOP HUD sticky.              */
+  .brand-hero-wrap.brand-hero-wrap {
+    padding: 0.75rem 1rem 1rem !important;
     min-height: 460px;
   }
   /* Title: paddingRight reserva el ancho del mascot a la derecha. */
-  .brand-title {
-    padding-right: 44vw !important;
+  .brand-hero-wrap .brand-title {
+    padding-right: 48vw !important;
     font-size: clamp(2.5rem, 12vw, 5rem) !important;
     line-height: 0.88 !important;
-    margin-top: 0.5rem !important;
+    margin-top: 0.25rem !important;
   }
-  /* Mascot: ANCLADO ARRIBA a la derecha (al lado del "BACK TO ARCHIVE",
-     no abajo en la zona de stats). Top mas chico = mascot mas alto.     */
-  .brand-mascot {
+  /* Mascot: ANCLADO ARRIBA. Selector con specificity reforzada
+     (.brand-hero-wrap .brand-mascot) para ganar contra inline styles.    */
+  .brand-hero-wrap .brand-mascot {
     position: absolute !important;
-    top: 1.5rem !important;
+    top: 0 !important;
     bottom: auto !important;
-    right: 0.25rem !important;
+    right: 0 !important;
+    left: auto !important;
     margin: 0 !important;
     z-index: 6 !important;
   }
-  .brand-mascot > div {
-    width: min(290px, 45vw) !important;
-    height: min(400px, 56vh) !important;
+  /* Tamaño +10% del anterior (290 -> 320, 45vw -> 50vw, 400 -> 440).    */
+  .brand-hero-wrap .brand-mascot > div {
+    width: min(320px, 50vw) !important;
+    height: min(440px, 60vh) !important;
   }
-  /* CALIDAD DE RENDER del mascot: por default model-viewer rasteriza al
-     DPR del canvas que se le da (chico = pixelado en mobile DPR 3x).
-     Forzamos max-pixel-ratio 2.5 para que internamente renderice a
-     resolucion mas alta y luego downscale → mucho menos pixelado.       */
-  .brand-mascot model-viewer {
+  /* CALIDAD DE RENDER del mascot. Forzamos max-pixel-ratio 2.5 para que
+     internamente renderice a resolucion mas alta y luego downscale →
+     mucho menos pixelado en pantallas DPR 2.5-3x.                       */
+  .brand-hero-wrap .brand-mascot model-viewer {
     --max-pixel-ratio: 2.5;
   }
-  /* Stats row: bajar MUCHO el margin-top para que no se solape con el
-     mascot que ahora esta arriba. min(290px, 45vw) + top 1.5rem ~
-     mascot baja hasta aprox 22-24rem; stats row debe estar mas abajo.   */
+  /* Stats row: padding-right para no pisarse con el mascot que baja
+     desde el top.                                                        */
   .brand-stats {
     margin-top: 1.5rem !important;
     flex-wrap: wrap !important;
     gap: 1.2rem 1.6rem !important;
-    /* padding-right reserva espacio para que el mascot que baja desde
-       arriba no pise los STATUS labels mas a la derecha.                */
-    padding-right: 38vw !important;
+    padding-right: 42vw !important;
   }
   /* Grid catalogo: 2 cols (era 1 col en <=640px). */
   .paginated-grid {
@@ -803,23 +800,23 @@ model-viewer {
   }
 }
 @media (max-width: 480px) {
-  .brand-hero-wrap {
+  .brand-hero-wrap.brand-hero-wrap {
     min-height: 400px;
   }
-  .brand-title {
-    padding-right: 46vw !important;
+  .brand-hero-wrap .brand-title {
+    padding-right: 50vw !important;
     font-size: clamp(2.1rem, 13vw, 3.8rem) !important;
   }
-  .brand-mascot > div {
-    width: min(230px, 48vw) !important;
-    height: min(330px, 46vh) !important;
+  .brand-hero-wrap .brand-mascot > div {
+    width: min(255px, 52vw) !important;
+    height: min(360px, 52vh) !important;
   }
-  .brand-mascot {
-    right: 0.2rem !important;
-    top: 1.25rem !important;
+  .brand-hero-wrap .brand-mascot {
+    top: 0 !important;
+    right: 0 !important;
   }
   .brand-stats {
-    padding-right: 42vw !important;
+    padding-right: 46vw !important;
   }
 }
 
