@@ -750,31 +750,39 @@ model-viewer {
   }
 }
 @media (max-width: 768px) {
-  /* Wrapper del BrandHero — padding mas humano en mobile.                 */
+  /* Wrapper del BrandHero — padding mas humano en mobile + min-height
+     para que el mascot anclado al BOTTOM tenga espacio.                  */
   .brand-hero-wrap {
-    padding: 3rem 1.25rem 1.5rem !important;
+    padding: 3rem 1.25rem 2rem !important;
+    min-height: 420px;
   }
-  /* Title: paddingRight 30vw -> 38vw (reserva espacio del mascot a la
-     derecha) + font mas chico para que entre con "LOUIS VUITTON".        */
+  /* Title: paddingRight reserva espacio del mascot a la derecha + font
+     mas chico para que entre con "LOUIS VUITTON".                        */
   .brand-title {
-    padding-right: 38vw !important;
-    font-size: clamp(2.25rem, 11vw, 4.5rem) !important;
-    line-height: 0.9 !important;
+    padding-right: 44vw !important;
+    font-size: clamp(2.5rem, 12vw, 5rem) !important;
+    line-height: 0.88 !important;
   }
-  /* Mascot: queda a la DERECHA del titulo (position absolute), tamano
-     reducido para que no overflowee ni tape el title. NO position:relative
-     (esa version le quedaba "encima" del texto al usuario).               */
+  /* Mascot: queda a la DERECHA del titulo, anclado al BOTTOM del wrapper
+     (no flotando al medio). Mas grande que antes para que se vea bien.   */
   .brand-mascot {
     position: absolute !important;
-    top: 4rem !important;
-    bottom: auto !important;
-    right: 0.5rem !important;
+    top: auto !important;
+    bottom: 0 !important;
+    right: 0.25rem !important;
     margin: 0 !important;
     z-index: 6 !important;
   }
   .brand-mascot > div {
-    width: 200px !important;
-    height: 280px !important;
+    width: min(290px, 45vw) !important;
+    height: min(400px, 60vh) !important;
+  }
+  /* CALIDAD DE RENDER del mascot: por default model-viewer rasteriza al
+     DPR del canvas que se le da (chico = pixelado en mobile DPR 3x).
+     Forzamos max-pixel-ratio 2.5 para que internamente renderice a
+     resolucion mas alta y luego downscale → mucho menos pixelado.       */
+  .brand-mascot model-viewer {
+    --max-pixel-ratio: 2.5;
   }
   /* Grid catalogo: 2 cols (era 1 col en <=640px). El usuario pidio 2 cards
      para que se vean mas grandes.                                         */
@@ -784,17 +792,19 @@ model-viewer {
   }
 }
 @media (max-width: 480px) {
+  .brand-hero-wrap {
+    min-height: 360px;
+  }
   .brand-title {
-    padding-right: 42vw !important;
-    font-size: clamp(2rem, 12vw, 3.5rem) !important;
+    padding-right: 46vw !important;
+    font-size: clamp(2.1rem, 13vw, 3.8rem) !important;
   }
   .brand-mascot > div {
-    width: 160px !important;
-    height: 230px !important;
+    width: min(230px, 48vw) !important;
+    height: min(330px, 50vh) !important;
   }
   .brand-mascot {
-    top: 5rem !important;
-    right: 0.4rem !important;
+    right: 0.2rem !important;
   }
 }
 

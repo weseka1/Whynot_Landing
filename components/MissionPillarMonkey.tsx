@@ -258,14 +258,21 @@ export default function MissionPillarMonkey({
         <Canvas
           frameloop="always"
           camera={{ position: [0, 0.4, 6.5], fov: 36 }}
-          dpr={isMobile ? 1 : [1, 1.5]}
+          /* dpr: la calidad de render. dpr=1 en mobile dejaba el mono
+             muy pixelado en pantallas DPR 2.5-3.5x (Android moderno).
+             [1, 2] permite hasta 2x pixels en el canvas (mas nitidez)
+             dejando un techo razonable de GPU. En desktop subimos a 2x
+             tambien por consistencia.                                   */
+          dpr={isMobile ? [1, 2] : [1, 2]}
           style={{
             width: "100%",
             height: "100%",
             background: "transparent",
           }}
           gl={{
-            antialias: !isMobile,
+            /* antialias true en mobile tambien — el costo extra es bajo
+               vs la ganancia visual (bordes mucho mas suaves del mono). */
+            antialias: true,
             powerPreference: "high-performance",
             alpha: true,
           }}
