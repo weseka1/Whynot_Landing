@@ -369,65 +369,270 @@ model-viewer {
 }
 
 /* ==========================================================================
-   MOBILE — adaptaciones para pantallas <= 768px
+   ==========================================================================
+   MOBILE EXPERIENCE — AAA Premium
+   Filosofia: mobile-first cuando posible, sin re-renderizar componentes.
+   Selectores quirurgicos sobre el DOM existente (sin tocar inline styles
+   complejos) + !important solo donde compite con inline styles.
+   Breakpoints:
+     <= 1024px   = tablet + mobile general
+     <= 768px    = mobile estandar
+     <= 480px    = mobile chico (iPhone SE, etc.)
+     <= 380px    = ultra small
+   ==========================================================================
    ========================================================================== */
-@media (max-width: 768px) {
-  /* Grain off — en mobile el repintar fixed inset:0 por scroll es caro,
-     y a 768px el efecto decorativo es casi imperceptible. */
-  body::before {
-    display: none !important;
-  }
 
-  /* Tipografía display más chica en mobile */
-  .display {
-    font-size: clamp(2.5rem, 14vw, 6rem) !important;
-  }
-
-  /* Ajuste de paddings de secciones */
+/* ---- SAFE AREA (iPhone con notch / dynamic island) ---------------------- */
+@supports (padding: env(safe-area-inset-top)) {
   :root {
-    --container-pad: clamp(0.75rem, 4vw, 1.25rem);
+    --safe-top:    env(safe-area-inset-top);
+    --safe-right:  env(safe-area-inset-right);
+    --safe-bottom: env(safe-area-inset-bottom);
+    --safe-left:   env(safe-area-inset-left);
+  }
+}
+:root {
+  --safe-top:    0px;
+  --safe-right:  0px;
+  --safe-bottom: 0px;
+  --safe-left:   0px;
+}
+
+/* ============== TABLET + MOBILE (<=1024px) ============================== */
+@media (max-width: 1024px) {
+  /* Mission header "Somos WhyNot" — flex 50/50 colapsa a stack vertical.
+     Texto arriba (full width), mono dorado abajo (full width).            */
+  #section-mission > div:nth-of-type(2) > div:first-child {
+    flex-direction: column !important;
+    min-height: auto !important;
+  }
+  #section-mission > div:nth-of-type(2) > div:first-child > div {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+  #section-mission > div:nth-of-type(2) > div:first-child > div:nth-child(2) {
+    /* el wrapper del mono dorado: altura limitada, no full viewport.      */
+    height: 60vh;
+    min-height: 380px;
+  }
+}
+
+/* ============== MOBILE (<=768px) ======================================== */
+@media (max-width: 768px) {
+  /* Grain off — fixed inset:0 + repaint por scroll es caro en mobile. */
+  body::before { display: none !important; }
+
+  /* Spacing system mobile (mas compacto pero respirable). */
+  :root {
+    --container-pad: clamp(0.875rem, 5vw, 1.25rem);
     --section-pad-y: clamp(2.5rem, 8vw, 4.5rem);
-    --space-xl: 3.5rem;
+    --space-xs:  0.4rem;
+    --space-sm:  0.875rem;
+    --space-md:  1.5rem;
+    --space-lg:  2.5rem;
+    --space-xl:  3.5rem;
     --space-2xl: 5rem;
   }
 
-  /* Tap targets más grandes (mínimo 44x44 px recomendado Apple/Google) */
+  /* Tipografia display — escala fluida mas controlada en mobile. */
+  .display {
+    font-size: clamp(2.75rem, 13vw, 6rem) !important;
+    line-height: 0.92 !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  /* Tap targets WCAG 2.5.5 (minimo 44x44). */
   button,
   a[role="button"],
   .form-cta,
-  [aria-label],
   input[type="checkbox"],
   input[type="radio"] {
     min-height: 44px;
   }
-
-  /* Mission: pilares se vuelven full-width y centrados, no alternan lado */
-  #section-mission [data-pillar] {
-    justify-content: flex-start !important;
-    min-height: 70vh !important;  /* más compacto, evita scroll excesivo */
+  /* Padding minimo en links navegacionales para que sean clickeables. */
+  nav a, .menu a {
+    padding: 8px 4px;
   }
-  #section-mission [data-pillar-inner] {
-    max-width: 100% !important;
-    margin-left: 0 !important;
+
+  /* Forzar word-break en headings largos para no overflow. */
+  h1, h2, h3, h4 {
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+  }
+
+  /* No overflow horizontal global. */
+  html, body { overflow-x: clip; }
+  section { max-width: 100vw; }
+
+  /* ====================================================================
+     HEADER — safe-area + sin overlap del logo central con los botones
+     en pantallas muy estrechas.
+     ==================================================================== */
+  .site-header {
+    padding-top: max(var(--space-sm), var(--safe-top)) !important;
+    padding-left: max(var(--container-pad), var(--safe-left)) !important;
+    padding-right: max(var(--container-pad), var(--safe-right)) !important;
+  }
+  /* En mobile la tagline a la izquierda se esconde para evitar overflow
+     con el logo central y el toggle ON/OFF. Mantenemos solo logo+toggle. */
+  .site-header > span:first-child {
+    display: none;
+  }
+
+  /* ====================================================================
+     HERO
+     ==================================================================== */
+  #hero {
+    overflow: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  /* El marquee gigante "WHYNOT AMK EXCLUSIVE" — bajamos altura para que
+     no se coma media pantalla, y subimos el top para mantener composicion. */
+  #hero > div:nth-child(4) {  /* el div del MarqueeBanner */
+    top: -8vh !important;
+  }
+  #hero > div:nth-child(4) img,
+  #hero > div:nth-child(4) [style*="height:"] {
+    /* Si el browser respeta el clamp, el marquee imagen ya se reduce.   */
+  }
+
+  /* model-viewer wrapper del Hero: en mobile menos paddingTop (estaba 8vh)
+     para que el mono se vea mas centrado en pantallas chicas.            */
+  #hero > div:nth-child(5) {
+    padding-top: 2vh !important;
+  }
+
+  /* UI overlay del Hero: paddings mas humanos. */
+  #hero > div:last-child {
+    padding-block: calc(var(--space-xl) + 8px) var(--space-md) !important;
+  }
+  /* Hero footer: stack vertical (sub + Discover button uno arriba otro). */
+  #hero > div:last-child > div:last-child {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-md) !important;
+    justify-items: start;
+  }
+  #hero > div:last-child > div:last-child > div:last-child {
+    align-self: end;
+    justify-self: end;
+  }
+  /* Hero top-bar: eyebrow + metaRight pueden chocar — reducimos font. */
+  #hero > div:last-child > div:first-child .system-text {
+    font-size: 0.6rem !important;
+    letter-spacing: 0.14em !important;
+  }
+
+  /* ====================================================================
+     MISSION — header + pilares
+     ==================================================================== */
+  /* Header titulo "Somos WhyNot" — full width, bien centrado. */
+  #section-mission > div:nth-of-type(2) > div:first-child > div:first-child {
+    padding: var(--space-lg) var(--container-pad) var(--space-md) !important;
+    text-align: left;
+  }
+  #section-mission > div:nth-of-type(2) > div:first-child h2 {
+    font-size: clamp(2.5rem, 11vw, 4.5rem) !important;
+  }
+
+  /* Pilares: stack vertical texto-arriba mono-abajo en mobile.
+     Nota: en el codigo el div interior es flex con justifyContent center
+     porque cada pilar es minHeight 100vh; en mobile bajamos a 90vh
+     para no obligar a tanto scroll. */
+  #section-mission [data-pillar] {
+    flex-direction: column !important;
+    min-height: auto !important;
+    padding-block: var(--space-md) !important;
+  }
+  #section-mission [data-pillar] > div {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+  #section-mission [data-pillar] [data-pillar-text] {
+    padding: var(--space-md) var(--container-pad) !important;
     text-align: left !important;
   }
-  #section-mission [data-pillar-inner] p {
-    margin-left: 0 !important;
-  }
-
-  /* Mission: las cajas 3D ocupan todo el ancho (no 50%) y van más translúcidas */
-  #section-mission [data-boxes-wrapper] {
+  /* Mono 3D wrapper del pilar — altura limitada, full width, opacity full
+     (queda abajo del texto, no detras). */
+  #section-mission [data-pillar] [data-pillar-monkey] {
+    height: 55vh;
+    min-height: 320px;
+    max-height: 500px;
     width: 100% !important;
-    height: 45vh !important;
-    opacity: 0.30 !important;  /* tras texto, semi-transparente */
   }
-
-  /* Mission: ancho del título full */
-  #section-mission > div > div:first-child {
+  /* Mission pillar headings mas chicos en mobile. */
+  #section-mission [data-pillar] h3 {
+    font-size: clamp(2rem, 8vw, 3rem) !important;
+  }
+  #section-mission [data-pillar] [data-pillar-text] p {
+    font-size: 1rem !important;
     max-width: 100% !important;
   }
 
-  /* IdeaForm: layout 2-col → 1 col en mobile */
+  /* ====================================================================
+     COLLECTIONS — AR product gallery
+     ==================================================================== */
+  #section-collections {
+    overflow-x: clip;
+    padding-block: var(--space-xl) var(--space-lg) !important;
+  }
+  /* Grid 2-col -> stack en mobile. */
+  #section-collections .ar-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-lg) !important;
+  }
+  /* Capsula AR: tamano mas razonable en mobile (antes min(62vh, 540px)
+     puede dar 500px+ en una pantalla de 375px → overflow horizontal). */
+  #section-collections .ar-capsule {
+    width: min(78vw, 420px) !important;
+    margin: 0 auto;
+  }
+  /* Stats laterales absolute: en mobile los escondemos (no aportan al
+     producto que es el foco; quedaban superpuestos al circulo).         */
+  #section-collections .ar-stats-col {
+    display: none !important;
+  }
+
+  /* ====================================================================
+     PAST DROP — archive
+     ==================================================================== */
+  #section-past-drop {
+    overflow-x: clip;
+    padding-block: var(--space-xl) !important;
+  }
+  /* Card 12-col grid → stack vertical en mobile. */
+  #section-past-drop article {
+    grid-template-columns: 1fr !important;
+  }
+  #section-past-drop article > * {
+    grid-column: 1 / -1 !important;
+  }
+  /* HUD top/bottom de PastDrop — reducir text size para que no se cortan. */
+  #section-past-drop .system-text {
+    font-size: 0.55rem !important;
+    letter-spacing: 0.14em !important;
+  }
+
+  /* ====================================================================
+     FUTURISTIC GALLERY
+     ==================================================================== */
+  #section-futuristic-gallery {
+    overflow-x: clip;
+  }
+  /* Carrusel — imagenes mas chicas en mobile para que entren mas en
+     pantalla y se vea mejor el ritmo del marquee. */
+  #section-futuristic-gallery figure img {
+    height: clamp(260px, 50vh, 420px) !important;
+  }
+  /* Top bar: ECG + titulo + indicador → reducimos gap/font para no romper. */
+  #section-futuristic-gallery > div:nth-child(5) {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+
+  /* ====================================================================
+     IDEA FORM
+     ==================================================================== */
   #section-form > div {
     grid-template-columns: 1fr !important;
     gap: var(--space-md) !important;
@@ -436,61 +641,109 @@ model-viewer {
     grid-column: 1 !important;
     justify-content: flex-start !important;
   }
-
-  /* WhyNotEnd: ajustes */
-  #section-whynot-end {
-    padding: var(--space-md) var(--container-pad) !important;
-    min-height: auto !important;
-  }
-  /* WhyNotEnd info bar: 4 cols → 2 cols en mobile */
-  #section-whynot-end > div[style*="grid-template-columns: repeat(4"],
-  #section-whynot-end > div:last-child {
-    grid-template-columns: repeat(2, 1fr) !important;
+  /* CTA button full-width en mobile (mejor tap target + UX premium). */
+  #section-form .form-cta {
+    width: 100%;
+    padding: var(--space-md) var(--space-lg) !important;
+    text-align: center;
   }
 
-  /* MeteoriteSection bottom info: 3 cols → 1 col */
+  /* ====================================================================
+     METEORITE / ARTIFACT (3D)
+     ==================================================================== */
+  /* Bottom info: 3 cols → 1 col, todo izquierdo. */
   #section-meteorite > div:last-child {
     grid-template-columns: 1fr !important;
     text-align: left !important;
+    gap: var(--space-sm) !important;
   }
   #section-meteorite > div:last-child > div {
     text-align: left !important;
   }
-
-  /* Hero: marquee más chico, sin overflow */
-  #hero {
-    overflow: hidden;
+  /* Top labels: reducimos font, permitimos wrap. */
+  #section-meteorite > div:first-child {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  #section-meteorite > div:first-child > span {
+    font-size: 0.55rem !important;
   }
 
-  /* PastDrop card: 12-col grid → stack vertical */
-  #section-past-drop article {
-    grid-template-columns: 1fr !important;
+  /* ====================================================================
+     WHYNOT END
+     ==================================================================== */
+  #section-whynot-end {
+    padding: var(--space-md) var(--container-pad) max(var(--space-md), var(--safe-bottom)) !important;
+    min-height: auto !important;
   }
-  #section-past-drop article > * {
-    grid-column: 1 / -1 !important;
+  /* Info bar 4 cols → 2 cols. */
+  #section-whynot-end > div:last-child {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--space-md) !important;
+  }
+  /* Top strip "STUDY: 404 PAGE / WHYNOT // BOTTOM / BACK TO TOP" → wrap. */
+  #section-whynot-end > div:first-child {
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
-  /* Collections: thumbs row no se debería desbordar */
-  #section-collections {
-    overflow-x: hidden;
+  /* ====================================================================
+     FOOTER — safe-area bottom
+     ==================================================================== */
+  footer {
+    padding-bottom: max(var(--space-md), var(--safe-bottom)) !important;
   }
 }
 
-/* Pantallas muy chicas (< 480px) — ajustes adicionales */
+/* ============== MOBILE CHICO (<=480px) ================================== */
 @media (max-width: 480px) {
-  .display {
-    font-size: clamp(2rem, 13vw, 4rem) !important;
+  body { font-size: 14px; }
+
+  .display { font-size: clamp(2.25rem, 13vw, 4rem) !important; }
+
+  /* Hero: marquee aun mas chico. */
+  #hero > div:nth-child(4) {
+    top: -5vh !important;
   }
 
-  /* Body text más chico */
-  body {
-    font-size: 14px;
+  /* Mission pilares titles. */
+  #section-mission [data-pillar] h3 {
+    font-size: clamp(1.75rem, 9vw, 2.5rem) !important;
+  }
+  #section-mission [data-pillar] [data-pillar-monkey] {
+    height: 45vh;
+    min-height: 280px;
+  }
+  /* Mission header titulo. */
+  #section-mission > div:nth-of-type(2) > div:first-child h2 {
+    font-size: clamp(2.25rem, 12vw, 3.5rem) !important;
   }
 
-  /* Aún menos opacidad para las cajas 3D en pantallas muy chicas */
-  #section-mission [data-boxes-wrapper] {
-    opacity: 0.25 !important;
-    height: 35vh !important;
+  /* Collections capsula. */
+  #section-collections .ar-capsule {
+    width: min(82vw, 360px) !important;
+  }
+
+  /* Footer info → 1 col, no 2. */
+  #section-whynot-end > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Gallery aun mas chico. */
+  #section-futuristic-gallery figure img {
+    height: clamp(220px, 45vh, 320px) !important;
+  }
+}
+
+/* ============== ULTRA SMALL (<=380px) =================================== */
+@media (max-width: 380px) {
+  :root {
+    --container-pad: 0.75rem;
+  }
+  /* En pantallas muy chicas, escondemos algunos meta-text decorativos
+     para evitar overflow y darle aire al contenido principal. */
+  #hero > div:last-child > div:first-child .system-text {
+    font-size: 0.55rem !important;
   }
 }
 
