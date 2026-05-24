@@ -299,15 +299,18 @@ export default function Mission() {
               aria-hidden
             >
               {/* Por pilar:
-                  - .002 BUILD (i=1): gorila streetwear
+                  - .001 SOURCE  (i=0): mono rigged default (Midnight Gorilla)
+                  - .002 BUILD   (i=1): gorila streetwear
                   - .003 RELEASE (i=2): mono blanco (Supreme Simian)
-                  - resto: mono rigged default */}
+                  - .004 ARCHIVE (i=3): mono Louis Vuitton */}
               <MissionPillarMonkey
                 modelSrc={
                   i === 1
                     ? "/assets/3d/gotila-esenssial.glb"
                     : i === 2
                     ? "/assets/3d/mono-blanco.glb"
+                    : i === 3
+                    ? "/assets/3d/mono-louis.glb"
                     : undefined
                 }
               />
