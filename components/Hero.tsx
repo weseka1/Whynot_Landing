@@ -29,6 +29,14 @@ export default function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    /* Skip total en touch / mobile: sin mouse el rAF nunca cambiaría
+       targetAngle, así que mantenerlo prendido es desperdicio de battery. */
+    if (typeof window !== "undefined") {
+      const touch  = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+      const narrow = window.innerWidth < 1024;
+      if (touch || narrow) return;
+    }
+
     const MAX_ANGLE = 22;       // grados a cada lado (rango acotado)
     const POLAR     = 88;       // ángulo vertical (88 ≈ mirando de frente)
     const RADIUS    = "55%";    // distancia de cámara
