@@ -104,28 +104,15 @@ const jsonLd = {
   ],
 };
 
-/* CSP via meta. Permisiva para:
-   - 'unsafe-inline' en style/script: tailwind inline + scripts inline de Next
-   - fonts.googleapis + fonts.gstatic: Audiowide/Orbitron
-   - ajax.googleapis: model-viewer CDN (web component que carga el Hero)
-   - gstatic.com: Draco decoder usado por drei (Meteorite)
-   - data: y blob: en img/media para svgs inline y posibles canvas-toBlob
-   Notas: 'frame-ancestors' en meta NO funciona — eso va en render.yaml
-   como X-Frame-Options. */
-const CSP = [
-  "default-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "script-src 'self' 'unsafe-inline' https://ajax.googleapis.com",
-  "img-src 'self' data: blob:",
-  "media-src 'self' blob:",
-  "connect-src 'self' https://www.gstatic.com https://ajax.googleapis.com",
-  "worker-src 'self' blob:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "upgrade-insecure-requests",
-].join("; ");
+/* CSP REMOVIDA del meta head: estaba bloqueando el Draco decoder de drei
+   (script desde www.gstatic.com) y WebAssembly (require 'wasm-unsafe-eval'),
+   lo que rompia la carga de los GLBs de Mission + Meteorite. Las security
+   headers reales viven en render.yaml a nivel host. Si en algun momento
+   queremos reactivar CSP en meta, hay que incluir:
+     - script-src ... 'wasm-unsafe-eval' https://www.gstatic.com
+     - worker-src 'self' blob:
+   y testear que tanto model-viewer como @react-three/drei sigan
+   descargando sus decoders sin error. */
 
 export default function RootLayout({
   children,
@@ -135,15 +122,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/* SECURITY meta (defensa en profundidad; render.yaml duplica como
-            headers HTTP reales) */}
-        <meta httpEquiv="Content-Security-Policy" content={CSP} />
+        {/* SECURITY meta — sin CSP (rompia carga del Draco decoder
+            y WebAssembly de los GLBs). Las security headers HTTP reales
+            estan en render.yaml. */}
         <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
-        <meta
-          httpEquiv="Permissions-Policy"
-          content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
-        />
 
         {/* --font-marquee chain:
               1) "T-12"/"T-012" local (definida en globals.css con @font-face,
