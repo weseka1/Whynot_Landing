@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Bloquear endpoints internos de Next y assets binarios pesados que no
+# aportan valor SEO (videos 360, modelos 3D) — ahorramos crawl budget.
+Disallow: /_next/
+Disallow: /videos-360/
+Disallow: /assets/3d/
+
+Sitemap: https://whynot-landing.onrender.com/sitemap.xml

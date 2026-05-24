@@ -33,15 +33,11 @@ import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
 
 const MONO_SRC_DEFAULT = "/assets/3d/mono-rigged.glb";
-const MONO_SRC_GOTILA  = "/assets/3d/gotila-esenssial.glb";
-const MONO_SRC_BLANCO  = "/assets/3d/mono-blanco.glb";
-const MONO_SRC_LOUIS   = "/assets/3d/mono-louis.glb";
-const MONO_SRC_DORADO  = "/assets/3d/mono-dorado.glb";
-useGLTF.preload(MONO_SRC_DEFAULT);
-useGLTF.preload(MONO_SRC_GOTILA);
-useGLTF.preload(MONO_SRC_BLANCO);
-useGLTF.preload(MONO_SRC_LOUIS);
-useGLTF.preload(MONO_SRC_DORADO);
+/* NOTA: Sacados los 5 useGLTF.preload(). Antes arrancaban 5 fetchs en
+   paralelo apenas se importaba el módulo (~7MB combinados), saturando la
+   red en mobile y compitiendo con el LCP. Ahora cada mono se carga sólo
+   cuando su pilar entra al rootMargin del IntersectionObserver — lazy real.
+   Si en el futuro querés warmup, hacelo en `requestIdleCallback` post-LCP. */
 
 const ANIM_MIN_DURATION_S = 0.5;
 const TARGET_SIZE         = 2.5;
@@ -200,8 +196,14 @@ export default function MissionPillarMonkey({
   const hasTriggeredRef = useRef<boolean>(false);
   const isMobile = useIsMobile();
   const [shouldMount, setShouldMount] = useState(false);
+  /* isInView controla `frameloop` — cuando el canvas sale del viewport
+     completamente, pasamos a "demand" y dejamos de hacer ticks. El mixer
+     no avanza, no se gastan ciclos en GPU. */
+  const [isInView, setIsInView] = useState(false);
 
-  /* Lazy mount: 300px de margin para precargar antes de llegar. */
+  /* Lazy mount: 250px de margin (antes 300px). Sigue siendo suficiente
+     para que el modelo esté listo cuando llegamos pero reduce ventana
+     de paralelismo con assets más arriba. */
   useEffect(() => {
     if (shouldMount) return;
     const el = wrapperRef.current;
@@ -217,27 +219,29 @@ export default function MissionPillarMonkey({
           io.disconnect();
         }
       },
-      { rootMargin: "300px" }
+      { rootMargin: "250px" }
     );
     io.observe(el);
     return () => io.disconnect();
   }, [shouldMount]);
 
-  /* Trigger por viewport entry: cuando >=30% visible, dispara animacion. */
+  /* Trigger + frameloop control via UN solo IntersectionObserver. */
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.intersectionRatio >= 0.3 && !hasTriggeredRef.current) {
+        const r = entry.intersectionRatio;
+        /* visible al menos un poquito → render activo */
+        setIsInView(r > 0);
+        if (r >= 0.3 && !hasTriggeredRef.current) {
           hasTriggeredRef.current = true;
           triggerSignalRef.current = true;
-        } else if (entry.intersectionRatio === 0) {
-          /* Reset al salir completamente → puede re-disparar al volver. */
+        } else if (r === 0) {
           hasTriggeredRef.current = false;
         }
       },
-      { threshold: [0, 0.3] }
+      { threshold: [0, 0.1, 0.3] }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -251,12 +255,16 @@ export default function MissionPillarMonkey({
         height: "100%",
         position: "relative",
         pointerEvents: "none",
+        /* CSS containment: aísla layout/paint de este sub-árbol del resto
+           de la página → menos invalidaciones globales por scroll. */
+        contain: "layout paint size",
       }}
       aria-hidden
     >
       {!shouldMount ? null : (
         <Canvas
-          frameloop="always"
+          /* frameloop dinámico: ahorra GPU al salir del viewport. */
+          frameloop={isInView ? "always" : "never"}
           camera={{ position: [0, 0.4, 6.5], fov: 36 }}
           dpr={isMobile ? 1 : [1, 1.5]}
           style={{
@@ -268,6 +276,9 @@ export default function MissionPillarMonkey({
             antialias: !isMobile,
             powerPreference: "high-performance",
             alpha: true,
+            stencil: false,
+            depth: true,
+            /* preserveDrawingBuffer:false (default) = mejor performance */
           }}
         >
           <ambientLight intensity={0.65} />

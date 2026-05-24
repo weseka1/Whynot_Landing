@@ -35,9 +35,11 @@ import { useInViewport } from "./useInViewport";
 
 /* Asset optimizado con `npm run optimize:glb` → 41.25 MB → 1.21 MB
    (Draco mesh + WebP textures + 1024px max). Drei useGLTF carga el decoder
-   Draco desde gstatic CDN automáticamente.                                */
+   Draco desde gstatic CDN automáticamente.
+   NOTA: preload removido del top-level. MeteoriteClient ya hace lazy mount
+   con rootMargin:"300px"; el preload doble sólo agregaba tráfico al
+   first paint sin beneficio (el componente no se renderiza hasta el lazy). */
 const ARTIFACT_SRC = "/assets/3d/balenciaga-3xl.glb";
-useGLTF.preload(ARTIFACT_SRC);
 
 const TARGET_SIZE = 2.6;
 
@@ -72,6 +74,8 @@ function Artifact() {
     c.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) {
         const mesh = o as THREE.Mesh;
+        /* castShadow se controla a nivel renderer (shadows={!isMobile}).
+           Acá lo dejamos true; si shadows está OFF, three.js lo ignora. */
         mesh.castShadow = true;
         mesh.receiveShadow = false;
         const mat = mesh.material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[];
@@ -272,13 +276,20 @@ export default function MeteoriteSection() {
           frameloop={isInView ? "always" : "never"}
           camera={{ position: [0, 0.6, 5.2], fov: 35 }}
           style={{ width: "100%", height: "100%", position: "relative", zIndex: 1 }}
+          /* dpr clampeada: incluso desktop nunca pasa de 1.5 (suficiente
+             en displays high-DPI sin saturar la GPU). Mobile: 1 firme. */
           dpr={isMobile ? 1 : [1, 1.5]}
           gl={{
             antialias: !isMobile,
-            powerPreference: "high-performance",
+            powerPreference: isMobile ? "low-power" : "high-performance",
             alpha: true,
+            stencil: false,
+            depth: true,
           }}
-          shadows
+          /* Shadows OFF en mobile — castShadow del directional light + el
+             plano reflectivo abajo costaban un render extra del shadow map
+             en cada frame. Visualmente casi no se percibe en mobile. */
+          shadows={!isMobile}
         >
           <color attach="background" args={["#050307"]} />
           <fog attach="fog" args={["#050307", 6, 14]} />
@@ -288,32 +299,38 @@ export default function MeteoriteSection() {
             position={[5, 6, 5]}
             intensity={1.6}
             color="#ffd9b8"
-            castShadow
+            castShadow={!isMobile}
           />
           <directionalLight
             position={[-4, -2, -3]}
             intensity={0.55}
             color="#5da3ff"
           />
-          <pointLight position={[0, 2.5, 2]} intensity={0.45} color="#ffffff" />
-          {/* Rim cálido por detrás para silueta tipo studio */}
-          <pointLight position={[0, 1.0, -3]} intensity={0.7} color="#f4a982" />
+          {!isMobile && (
+            <>
+              <pointLight position={[0, 2.5, 2]} intensity={0.45} color="#ffffff" />
+              {/* Rim cálido por detrás para silueta tipo studio */}
+              <pointLight position={[0, 1.0, -3]} intensity={0.7} color="#f4a982" />
+            </>
+          )}
 
           <Suspense fallback={null}>
             {!isMobile && <Environment preset="city" background={false} />}
 
+            {/* Stars: en mobile bajamos a 150 (era 300) y fade off para evitar
+                computar opacity por estrella. */}
             <Stars
               radius={50}
               depth={50}
-              count={isMobile ? 300 : 1200}
+              count={isMobile ? 150 : 1000}
               factor={3}
               saturation={0}
-              fade
+              fade={!isMobile}
               speed={isMobile ? 0 : 0.4}
             />
 
             <Sparkles
-              count={isMobile ? 30 : 70}
+              count={isMobile ? 20 : 60}
               scale={[6, 4, 6]}
               size={3}
               speed={0.35}
