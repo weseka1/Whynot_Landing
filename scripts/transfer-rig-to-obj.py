@@ -18,6 +18,7 @@ no modifica mesh.data.vertices directamente (eso causa bbox=0 al exportar).
 import bpy
 import sys
 import os
+import math
 import argparse
 from mathutils import Vector
 
@@ -198,7 +199,16 @@ def main():
     source_mesh.select_set(True)
     bpy.ops.object.delete(use_global=False)
 
-    print("[8/8] Exportando GLB...")
+    print("[8/8] Pre-rotacion + exportando GLB...")
+    # Pre-rotar el armature (parent de todo) -90 X → en world space el modelo
+    # queda con Y como altura (glTF estandar). Solo modificamos rotation_euler
+    # del armature object (NO transform_apply) → los children rotan en world
+    # pero el bind pose interno del skeleton se preserva. Eso solo cambia el
+    # node matrix del armature en el glTF, three.js lo aplica al renderizar.
+    # Combinado con export_yup=False (no doble rotacion), el GLB queda Y-up.
+    armature.rotation_euler[0] = math.radians(-90)
+    bpy.context.view_layer.update()
+
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.export_scene.gltf(
@@ -210,7 +220,7 @@ def main():
         export_morph=True,
         export_apply=False,
         export_image_format="AUTO",
-        export_yup=True,
+        export_yup=False,
         export_nla_strips=True,
     )
     size_mb = os.path.getsize(args.output) / (1024 * 1024)
