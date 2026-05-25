@@ -143,11 +143,11 @@ export default function FuturisticGallery() {
     <section
       id="section-futuristic-gallery"
       ref={sectionRef}
-      data-bg-color="#0a0a0a"
-      data-text-color="#e8ff00"
+      data-bg-color="#1a1a1c"
+      data-text-color="#f3ece1"
       style={{
         position: "relative",
-        background: "#1a1a1c",
+        background: "var(--page-bg)",
         color: "#f3ece1",
         padding: "var(--space-md) var(--space-md)",
         borderTop: "1px solid var(--color-line)",

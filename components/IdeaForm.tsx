@@ -28,9 +28,15 @@ export default function IdeaForm() {
     <section
       id="section-form"
       className="section bg-dich-peach-flat"
-      data-bg-color="#e8ff00"
-      data-text-color="#0a0a0a"
-      style={{ position: "relative" }}
+      data-bg-color="#ffdfc4"
+      data-text-color="#070707"
+      style={{
+        position: "relative",
+        /* sobrescribe el background-color de .bg-dich-peach-flat para
+           usar la var driveada por useSectionColor. El background-image
+           (dots) se preserva.                                            */
+        backgroundColor: "var(--page-bg)",
+      }}
     >
       <div
         className="container-full"

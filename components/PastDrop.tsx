@@ -526,8 +526,8 @@ export default function PastDrop() {
     <section
       id="section-past-drop"
       ref={sectionRef}
-      data-bg-color="#1a1a1a"
-      data-text-color="#ffffff"
+      data-bg-color="#e0b3f5"
+      data-text-color="#0a0a14"
       style={{
         position: "relative",
         /* Mobile: 180vh sticky = 100vh visible + 80vh de "track" para que
@@ -535,7 +535,11 @@ export default function PastDrop() {
            Desktop: 100vh — el carrusel se mueve solo con flechas/drag, la
            rueda del mouse pasa de largo a la seccion siguiente.            */
         minHeight: isMobile ? "180vh" : "100vh",
-        background: "#e0b3f5", // vibrant pink-lavender (mas vivo que el #cdb5f0 anterior)
+        /* background driven por useSectionColor (--page-bg) en lugar de
+           hardcoded "#e0b3f5". El data-bg-color de esta seccion es ese
+           mismo lila, asi el look no cambia EN la seccion — pero ahora
+           el sweep entre PastDrop y secciones vecinas SI se ve.          */
+        background: "var(--page-bg)",
         color: "#0a0a14",
         overflow: "hidden",
       }}

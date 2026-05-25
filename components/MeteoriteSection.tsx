@@ -177,10 +177,14 @@ export default function MeteoriteSection() {
   return (
     <section
       id="section-meteorite"
-      data-bg-color="#050816"
-      data-text-color="#ffffff"
+      data-bg-color="#050307"
+      data-text-color="#f4a982"
       style={{
         position: "relative",
+        /* MeteoriteSection mantiene su radial-gradient propio porque el
+           look del "orbe espacial" depende del degrade radial. El sweep
+           DICH se ve en las transiciones entrante/saliente (cuando el
+           body asoma antes/despues), no dentro de esta seccion.          */
         background:
           "radial-gradient(ellipse at center, #0d0a13 0%, #050307 70%, #020103 100%)",
         color: "var(--color-accent)",

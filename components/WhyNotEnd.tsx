@@ -194,11 +194,11 @@ export default function WhyNotEnd() {
     <section
       id="section-whynot-end"
       ref={sectionRef}
-      data-bg-color="#0a0a0a"
-      data-text-color="#ffffff"
+      data-bg-color="#070707"
+      data-text-color="#f4a982"
       style={{
         position: "relative",
-        background: "#070707",
+        background: "var(--page-bg)",
         color: "var(--color-accent)",
         padding: "var(--space-xl) var(--container-pad) var(--space-lg)",
         minHeight: "100vh",

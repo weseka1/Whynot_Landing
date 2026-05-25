@@ -104,12 +104,16 @@ export default function Collections() {
     <section
       id="section-collections"
       className="bg-ar-gallery"
-      data-bg-color="#f4f1ea"
-      data-text-color="#0a0a0a"
+      data-bg-color="#f4f1ec"
+      data-text-color="#2e2a25"
       style={{
         position: "relative",
         padding: "var(--space-2xl) var(--container-pad) var(--space-xl)",
         overflow: "hidden",
+        /* background-color inline pisa el de .bg-ar-gallery (var(--color-pearl))
+           para que use --page-bg (controlada por useSectionColor). El
+           background-image del className se preserva (dots HUD).            */
+        backgroundColor: "var(--page-bg)",
       }}
     >
       {/* ============ TITULO Y SUBTITULO EDITORIAL ============ */}

@@ -121,13 +121,18 @@ export default function Hero() {
     <section
       id="hero"
       ref={sectionRef}
-      data-bg-color="#0a0a0a"
-      data-text-color="#ffffff"
+      data-bg-color="#0a0908"
+      data-text-color="#f3ece1"
       style={{
         position: "relative",
         minHeight: "100vh",
         overflow: "hidden",
-        background: "var(--color-bg)",
+        /* background var(--page-bg) en lugar de color hardcoded: el hook
+           useSectionColor setea --page-bg en :root segun la seccion
+           activa, y la transition 700ms del body se propaga aca tambien
+           porque todas las secciones leen la misma var. Asi se ve el
+           sweep DICH al transicionar entre secciones.                    */
+        background: "var(--page-bg)",
       }}
     >
       {/* — Fondo cielo — */}

@@ -152,11 +152,11 @@ export default function Mission() {
     <section
       id="section-mission"
       ref={sectionRef}
-      data-bg-color="#ffffff"
-      data-text-color="#0a0a0a"
+      data-bg-color="#cdb5f0"
+      data-text-color="#0a0a14"
       style={{
         position: "relative",
-        background: "#cdb5f0",
+        background: "var(--page-bg)",
         color: "#0a0a14",
       }}
     >
