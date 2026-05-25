@@ -155,15 +155,8 @@ function Sneaker({ videoSrc }: { videoSrc: string }) {
    GLASS SPHERE — cristal premium SIN distortion/chromatic (eso lo hacia
    verse "amateur"). Solo highlights y attenuation tinted.
    ============================================================================ */
-function GlassSphere({
-  accent,
-  isMobile,
-}: {
-  accent: Accent;
-  isMobile: boolean;
-}) {
+function GlassSphere({ isMobile }: { isMobile: boolean }) {
   const ref = useRef<THREE.Mesh>(null);
-  const c = ACCENT[accent];
 
   useFrame((_, dt) => {
     if (ref.current) ref.current.rotation.y += dt * 0.04;
@@ -197,6 +190,11 @@ function GlassSphere({
      - roughness 0.04 -> 0.10  (levemente frosted, suaviza cualquier residuo)
      El attenuationColor tinted + clearcoat 1 conservan el "look luxury"
      premium, pero el sphere es ahora mas highlight/halo y menos lente.   */
+  /* attenuationColor FIJO neutro-blanco para los 3 accents. Antes usaba
+     c.ring (silver=gris frio, gold=dorado calido) -> el lado no iluminado
+     de la sphere quedaba oscuro/saturado, que era la "parte negra" que el
+     usuario notaba en 02/03 vs 01. Ahora las 3 spheres son iguales
+     opticamente; el accent solo cambia luces, particulas y anillos.       */
   return (
     <mesh ref={ref} renderOrder={5}>
       <sphereGeometry args={[1.55, 80, 80]} />
@@ -211,8 +209,8 @@ function GlassSphere({
         temporalDistortion={0}
         roughness={0.10}
         ior={1.20}
-        attenuationColor={c.ring}
-        attenuationDistance={5.5}
+        attenuationColor="#f0f3f8"
+        attenuationDistance={6.0}
         color="#ffffff"
         transmission={0.55}
         clearcoat={1}
@@ -245,10 +243,20 @@ function OrbitRings({ isMobile }: { isMobile: boolean }) {
         <torusGeometry args={[2.2, 0.005, 8, 96]} />
         <meshBasicMaterial color="#f4a982" transparent opacity={0.55} />
       </mesh>
+      {/* Anillo AZUL en FRENTE de la zapa: renderOrder 200 (despues de la
+         zapa que va en 100) + depthTest:false -> el arco azul cruza por
+         delante de la silueta del producto, dando el look "ring orbiting
+         around it" del que pidio el usuario.                              */}
       {!isMobile && (
-        <mesh ref={b} rotation={[Math.PI / 3, Math.PI / 6, 0]}>
+        <mesh ref={b} rotation={[Math.PI / 3, Math.PI / 6, 0]} renderOrder={200}>
           <torusGeometry args={[2.6, 0.004, 8, 96]} />
-          <meshBasicMaterial color="#5da3ff" transparent opacity={0.38} />
+          <meshBasicMaterial
+            color="#5da3ff"
+            transparent
+            opacity={0.55}
+            depthTest={false}
+            depthWrite={false}
+          />
         </mesh>
       )}
       <mesh ref={c} rotation={[0, 0, Math.PI / 4]}>
@@ -364,7 +372,7 @@ function Scene({
       <OrbitRings isMobile={lowQuality} />
 
       {/* === GLASS SPHERE — envuelve al producto en el porthole === */}
-      <GlassSphere accent={accent} isMobile={lowQuality} />
+      <GlassSphere isMobile={lowQuality} />
 
       {/* Removed: ReflectiveFloor + ContactShadows. Generaban el "puddle"
          oscuro en la mitad inferior del orbe (el sphere via transmission
