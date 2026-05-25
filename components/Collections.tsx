@@ -299,23 +299,43 @@ export default function Collections() {
                     />
                   </motion.div>
                 ) : (
-                  <motion.img
+                  /* Fallback (iOS + items sin video): envolvemos la imagen
+                     en un wrapper circular oscuro tipo porthole, mismo look
+                     que el wrapper de SneakerPlanet en Android/desktop. La
+                     imagen .webp con alpha real queda flotando dentro del
+                     orbe oscuro. Sin este wrapper, la zapa se veia plana
+                     sobre el bg crema del Collections, sin la "burbuja".  */
+                  <motion.div
                     key={current.id}
-                    src={current.image}
-                    alt={current.name}
                     initial={{ opacity: 0, scale: 0.92 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.92 }}
                     transition={{ duration: 0.45, ease: "easeOut" }}
                     style={{
-                      width: "88%",
-                      height: "88%",
-                      objectFit: "contain",
-                      animation: "floatGentle 5.5s ease-in-out infinite",
-                      filter:
-                        "drop-shadow(0 18px 22px rgba(46,42,37,0.18)) drop-shadow(0 4px 6px rgba(46,42,37,0.10))",
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      background: "#0a0b0f",
+                      boxShadow:
+                        "inset 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(20,18,15,0.35)",
+                      display: "grid",
+                      placeItems: "center",
                     }}
-                  />
+                  >
+                    <img
+                      src={current.image}
+                      alt={current.name}
+                      style={{
+                        width: "78%",
+                        height: "78%",
+                        objectFit: "contain",
+                        animation: "floatGentle 5.5s ease-in-out infinite",
+                        filter:
+                          "drop-shadow(0 18px 22px rgba(0,0,0,0.45)) drop-shadow(0 4px 6px rgba(0,0,0,0.35))",
+                      }}
+                    />
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
