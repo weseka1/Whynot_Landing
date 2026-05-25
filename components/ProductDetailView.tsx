@@ -115,9 +115,11 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
 
       {/* ── Viewer ──────────────────────────────────────────────── */}
       <div style={viewerWrapStyle}>
-        <div style={viewerHaloStyle} aria-hidden />
-        <div style={viewerBoxStyle}>
-          <Frame360Viewer entry={entry} />
+        <div className="pd-viewer-outer">
+          <div style={viewerHaloStyle} aria-hidden />
+          <div style={viewerBoxStyle}>
+            <Frame360Viewer entry={entry} />
+          </div>
         </div>
       </div>
 
@@ -512,6 +514,16 @@ const relatedTitleStyle: React.CSSProperties = {
    LOCAL CSS — hover states, scrollbar, animations
    ============================================================================ */
 const LOCAL_CSS = `
+  /* ── Viewer outer: capa que controla el ancho del visor ── */
+  .pd-viewer-outer {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+  }
+  @media (min-width: 720px) {
+    .pd-viewer-outer { max-width: 360px; }
+  }
+
   .pd-back-btn {
     background: none;
     border: 1px solid ${DARK_SOFT};
