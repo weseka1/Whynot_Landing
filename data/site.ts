@@ -95,11 +95,13 @@ export const site = {
         label: "¿Cuáles son nuestros canales oficiales?",
         copy:  "Entrá por donde te quede mejor — la conversación no se rompe entre canales.",
         channels: [
-          { type: "whatsapp",         display: "+54 9 11 7629-5915",  url: "https://wa.me/5491176295915" },
-          { type: "instagram",        display: "@whynot_exclusive",    url: "https://www.instagram.com/whynot_exclusive/" },
-          { type: "web",              display: "www.whynotamk.com.ar", url: "https://www.whynotamk.com.ar" },
+          /* WhatsApp y Web los sacamos por redundancia: ya aparecen como
+             pills en otros pilares (.001 COMPRA y .005 DUDAS para WA,
+             y la URL se ve en el body). Aca solo dejamos los canales
+             "extra" que solo se muestran aca: Instagram + Canal WhatsApp. */
+          { type: "instagram",        display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
           /* TODO: reemplazar el "#" cuando me pases la URL del Canal de WhatsApp. */
-          { type: "whatsapp-channel", display: "Canal WhatsApp",       url: "#" },
+          { type: "whatsapp-channel", display: "Canal WhatsApp",      url: "#" },
         ],
       },
       {
