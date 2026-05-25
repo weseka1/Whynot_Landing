@@ -526,6 +526,8 @@ export default function PastDrop() {
     <section
       id="section-past-drop"
       ref={sectionRef}
+      data-bg-color="#1a1a1a"
+      data-text-color="#ffffff"
       style={{
         position: "relative",
         /* Mobile: 180vh sticky = 100vh visible + 80vh de "track" para que

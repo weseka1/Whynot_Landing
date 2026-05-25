@@ -177,6 +177,8 @@ export default function MeteoriteSection() {
   return (
     <section
       id="section-meteorite"
+      data-bg-color="#050816"
+      data-text-color="#ffffff"
       style={{
         position: "relative",
         background:

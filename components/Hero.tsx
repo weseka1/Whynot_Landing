@@ -121,6 +121,8 @@ export default function Hero() {
     <section
       id="hero"
       ref={sectionRef}
+      data-bg-color="#0a0a0a"
+      data-text-color="#ffffff"
       style={{
         position: "relative",
         minHeight: "100vh",

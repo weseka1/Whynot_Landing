@@ -104,6 +104,8 @@ export default function Collections() {
     <section
       id="section-collections"
       className="bg-ar-gallery"
+      data-bg-color="#f4f1ea"
+      data-text-color="#0a0a0a"
       style={{
         position: "relative",
         padding: "var(--space-2xl) var(--container-pad) var(--space-xl)",

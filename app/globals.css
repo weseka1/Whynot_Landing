@@ -129,6 +129,14 @@
 
   --ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out:     cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* — DICH-style section color sweep —
+     Vars driven por useSectionColor hook. Cuando una <section data-bg-color>
+     cruza el 50% del viewport, JS setea estas dos vars y el body las
+     interpola con transition 700ms (ver mas abajo en body{}). Defaults
+     iguales al Hero: negro casi puro + texto claro.                       */
+  --page-bg: #0a0a0a;
+  --page-fg: #ffffff;
 }
 
 /* --------------------------------------------------------------------------
@@ -137,8 +145,15 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  background: var(--color-bg);
-  color: var(--color-fg);
+  /* background y color usan vars driven por useSectionColor para el
+     sweep DICH. La transition 700ms ease-in-out hace que el cambio se
+     vea como un fundido gradual entre secciones — el JS hace snap del
+     color, el browser lo interpola.                                      */
+  background-color: var(--page-bg);
+  color: var(--page-fg);
+  transition:
+    background-color 700ms ease-in-out,
+    color 700ms ease-in-out;
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.4;

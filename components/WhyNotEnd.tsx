@@ -194,6 +194,8 @@ export default function WhyNotEnd() {
     <section
       id="section-whynot-end"
       ref={sectionRef}
+      data-bg-color="#0a0a0a"
+      data-text-color="#ffffff"
       style={{
         position: "relative",
         background: "#070707",

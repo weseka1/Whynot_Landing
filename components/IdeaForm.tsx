@@ -28,6 +28,8 @@ export default function IdeaForm() {
     <section
       id="section-form"
       className="section bg-dich-peach-flat"
+      data-bg-color="#e8ff00"
+      data-text-color="#0a0a0a"
       style={{ position: "relative" }}
     >
       <div

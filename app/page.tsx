@@ -11,14 +11,15 @@
    ============================================================================ */
 
 import dynamic from "next/dynamic";
-import Preloader        from "@/components/Preloader";
-import PixelReveal      from "@/components/PixelReveal";
-import SoundController  from "@/components/SoundController";
-import Header           from "@/components/Header";
-import Hero             from "@/components/Hero";
-import CloudBand        from "@/components/CloudBand";
-import Mission          from "@/components/Mission";
-import MeteoriteSection from "@/components/MeteoriteClient";
+import Preloader               from "@/components/Preloader";
+import PixelReveal             from "@/components/PixelReveal";
+import SoundController         from "@/components/SoundController";
+import SectionColorController  from "@/components/SectionColorController";
+import Header                  from "@/components/Header";
+import Hero                    from "@/components/Hero";
+import CloudBand               from "@/components/CloudBand";
+import Mission                 from "@/components/Mission";
+import MeteoriteSection        from "@/components/MeteoriteClient";
 
 function SectionSkeleton({ id, h = "100vh" }: { id?: string; h?: string }) {
   return (
@@ -62,6 +63,10 @@ export default function Page() {
       <Preloader />
       <PixelReveal />
       <SoundController />
+      {/* DICH-style color sweep: observa todos los <section data-bg-color>
+          y setea --page-bg / --page-fg en :root segun cual cruza el 50%
+          del viewport. El body interpola via CSS transition 700ms.       */}
+      <SectionColorController />
       <Header />
 
       <main>
