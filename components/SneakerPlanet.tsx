@@ -38,6 +38,7 @@ import {
   Sparkles,
   Stars,
   Billboard,
+  MeshTransmissionMaterial,
   AdaptiveDpr,
   AdaptiveEvents,
   PerformanceMonitor,
@@ -130,18 +131,22 @@ function Sneaker({ videoSrc }: { videoSrc: string }) {
 
   if (!texture) return null;
 
-  /* Aspect ratio del webm (256x192 normalizado a 2x1.5 en escena = 4:3) */
-  const W = 2.4;
-  const H = 1.8;
+  /* Tamano de la zapa para que quepa COMODA adentro de la sphere
+     (radio ~1.45). Mantengo 4:3 del webm. */
+  const W = 1.45;
+  const H = 1.09;
 
   return (
     <Billboard follow lockX={false} lockY={false} lockZ={false}>
-      <mesh ref={ref} renderOrder={100}>
+      <mesh ref={ref} renderOrder={2}>
         <planeGeometry args={[W, H]} />
         <meshBasicMaterial
           map={texture}
           transparent
-          depthTest={false}
+          /* depthTest TRUE: la sphere con transmission refracta correctamente
+             la zapa que esta DETRAS de su cara frontal -> efecto "planeta
+             adentro del cristal". depthWrite false porque es alpha. */
+          depthTest
           depthWrite={false}
           toneMapped={false}
           alphaTest={0.02}
@@ -165,25 +170,53 @@ function GlassSphere({ accent, isMobile }: { accent: Accent; isMobile: boolean }
     if (ref.current) ref.current.rotation.y += dt * 0.05;
   });
 
+  /* Mobile fallback: meshPhysicalMaterial simple sin transmission (que
+     hace render-to-target costoso). Desktop: MeshTransmissionMaterial
+     de drei → cristal real con refraccion verdadera de la zapa adentro. */
+  if (isMobile) {
+    return (
+      <mesh ref={ref} renderOrder={5}>
+        <sphereGeometry args={[1.45, 32, 32]} />
+        <meshPhysicalMaterial
+          color="#ffffff"
+          transmission={0}
+          roughness={0.10}
+          metalness={0}
+          clearcoat={1}
+          clearcoatRoughness={0.10}
+          envMapIntensity={1.0}
+          transparent
+          opacity={0.18}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    );
+  }
+
+  /* Desktop: cristal premium con refraccion real. La sphere es CHICA
+     (radio 1.45) → contiene la zapa (1.45x1.09) sin sobrar mucho.
+     thickness controla cuanto se ve refractado el contenido.            */
   return (
-    <mesh ref={ref} renderOrder={1}>
-      <sphereGeometry args={[1.85, isMobile ? 32 : 64, isMobile ? 32 : 64]} />
-      <meshPhysicalMaterial
+    <mesh ref={ref} renderOrder={5}>
+      <sphereGeometry args={[1.45, 64, 64]} />
+      <MeshTransmissionMaterial
+        backside={false}
+        samples={6}
+        thickness={0.35}
+        chromaticAberration={0.04}
+        anisotropy={0.18}
+        distortion={0.10}
+        distortionScale={0.30}
+        temporalDistortion={0.10}
+        roughness={0.05}
+        ior={1.35}
+        attenuationColor={c.ring}
+        attenuationDistance={2.5}
         color="#ffffff"
-        transmission={isMobile ? 0 : 0.92}
-        thickness={0.55}
-        roughness={0.06}
-        metalness={0}
-        ior={1.42}
+        transmission={1}
         clearcoat={1}
         clearcoatRoughness={0.08}
-        attenuationColor={c.ring}
-        attenuationDistance={3.2}
-        envMapIntensity={1.1}
-        transparent
-        opacity={isMobile ? 0.18 : 1}
-        depthWrite={false}
-        side={THREE.DoubleSide}
       />
     </mesh>
   );
@@ -319,8 +352,8 @@ function Scene({
           Tilts pensados para que la "tapa" frontal de cada anillo pase ARRIBA
           o ABAJO de la silueta del zapa, nunca cruzando por el centro. */}
       <OrbitRing
-        radius={2.35}
-        thickness={0.013}
+        radius={1.85}
+        thickness={0.010}
         tilt={[Math.PI * 0.38, 0.12, 0.05]}
         speed={0.08}
         color={c.ring}
@@ -328,8 +361,8 @@ function Scene({
         segments={lowQuality ? 64 : 160}
       />
       <OrbitRing
-        radius={2.75}
-        thickness={0.008}
+        radius={2.15}
+        thickness={0.007}
         tilt={[-Math.PI * 0.32, -0.25, 0.08]}
         speed={-0.05}
         color={c.ring}
@@ -337,8 +370,8 @@ function Scene({
         segments={lowQuality ? 64 : 160}
       />
       <OrbitRing
-        radius={3.15}
-        thickness={0.006}
+        radius={2.45}
+        thickness={0.005}
         tilt={[Math.PI * 0.22, 0.45, -0.10]}
         speed={0.035}
         color={c.glow}
