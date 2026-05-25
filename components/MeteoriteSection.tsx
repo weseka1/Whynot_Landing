@@ -22,6 +22,7 @@
 import { Suspense, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
+  AdaptiveDpr,
   Environment,
   Float,
   MeshReflectorMaterial,
@@ -282,8 +283,14 @@ export default function MeteoriteSection() {
             powerPreference: "high-performance",
             alpha: true,
           }}
-          shadows
+          /* shadows OFF en mobile: shadow map render extra + cada material
+             que hace castShadow agrega un draw call. La sombra de la zapa
+             casi no se ve sobre el reflector espejado de todas formas.   */
+          shadows={!isMobile}
         >
+          {/* AdaptiveDpr: drei baja dpr a la mitad si fps cae bajo 60.   */}
+          {isMobile && <AdaptiveDpr pixelated />}
+
           <color attach="background" args={["#050307"]} />
           <fog attach="fog" args={["#050307", 6, 14]} />
 
@@ -292,7 +299,7 @@ export default function MeteoriteSection() {
             position={[5, 6, 5]}
             intensity={1.6}
             color="#ffd9b8"
-            castShadow
+            castShadow={!isMobile}
           />
           <directionalLight
             position={[-4, -2, -3]}
@@ -306,26 +313,40 @@ export default function MeteoriteSection() {
           <Suspense fallback={null}>
             {!isMobile && <Environment preset="city" background={false} />}
 
-            <Stars
-              radius={50}
-              depth={50}
-              count={isMobile ? 300 : 1200}
-              factor={3}
-              saturation={0}
-              fade
-              speed={isMobile ? 0 : 0.4}
-            />
+            {/* Stars: en mobile las omitimos del todo. El fondo radial
+                negro de la seccion ya da sensacion cosmica, y 300 puntos
+                con vertex shader transparente sumaban ~5-8ms/frame.     */}
+            {!isMobile && (
+              <Stars
+                radius={50}
+                depth={50}
+                count={1200}
+                factor={3}
+                saturation={0}
+                fade
+                speed={0.4}
+              />
+            )}
 
-            <Sparkles
-              count={isMobile ? 30 : 70}
-              scale={[6, 4, 6]}
-              size={3}
-              speed={0.35}
-              opacity={0.7}
-              color="#f4a982"
-            />
+            {/* Sparkles: idem — son sprites con shader propio, costo
+                medio. En mobile saltamos esta capa.                     */}
+            {!isMobile && (
+              <Sparkles
+                count={70}
+                scale={[6, 4, 6]}
+                size={3}
+                speed={0.35}
+                opacity={0.7}
+                color="#f4a982"
+              />
+            )}
 
-            <ReflectiveFloor isMobile={isMobile} />
+            {/* ReflectiveFloor: el MeshReflectorMaterial hace un FBO render
+                pass extra (vuelve a renderizar la escena para el espejo).
+                En mobile lo cambiamos por un plano oscuro plano — no se
+                ve casi nada del piso reflectivo en una pantalla chica de
+                todas formas, pero ahorra ~50% del fillrate por frame.    */}
+            {!isMobile && <ReflectiveFloor isMobile={isMobile} />}
             <OrbitRings isMobile={isMobile} />
 
             <Float

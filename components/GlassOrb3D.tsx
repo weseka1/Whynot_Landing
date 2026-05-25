@@ -31,6 +31,7 @@ import {
   Environment,
   Float,
   ContactShadows,
+  AdaptiveDpr,
 } from "@react-three/drei";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
@@ -642,23 +643,37 @@ export default function GlassOrb3D({
         pointerEvents: "none",
       }}
     >
-      {/* Setup luminico — key warm + rim cool + bounce */}
+      {/* AdaptiveDpr en mobile: si fps cae bajo 60, drei baja dpr efectivo
+         automaticamente (y lo restaura cuando recupera).                  */}
+      {isMobile && <AdaptiveDpr pixelated />}
+
+      {/* Setup luminico — key warm + rim cool + bounce.
+         En mobile cortamos las 2 point lights (las 2 directionals dan el
+         contraste principal; las point lights agregaban 2 draw passes
+         extra de iluminacion por cada material). Bounce no se nota a la
+         resolucion mobile.                                                */}
       <ambientLight intensity={0.55} />
       <directionalLight position={[-2.5, 3, 4]} intensity={1.6} color="#fff5e8" />
       <directionalLight position={[3, 1, -2]} intensity={0.8} color="#c8d8ff" />
-      <pointLight position={[0, 0, 4]} intensity={0.4} color="#ffffff" />
-      <pointLight position={[0, -1.5, 1]} intensity={0.25} color="#ffd9a8" />
+      {!isMobile && (
+        <>
+          <pointLight position={[0, 0, 4]} intensity={0.4} color="#ffffff" />
+          <pointLight position={[0, -1.5, 1]} intensity={0.25} color="#ffd9a8" />
+        </>
+      )}
 
       {!isMobile && <Environment preset="city" background={false} />}
 
       {/* Glow interior (detras del producto) — additive */}
       <InnerGlow />
 
-      {/* Producto plano flotante. Sin rotacion: el video webm ya tiene 360. */}
+      {/* Producto plano flotante. Sin rotacion: el video webm ya tiene 360.
+         En mobile bajamos speed/intensity — el float sutil cuenta menos en
+         pantalla chica y libera ciclos del useFrame loop.                  */}
       <Float
-        speed={1.2}
-        rotationIntensity={0.08}
-        floatIntensity={0.35}
+        speed={isMobile ? 0.8 : 1.2}
+        rotationIntensity={isMobile ? 0 : 0.08}
+        floatIntensity={isMobile ? 0.18 : 0.35}
         floatingRange={[-0.05, 0.05]}
       >
         <group position={[0, 0, -0.1]}>

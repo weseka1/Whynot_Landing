@@ -226,9 +226,14 @@ export default function PastDrop() {
   useMotionValueEvent(dragOffset, "change", (v) => {
     targetPosition.set(scrollPosition.get() + v);
   });
-  const position = useSpring(targetPosition, {
-    stiffness: 78, damping: 26, mass: 1,
-  });
+  /* Spring: en mobile bajamos stiffness y subimos damping. Resultado:
+     menos bounce al scrollear hacia atras rapido (el sintoma que reportaba
+     el usuario, "se traba cuando voy para atras" venia del rebote del
+     spring chocando con el cambio de scrollProgress). Desktop mantiene los
+     valores snappy originales.                                            */
+  const position = useSpring(targetPosition, isMobile
+    ? { stiffness: 55, damping: 34, mass: 1 }
+    : { stiffness: 78, damping: 26, mass: 1 });
 
   /* ---------- Active index ---------- */
   const [activeIndex, setActiveIndex] = useState(0);
@@ -522,10 +527,17 @@ export default function PastDrop() {
           overflow: "hidden",
         }}
       >
-        {/* ----- BACKGROUND LAYERS ----- */}
-        <BackgroundAurora />
+        {/* ----- BACKGROUND LAYERS -----
+             En mobile cortamos:
+              - BackgroundAurora: 2 motion.div con animate continuo de
+                32s/26s. CADA frame el browser recalcula los gradients
+                radiales blureados (filter:blur(50-70px) es lo mas caro
+                que existe en CSS). Apagando esto recupera ~6-10ms/frame.
+              - BackgroundParticles: 8 puntos animandose y rebotando
+                continuo — extras durante el scroll thrash. */}
+        {!isMobile && <BackgroundAurora />}
         <BackgroundGrid />
-        <BackgroundParticles count={isMobile ? 8 : 22} />
+        {!isMobile && <BackgroundParticles count={22} />}
 
         {/* ----- GIANT BRAND TEXT BEHIND -----
              Sobre lila: italic oscuro en lugar de white-on-dark. Sin
@@ -696,25 +708,33 @@ export default function PastDrop() {
         {/* ----- BOTTOM HUD ----- */}
         <HudBottom active={active} coordX={coordX} coordY={coordY} />
 
-        {/* ----- NOISE OVERLAY (grain cinematográfico sobre todo) ----- */}
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: NOISE_URL,
-            backgroundRepeat: "repeat",
-            opacity: 0.04,
-            mixBlendMode: "multiply",
-            pointerEvents: "none",
-            zIndex: 12,
-          }}
-        />
+        {/* ----- NOISE OVERLAY (grain cinematográfico sobre todo) -----
+             mix-blend-mode "multiply" sobre toda la seccion sticky forza
+             al compositor a re-blendear cada frame. En mobile lo dropeamos
+             — el grain casi no se ve en pantallas pequenas de todos modos. */}
+        {!isMobile && (
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: NOISE_URL,
+              backgroundRepeat: "repeat",
+              opacity: 0.04,
+              mixBlendMode: "multiply",
+              pointerEvents: "none",
+              zIndex: 12,
+            }}
+          />
+        )}
       </div>
 
-      {/* Cursor-reactive glow + scanlines CRT (sobre toda la seccion sticky) */}
-      <CursorGlow />
-      <Scanlines />
+      {/* Cursor-reactive glow + scanlines CRT (sobre toda la seccion sticky).
+          En mobile no hay cursor (touch), y las scanlines CRT son un overlay
+          full-screen con repeating-linear-gradient + animacion — caro en
+          GPU mobile, y casi imperceptible en pantalla chica.                */}
+      {!isMobile && <CursorGlow />}
+      {!isMobile && <Scanlines />}
 
       {/* Command palette overlay (global archive search) */}
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
@@ -1257,7 +1277,10 @@ function Capsule({
       }}
     >
       {/* ===== Breathing glow detrás del activo — pastel rosado-blanco
-              que apoya al activo sobre el lila (en lugar de cosmic dark). */}
+              que apoya al activo sobre el lila (en lugar de cosmic dark).
+              En mobile lo dejamos estatico (sin breathing animate). El
+              gradient blureado es lo mas caro de pintar; animar scale + opacity
+              cada frame en blur(30px) full-quality es el peor combo posible. */}
       <motion.div
         aria-hidden
         style={{
@@ -1269,14 +1292,14 @@ function Capsule({
         }}
       >
         <motion.div
-          animate={{ opacity: [0.55, 0.95, 0.55], scale: [1, 1.06, 1] }}
-          transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+          animate={isMobile ? undefined : { opacity: [0.55, 0.95, 0.55], scale: [1, 1.06, 1] }}
+          transition={isMobile ? undefined : { duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
           style={{
             width: "100%",
             height: "100%",
             background:
               "radial-gradient(circle, rgba(255,250,240,0.55) 0%, rgba(244,220,63,0.18) 40%, transparent 70%)",
-            filter: "blur(30px)",
+            filter: isMobile ? "blur(18px)" : "blur(30px)",
           }}
         />
       </motion.div>
@@ -1570,10 +1593,13 @@ function BrandLabel({
         opacity: baseOpacity,
       }}
     >
-      {/* Bracket izquierdo — solo activo, respira */}
+      {/* Bracket izquierdo — solo activo, respira.
+          En mobile no animamos el respiro: 14 capsulas × 2 brackets = 28
+          motion values activos que se evaluan cada frame para CSS opacity.
+          En estatico la estetica del bracket se conserva.                  */}
       <motion.span
-        animate={{ opacity: [0.55, 1, 0.55] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        animate={isMobile ? undefined : { opacity: [0.55, 1, 0.55] }}
+        transition={isMobile ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
         style={{
           opacity: ornamentOpacity,
           fontFamily: "var(--font-mono, monospace)",
@@ -1622,35 +1648,40 @@ function BrandLabel({
         >
           {brand}
         </motion.span>
-        {/* Scan-line debajo del nombre — solo activo, recorre L→R en loop.  */}
-        <motion.span
-          aria-hidden
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: -6,
-            height: 1,
-            opacity: ornamentOpacity,
-            overflow: "hidden",
-          }}
-        >
+        {/* Scan-line debajo del nombre — solo activo, recorre L→R en loop.
+            En mobile la dropeamos: es una animacion infinita de transform
+            por cada una de las 14 capsulas. La linea base estatica de
+            abajo conserva el "underscore" visual.                          */}
+        {!isMobile && (
           <motion.span
-            animate={{ x: ["-100%", "100%"] }}
-            transition={{
-              duration: 3.2,
-              repeat: Infinity,
-              ease: "linear",
-            }}
+            aria-hidden
             style={{
-              display: "block",
-              width: "60%",
-              height: "100%",
-              background:
-                "linear-gradient(90deg, transparent, #0a0a14 50%, transparent)",
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: -6,
+              height: 1,
+              opacity: ornamentOpacity,
+              overflow: "hidden",
             }}
-          />
-        </motion.span>
+          >
+            <motion.span
+              animate={{ x: ["-100%", "100%"] }}
+              transition={{
+                duration: 3.2,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              style={{
+                display: "block",
+                width: "60%",
+                height: "100%",
+                background:
+                  "linear-gradient(90deg, transparent, #0a0a14 50%, transparent)",
+              }}
+            />
+          </motion.span>
+        )}
         {/* Línea estática base (siempre, muy tenue) bajo el nombre. */}
         <span
           aria-hidden
@@ -1668,8 +1699,8 @@ function BrandLabel({
 
       {/* Bracket derecho — espejo del izquierdo */}
       <motion.span
-        animate={{ opacity: [0.55, 1, 0.55] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
+        animate={isMobile ? undefined : { opacity: [0.55, 1, 0.55] }}
+        transition={isMobile ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
         style={{
           opacity: ornamentOpacity,
           fontFamily: "var(--font-mono, monospace)",

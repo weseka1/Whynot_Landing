@@ -50,6 +50,7 @@ import {
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
+import { useInViewport } from "./useInViewport";
 
 type Accent = "white" | "silver" | "gold";
 
@@ -360,28 +361,34 @@ function Scene({
               en el cristal se sientan iguales en las 2 escenas.            */}
       {!lowQuality && <Environment preset="city" background={false} />}
 
-      {/* === STARS — config IDENTICA al 3xl: radius 50, depth 50,
-              count 1200, factor 3, speed 0.4 (en desktop). */}
-      <Stars
-        radius={50}
-        depth={50}
-        count={lowQuality ? 300 : 1200}
-        factor={3}
-        saturation={0}
-        fade
-        speed={lowQuality ? 0 : 0.4}
-      />
+      {/* === STARS — solo desktop. En mobile el viewport del porthole es
+              tan chico que las stars apenas se ven y costaban ~3-5ms/frame
+              extra (vertex shader + alpha blend de 300+ points).            */}
+      {!lowQuality && (
+        <Stars
+          radius={50}
+          depth={50}
+          count={1200}
+          factor={3}
+          saturation={0}
+          fade
+          speed={0.4}
+        />
+      )}
 
-      {/* === SPARKLES — "pintitas tipo estrellas" igual al 3xl: color
-              naranja calido #f4a982, size 3, opacity 0.7, count 70. */}
-      <Sparkles
-        count={lowQuality ? 30 : 70}
-        scale={[6, 4, 6]}
-        size={3}
-        speed={0.35}
-        opacity={0.7}
-        color="#f4a982"
-      />
+      {/* === SPARKLES — idem stars: en mobile lo omitimos completamente.
+              El bloom desktop hace la mayor parte del look "luminoso", y
+              sin bloom las sparkles solas se ven planas.                  */}
+      {!lowQuality && (
+        <Sparkles
+          count={70}
+          scale={[6, 4, 6]}
+          size={3}
+          speed={0.35}
+          opacity={0.7}
+          color="#f4a982"
+        />
+      )}
 
       {/* === ANILLOS — 3 toruses orange/blue/white EXACTOS al 3xl === */}
       <OrbitRings isMobile={lowQuality} />
@@ -424,6 +431,13 @@ function SneakerPlanetImpl({
 }: SneakerPlanetProps) {
   const isMobile = useIsMobile();
   const [perfDegraded, setPerfDegraded] = useState(false);
+  /* Frameloop "demand"/never cuando el porthole esta fuera de viewport.
+     Pausa: video texture, sphere rotation, parallax, postproc.
+     En mobile el ahorro es critico — sin esto el Canvas seguia tirando
+     ~16ms/frame aun con el usuario mirando otra seccion.                 */
+  const { ref: wrapperRef, isInView } = useInViewport<HTMLDivElement>({
+    rootMargin: "150px",
+  });
 
   /* Defensa contra el bug del dark crescent intermitente: R3F a veces
      mide el canvas mientras el motion.div padre todavia tiene scale
@@ -440,6 +454,7 @@ function SneakerPlanetImpl({
 
   return (
     <div
+      ref={wrapperRef}
       style={{
         position: "absolute",
         inset: 0,
@@ -477,7 +492,10 @@ function SneakerPlanetImpl({
         }}
       />
       <Canvas
-        dpr={[1, isMobile ? 1.5 : 2]}
+        /* dpr: en mobile el cap de 1.5x daba canvas de hasta 720k pixels
+           por porthole de 480x480. Bajamos a 1 fijo (240k pixels) —
+           imperceptible visualmente a esa distancia y mitad de fillrate.  */
+        dpr={isMobile ? 1 : [1, 2]}
         gl={{
           antialias: !isMobile,
           alpha: false,
@@ -486,7 +504,9 @@ function SneakerPlanetImpl({
           depth: true,
         }}
         camera={{ position: [0, 0, 4.7], fov: 36, near: 0.1, far: 60 }}
-        frameloop="always"
+        /* frameloop: pausa el render cuando el porthole esta fuera de
+           viewport (mismo patron que MeteoriteSection/GlassOrb3D).        */
+        frameloop={isInView ? "always" : "never"}
         style={{ position: "relative", zIndex: 1 }}
       >
         <Suspense fallback={null}>
