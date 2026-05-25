@@ -548,29 +548,20 @@ model-viewer {
   #section-mission > div:nth-of-type(2) > div:first-child h2 {
     font-size: clamp(2.5rem, 11vw, 4.5rem) !important;
   }
-  /* CRITICO MOBILE: el cartel "Application error" volvio. Hipotesis solida:
-     WebGL context limit (mobile: 4-8 contexts). En la home navegando estaban
-     activos al mismo tiempo Hero + 5 Mission monkeys + Meteorite = 7
-     contexts. Al entrar al catalogo aparece tambien el MonoMascot del
-     header → llegamos a 8+. Browser mata contexts → R3F throw → cartel.
+  /* MOBILE MONKEYS RE-HABILITADOS (intencional, post optimizacion 71a1e9e).
+     Antes los 5 Mission monkeys + header estaban escondidos en mobile via
+     display:none para evitar el cartel "Application error" causado por el
+     limite WebGL contexts (mobile: 4-8). Pero despues de la optimizacion
+     de GLBs (-60% peso) + lazy mount + perf 2da pasada, los volvemos a
+     mostrar por pedido del usuario.
 
-     Fix conservador: ocultamos los 5 monos del Mission en mobile via
-     display:none (el IO interno nunca los reporta intersecting →
-     shouldMount=false → no se crea Canvas → no se crea WebGL context).
-     En mobile el Mission queda como tipografia premium. Los monos vuelven
-     en desktop (>= 769px) donde el limite WebGL es 16.
+     Si vuelve a crashear con "Application error" en mobile, hay que:
+       1. Rollback rapido: restaurar los display:none aca abajo, o
+       2. Migrar a imagenes estaticas en mobile (PNG en vez de Canvas R3F).
 
-     Contextos en mobile despues de este fix:
-       - Hero <model-viewer>: 1
-       - MonoMascot del catalogo (cuando estas ahi): 1
-       - Meteorite <Canvas> (lazy mount): 1
-     Total: 3 max. Lejos del limite. */
-  #section-mission > div:nth-of-type(2) > div:first-child > div:nth-child(2) {
-    display: none !important;
-  }
-  #section-mission [data-pillar-monkey] {
-    display: none !important;
-  }
+     El lazy mount + IntersectionObserver minimiza el riesgo: solo 1-2
+     monkeys estan activos al mismo tiempo (los visibles + preload). El
+     browser puede igual LRU-evictar contexts viejos al scroll up. */
 
   /* Pilares: stack vertical texto-arriba mono-abajo en mobile.
      Nota: en el codigo el div interior es flex con justifyContent center
