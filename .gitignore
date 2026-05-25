@@ -56,6 +56,11 @@ scripts/process-shoe-video/tmp-interp/
 /Mono 3d.glb
 /balenciaga 3xl 3D.glb
 
+# Backup local de los GLB originales pre-optimizacion (~14MB)
+# Sirve para poder re-correr scripts/optimize-glb.mjs con otras settings.
+# No va al deploy: los activos en public/assets/3d/*.glb ya estan optimizados.
+public/assets/3d/_originals_backup/
+
 # Imágenes sueltas en root (las usadas están en public/)
 /ChatGPT Image*.png
 /Fondo 1 cielo-nubes.png

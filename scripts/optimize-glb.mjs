@@ -34,17 +34,24 @@ const output =
 
 const cli = path.resolve("node_modules/@gltf-transform/cli/bin/cli.js");
 
+/* Settings actuales (2026-05): Draco + 512px textures + simplify ratio 0.4
+   bajan los GLBs del site ~50% sin perdida visual notable a la distancia
+   de visualizacion del Hero/Mission. Para modelos rigged hay que pasar
+   --rigged true al script para evitar flatten/join que rompe el skinning. */
+const RIGGED = process.argv.includes("--rigged");
+
 const flags = [
   "optimize",
   input,
   output,
-  "--compress",
-  "draco",
-  "--texture-compress",
-  "webp",
-  "--texture-size",
-  "1024",
+  "--compress", "draco",
+  "--texture-compress", "webp",
+  "--texture-size", "512",
+  "--simplify-ratio", RIGGED ? "0.5" : "0.4",
+  "--simplify-error", RIGGED ? "0.004" : "0.003",
+  "--palette", "false",
 ];
+if (RIGGED) flags.push("--join", "false", "--flatten", "false");
 
 console.log(`▸ optimize ${path.basename(input)}`);
 

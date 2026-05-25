@@ -146,8 +146,9 @@ export default function RootLayout({
 
         {/* Preload de assets criticos del Hero — el browser los pide en
             paralelo con el JS, no espera a que React monte el componente.
-            ESTOS PRELOADS NO SE TOCAN: son los que aseguran que el modelo
-            3D del Hero y el LCP carguen bien. */}
+            Estos comparten lista con CRITICAL_ASSETS en Preloader.tsx para
+            que la barra 0→100% del loader cubra exactamente lo que se ve
+            en el primer scroll. */}
         <link
           rel="preload"
           as="image"
@@ -167,7 +168,25 @@ export default function RootLayout({
           as="fetch"
           href="/assets/3d/mono.glb"
           crossOrigin=""
+          // @ts-ignore
+          fetchpriority="high"
         />
+
+        {/* Preconnect al CDN del decoder Draco que usa @react-three/drei para
+            los GLBs de Mission + Meteorite — abre la conexion TLS antes y
+            ahorra ~200ms cuando arranca la descarga del decoder.            */}
+        <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="" />
+
+        {/* Prefetch (baja prioridad) del resto de GLBs y assets soon-visibles
+            — el browser los baja en idle time sin pelearle ancho de banda al
+            preload del hero. Cuando el preloader pide estos mismos URLs en
+            sus jobs, ya estan calientes en cache HTTP.                       */}
+        <link rel="prefetch" href="/assets/3d/mono-dorado.glb" as="fetch" crossOrigin="" />
+        <link rel="prefetch" href="/assets/3d/mono-rigged.glb" as="fetch" crossOrigin="" />
+        <link rel="prefetch" href="/nuves/cloud-center.webp" as="image" />
+        <link rel="prefetch" href="/assets/hero/golden-goose-white-black.webp" as="image" />
+        <link rel="prefetch" href="/assets/hero/golden-goose-silver-star.webp" as="image" />
+        <link rel="prefetch" href="/assets/hero/golden-goose-gold-star.webp" as="image" />
 
         {/* JSON-LD */}
         <script

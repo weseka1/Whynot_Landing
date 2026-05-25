@@ -1,12 +1,14 @@
 "use client";
 
 /* ============================================================================
-   PRELOADER — version REAL (no fake timer)
-   - Espera a que carguen los assets criticos del Hero (sky, marquee, GLB)
-     + fonts (document.fonts.ready).
-   - Progreso atado a la fraccion de assets ya completos.
-   - MIN_TIME: minimo 1.2s en pantalla (evita flash si la red es muy rapida).
-   - MAX_TIME: hard timeout 5s (si la red esta saturada igual liberamos UI).
+   PRELOADER — version REAL + FULL PAGE.
+   - Espera a que carguen TODOS los assets criticos visibles en el primer
+     scroll (Hero, CloudBand, Collections, Mission monos, etc.) + fonts.
+   - Progreso ponderado por peso de archivo: archivos pesados aportan mas
+     a la barra para que el % refleje la realidad (no llega a 90% y se traba
+     5s cargando el ultimo GLB).
+   - MIN_TIME: minimo 600ms en pantalla (evita flash si la red es muy rapida).
+   - MAX_TIME: hard timeout 10s (si la red esta saturada igual liberamos UI).
    - Conserva el look: corners SVG, scanline, % grande, logs de boot.
    ============================================================================ */
 
@@ -15,19 +17,47 @@ import { AnimatePresence, motion } from "framer-motion";
 import { site } from "@/data/site";
 import CornerFrame from "./CornerFrame";
 
-/* MIN_TIME 800ms (antes 1200): pantalla minima del preloader para no
-   flashear si la red es muy rapida. Bajado para reducir delay percibido.
-   MAX_TIME 3500ms (antes 5000): hard timeout si la red esta saturada.
-   3.5s es suficiente para 3G/4G, evita que el usuario espere de mas. */
-const MIN_TIME = 800;
-const MAX_TIME = 3500;
+const MIN_TIME = 600;
+const MAX_TIME = 10000;
+
+/* Lista de assets criticos para que la pagina se vea fluida en el primer
+   scroll. Cada entrada tiene un `weight` aproximado (KB) para que el %
+   refleje el progreso real (un GLB de 1MB aporta mas que una webp de 30KB).
+   --------------------------------------------------------------------------
+   Si agregas/cambias assets pesados en Hero, CloudBand, Collections o
+   Mission, sumalos aca para que sigan apareciendo dentro del preloader. */
+type Asset = { url: string; kind: "image" | "fetch"; weight: number };
+
+const CRITICAL_ASSETS: Asset[] = [
+  /* HERO ------------------------------------------------------------- */
+  { url: "/assets/hero/sky-background.webp",       kind: "image", weight: 40  },
+  { url: "/assets/marquee/whynot-text.webp",       kind: "image", weight: 30  },
+  { url: "/assets/3d/mono.glb",                    kind: "fetch", weight: 1060 },
+
+  /* CLOUDBAND -------------------------------------------------------- */
+  { url: "/nuves/cloud-center.webp",               kind: "image", weight: 110 },
+  { url: "/nuves/cloud-2.webp",                    kind: "image", weight: 36  },
+  { url: "/nuves/cloud-center-bottom.webp",        kind: "image", weight: 19  },
+
+  /* COLLECTIONS ------------------------------------------------------ */
+  { url: "/assets/hero/golden-goose-white-black.webp", kind: "image", weight: 10 },
+  { url: "/assets/hero/golden-goose-silver-star.webp", kind: "image", weight: 10 },
+  { url: "/assets/hero/golden-goose-gold-star.webp",   kind: "image", weight: 10 },
+  { url: "/assets/hero/extra.webp",                    kind: "image", weight: 180 },
+
+  /* MISSION (mono dorado = mascota repetida a la derecha en cada pilar
+     + el rigged que cae arriba). Los demas se cargan on-demand cuando
+     el pilar entra al viewport — no entran al preloader.              */
+  { url: "/assets/3d/mono-dorado.glb",             kind: "fetch", weight: 1170 },
+  { url: "/assets/3d/mono-rigged.glb",             kind: "fetch", weight: 925  },
+];
 
 /* Helpers de precarga — cada uno resuelve cuando el asset esta listo. */
 function loadImage(src: string): Promise<void> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve();
-    img.onerror = () => resolve(); // fallar no debe trabar el preloader
+    img.onerror = () => resolve();
     img.src = src;
   });
 }
@@ -55,37 +85,34 @@ export default function Preloader() {
   useEffect(() => {
     const start = performance.now();
 
-    /* Lista de "trabajos" — cada uno aporta 1/N al progreso. */
-    const jobs: Promise<void>[] = [
-      loadImage(site.hero.bgImage),
-      loadImage("/assets/marquee/whynot-text.webp"),
-      fetchAsset(site.hero.model),
-      fontsReady(),
-    ];
+    /* Peso "virtual" para fonts — sin esto un MAX_TIME largo se ve mal
+       porque la barra se queda en 99% mientras se espera al fonts ready. */
+    const FONTS_WEIGHT = 50;
+    const totalWeight =
+      CRITICAL_ASSETS.reduce((s, a) => s + a.weight, 0) + FONTS_WEIGHT;
 
-    let done = 0;
-    const total = jobs.length;
+    let doneWeight = 0;
     let cancelled = false;
 
-    /* Update visual del % conforme jobs completan. */
+    /* Animacion suave hacia el target — evita saltos bruscos del numero. */
+    let displayPct = 0;
     const tick = () => {
       if (cancelled) return;
-      const target = Math.round((done / total) * 100);
-      setPct((p) => (p < target ? Math.min(target, p + 2) : p));
-      if (done < total) requestAnimationFrame(tick);
+      const target = Math.min(100, (doneWeight / totalWeight) * 100);
+      displayPct += (target - displayPct) * 0.18;
+      setPct(displayPct);
+      if (displayPct < 99.5 || target < 100) {
+        requestAnimationFrame(tick);
+      } else {
+        setPct(100);
+      }
     };
     requestAnimationFrame(tick);
 
-    /* Cuando cada job termina, sumamos al contador. */
-    jobs.forEach((p) => p.then(() => { done++; }));
-
-    /* Helper: cierra el preloader y, una vez que el fade-out de
-       framer-motion (500ms) termina, avisa al PixelReveal para que
-       arranque su ola de revelado. Asi quedan secuenciales: primero el
-       preloader se va, despues la grilla se abre desde el centro. */
+    /* Cierre: cuando todos terminaron Y paso MIN_TIME. */
     const close = () => {
       if (cancelled) return;
-      setPct(100);
+      doneWeight = totalWeight;
       setTimeout(() => {
         if (cancelled) return;
         setVisible(false);
@@ -94,10 +121,26 @@ export default function Preloader() {
           if (cancelled) return;
           window.dispatchEvent(new CustomEvent("whynot:preloader-hidden"));
         }, 500);
-      }, 350);
+      }, 280);
     };
 
-    /* Cierre: cuando todos terminaron Y paso MIN_TIME. */
+    /* Disparar todos los fetchs en paralelo — cada uno aporta su weight
+       al doneWeight cuando termina. */
+    const jobs: Promise<void>[] = CRITICAL_ASSETS.map((a) => {
+      const p = a.kind === "image" ? loadImage(a.url) : fetchAsset(a.url);
+      return p.then(() => {
+        if (!cancelled) doneWeight += a.weight;
+      });
+    });
+
+    /* Fonts ready cuenta como un job mas. */
+    jobs.push(
+      fontsReady().then(() => {
+        if (!cancelled) doneWeight += FONTS_WEIGHT;
+      })
+    );
+
+    /* Cuando todo termino + MIN_TIME -> cerrar. */
     Promise.all(jobs).then(() => {
       if (cancelled) return;
       const elapsed = performance.now() - start;
