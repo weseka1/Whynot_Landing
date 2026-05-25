@@ -13,10 +13,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/* GLB del MONO CUERPO COMPLETO 3D — 23.9MB. Más pesado pero modelo full-body
-   en lugar del busto que usa el Hero. Para optimizar percibida velocidad, el
-   archivo se sirve cacheable desde /public y el componente lo lazy-monta sólo
-   cuando entra al viewport (IntersectionObserver). */
+/* GLB del MONO CUERPO COMPLETO 3D — ~377KB (optimizado: textures 192x192
+   webp + Draco mesh compression + simplify 0.45). Antes pesaba 23.9MB, lo
+   bajamos en sucesivas pasadas de gltf-transform. Para acelerar carga
+   percibida en mobile:
+     1. Lazy mount via IntersectionObserver (este componente).
+     2. <link rel="preload"> en app/catalog/[brand]/page.tsx para que el
+        browser empiece la descarga en paralelo con el JS bundle.
+     3. /assets/* tiene Cache-Control immutable 1 ano en render.yaml. */
 const GLB_SRC = "/assets/3d/mono-cuerpo-completo.glb";
 
 type Props = {

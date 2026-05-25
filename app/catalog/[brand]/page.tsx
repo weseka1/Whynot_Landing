@@ -72,6 +72,21 @@ export default async function BrandPage({ params }: Params) {
         overflow: "hidden",
       }}
     >
+      {/* Preload del GLB del MonoMascot (BrandHero). Crucial en mobile:
+          sin esto el browser solo descarga el GLB cuando MonoMascot monta
+          via IntersectionObserver — perdemos 5-8s en 3G. Con preload el
+          fetch arranca en paralelo con el JS bundle y el GLB ya esta en
+          cache cuando el componente se hidrata.
+          Next 14 hoistea automaticamente <link> a <head>. */}
+      <link
+        rel="preload"
+        as="fetch"
+        crossOrigin=""
+        href="/assets/3d/mono-cuerpo-completo.glb"
+        // @ts-ignore fetchpriority no esta en types aun
+        fetchpriority="high"
+      />
+
       {/* ============ BACKGROUND LAYERS ============ */}
       <BgLayers fixed />
       <CursorGlow />
