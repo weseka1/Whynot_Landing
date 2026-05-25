@@ -69,7 +69,6 @@ export const site = {
       { id: "01", name: "Super Star · White Black",  caption: "Shift the vision",  image: "/assets/hero/golden-goose-white-black.webp",  video: "/assets/hero/golden-goose-white-black.webm" },
       { id: "02", name: "Super Star · Silver Star",  caption: "Evolve",            image: "/assets/hero/golden-goose-silver-star.webp",  video: "/assets/hero/golden-goose-silver-star.webm" },
       { id: "03", name: "Super Star · Gold Star",    caption: "Touch the void",    image: "/assets/hero/golden-goose-gold-star.webp",    video: "/assets/hero/golden-goose-gold-star.webm" },
-      { id: "04", name: "Capsule 04",                caption: "Decrypted",          image: "/assets/hero/extra.webp" },
     ],
   },
 

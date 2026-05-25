@@ -43,8 +43,6 @@ import {
   Stars,
   Billboard,
   MeshTransmissionMaterial,
-  MeshReflectorMaterial,
-  ContactShadows,
   AdaptiveDpr,
   AdaptiveEvents,
   PerformanceMonitor,
@@ -150,31 +148,6 @@ function Sneaker({ videoSrc }: { videoSrc: string }) {
         />
       </mesh>
     </Billboard>
-  );
-}
-
-/* ============================================================================
-   REFLECTIVE FLOOR — piso espejado bajo el producto. Mismo recipe que
-   MeteoriteSection pero a escala porthole.
-   ============================================================================ */
-function ReflectiveFloor({ isMobile }: { isMobile: boolean }) {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.0, 0]}>
-      <planeGeometry args={[8, 8]} />
-      <MeshReflectorMaterial
-        blur={isMobile ? [100, 50] : [280, 100]}
-        resolution={isMobile ? 256 : 512}
-        mixBlur={1.3}
-        mixStrength={0.95}
-        roughness={0.92}
-        depthScale={0.6}
-        minDepthThreshold={0.4}
-        maxDepthThreshold={1.4}
-        color="#0a0a0e"
-        metalness={0.55}
-        mirror={0}
-      />
-    </mesh>
   );
 }
 
@@ -390,24 +363,13 @@ function Scene({
       {/* === ANILLOS — 3 toruses orange/blue/white EXACTOS al 3xl === */}
       <OrbitRings isMobile={lowQuality} />
 
-      {/* === GLASS SPHERE — sigue envolviendo al producto en el porthole === */}
+      {/* === GLASS SPHERE — envuelve al producto en el porthole === */}
       <GlassSphere accent={accent} isMobile={lowQuality} />
 
-      {/* === PISO ESPEJADO debajo de la zapa (replica MeteoriteSection) === */}
-      <ReflectiveFloor isMobile={lowQuality} />
-
-      {/* === CONTACT SHADOW extra para reforzar el grounding === */}
-      {!lowQuality && (
-        <ContactShadows
-          position={[0, -0.99, 0]}
-          opacity={0.45}
-          scale={3.5}
-          blur={2.4}
-          far={3}
-          resolution={256}
-          color="#000000"
-        />
-      )}
+      {/* Removed: ReflectiveFloor + ContactShadows. Generaban el "puddle"
+         oscuro en la mitad inferior del orbe (el sphere via transmission
+         reflejaba el piso #0a0a0e + las sombras de contacto). Sin floor,
+         la sphere queda uniformemente iluminada por el HDRI.              */}
 
       {/* === SNEAKER Golden Goose (video texture, alpha real) === */}
       <Sneaker videoSrc={videoSrc} />
