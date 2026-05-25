@@ -141,7 +141,7 @@ const LAYOUT_DESKTOP: Layout = {
 
 const LAYOUT_MOBILE: Layout = {
   CIRCLE_SIZE: 220,
-  SPACING: 260,   // > CIRCLE_SIZE → gap real entre activo y vecinos
+  SPACING: 185,   // overlap leve (~84%) — circulos mas juntos en mobile
   SIDE_SCALE: 0.42,
   OUTER_SCALE: 0.22,
   FADE_START: 1.2,
@@ -260,68 +260,146 @@ export default function PastDrop() {
     mouseY.set(0);
   }, [mouseX, mouseY]);
 
-  /* ---------- Drag handlers (con disambiguación click vs drag) ----------
-     Threshold viene del Layout: mobile 10px (los dedos se mueven sin
-     querer al posar), desktop 4px. Si el puntero se mueve mas que eso
-     entre down y up → fue swipe → NO navegamos. Ademas:
-     - Solo navegamos si el tap aterrizo CERCA del centro del stage
-       (sobre el activo). Tap sobre un vecino mientras se desliza no
-       abre el catalogo de la marca equivocada.
-     - Si el movimiento es claramente vertical (dy > dx*1.4), dejamos al
-       browser hacer scroll y NO movemos el carrusel. Evita que el carrusel
-       se arrastre al hacer scroll con el pulgar sobre la zona del stage. */
+  /* ---------- Gesture state machine (tap vs hswipe vs vscroll) ----------
+     Intent explícito por puntero. Mientras es "unknown" no movemos el
+     carrusel — solo decidimos en cuanto la distancia supera NOISE_PX:
+       angle > ~50° (|dy| > |dx|*1.2)  → "vscroll": soltamos el pointer
+                                          capture para que el browser haga
+                                          scroll nativo limpio. Nunca
+                                          navegamos en pointer-up.
+       angle <= ~50°                    → "hswipe": empezamos a driver el
+                                          dragOffset. Nunca navegamos en up.
+     Si nunca cruzamos NOISE_PX y el up llega rapido (<700ms) y el dedo
+     cayo sobre el activo → "tap" → navegamos.
+
+     Porque arregla el bug:
+       Antes, scrollear vertical no cambiaba "didDrag" y el pointer-up
+       caia en "!didDrag && landedOnActive" → router.push → catalogo
+       fantasma. Ahora ese caso queda marcado como intent="vscroll" y el
+       up NO navega.
+     Tambien:
+       pointercancel (el browser tomo el scroll nativo) entra en la misma
+       rama que vscroll y nunca navega — antes lo trataba como pointer-up
+       y abria catalogo. */
+
+  type Intent = "unknown" | "hswipe" | "vscroll";
+  const NOISE_PX = 6;       // distancia minima para clasificar el gesto
+  const TAP_PX = 8;         // limite de movimiento para considerar tap
+  const TAP_MS_MAX = 700;   // limite temporal para considerar tap
+
   const dragRef = useRef<{
+    pointerId: number;
     startX: number;
     startY: number;
+    startTime: number;
     baseOffset: number;
-    didDrag: boolean;
     landedOnActive: boolean;
+    intent: Intent;
+    captured: boolean;
   } | null>(null);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      // Ignorar botones de mouse no-primarios (right/middle) en desktop
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch {}
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const distFromCenter = Math.abs(e.clientX - cx);
       const landedOnActive = distFromCenter <= L.CIRCLE_SIZE / 2;
       dragRef.current = {
+        pointerId: e.pointerId,
         startX: e.clientX,
         startY: e.clientY,
+        startTime: performance.now(),
         baseOffset: dragOffset.get(),
-        didDrag: false,
         landedOnActive,
+        intent: "unknown",
+        captured: true,
       };
     },
     [dragOffset, L.CIRCLE_SIZE]
   );
+
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!dragRef.current) return;
-      const dx = e.clientX - dragRef.current.startX;
-      const dy = e.clientY - dragRef.current.startY;
-      if (!dragRef.current.didDrag && Math.abs(dy) > Math.abs(dx) * 1.4) {
-        return;
+      const g = dragRef.current;
+      if (!g || e.pointerId !== g.pointerId) return;
+
+      const dx = e.clientX - g.startX;
+      const dy = e.clientY - g.startY;
+
+      if (g.intent === "vscroll") return; // soltamos el control al browser
+
+      if (g.intent === "unknown") {
+        const dist = Math.hypot(dx, dy);
+        if (dist < NOISE_PX) return; // todavia ambiguo
+        // Decidir por angulo: vertical-leaning => scroll
+        if (Math.abs(dy) > Math.abs(dx) * 1.2) {
+          g.intent = "vscroll";
+          if (g.captured) {
+            try {
+              (e.currentTarget as HTMLElement).releasePointerCapture(g.pointerId);
+            } catch {}
+            g.captured = false;
+          }
+          return;
+        }
+        g.intent = "hswipe";
       }
-      if (Math.abs(dx) > L.DRAG_THRESHOLD_PX) dragRef.current.didDrag = true;
-      dragOffset.set(dragRef.current.baseOffset - dx / L.SPACING);
+
+      // intent === "hswipe": driver del offset
+      dragOffset.set(g.baseOffset - dx / L.SPACING);
     },
-    [dragOffset, L.DRAG_THRESHOLD_PX, L.SPACING]
+    [dragOffset, L.SPACING]
   );
-  const onPointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      if (!dragRef.current) return;
-      try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {}
-      const { didDrag, landedOnActive } = dragRef.current;
+
+  const finishGesture = useCallback(
+    (e: React.PointerEvent, cancelled: boolean) => {
+      const g = dragRef.current;
+      if (!g || e.pointerId !== g.pointerId) return;
+      if (g.captured) {
+        try {
+          (e.currentTarget as HTMLElement).releasePointerCapture(g.pointerId);
+        } catch {}
+      }
+      const intent = g.intent;
+      const totalDist = Math.hypot(
+        e.clientX - g.startX,
+        e.clientY - g.startY
+      );
+      const elapsed = performance.now() - g.startTime;
+      const landedOnActive = g.landedOnActive;
       dragRef.current = null;
-      if (!didDrag && landedOnActive) {
+
+      // Solo navegamos en un tap real:
+      //   no cancelado (pointercancel = browser tomo el scroll)
+      //   intent quedo "unknown" (nunca cruzamos la zona de ruido)
+      //   movimiento total < TAP_PX, duracion < TAP_MS_MAX
+      //   y el dedo aterrizo sobre el activo
+      if (
+        !cancelled &&
+        intent === "unknown" &&
+        totalDist < TAP_PX &&
+        elapsed < TAP_MS_MAX &&
+        landedOnActive
+      ) {
         const href = SPECS[lastIdxRef.current]?.href;
         if (href) router.push(href);
       }
     },
     [router]
+  );
+
+  const onPointerUp = useCallback(
+    (e: React.PointerEvent) => finishGesture(e, false),
+    [finishGesture]
+  );
+  const onPointerCancel = useCallback(
+    (e: React.PointerEvent) => finishGesture(e, true),
+    [finishGesture]
   );
 
   /* ---------- Advance by ±1 specimen ----------
@@ -548,22 +626,26 @@ export default function PastDrop() {
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerCancel={onPointerCancel}
           style={{
             position: "absolute",
             inset: 0,
             cursor: "grab",
             /* touchAction "pan-y": permite que el browser maneje el scroll
                vertical (para que la pagina siga scrolleando con el dedo)
-               PERO captura el pan horizontal → nuestros pointerdown/move/up
-               disparan limpio cuando el usuario desliza horizontal para
-               cambiar de specimen. "none" bloqueaba el scroll vertical
-               y ademas en algunos browsers mobile cancelaba el pointer-
-               move antes de que el threshold (4px) se cumpliera, asi que
-               se interpretaba como tap → ibamos al catalogo en vez de
-               cambiar de zapa.                                            */
+               PERO nosotros capturamos el pan horizontal via pointerdown/
+               move/up. "none" bloqueaba el scroll vertical; sin pan-y, el
+               browser cancelaba el pointer-move antes del threshold y se
+               interpretaba como tap → navegabamos al catalogo en vez de
+               cambiar de zapa. Combinado con la state machine de intent
+               (hswipe/vscroll/tap), garantiza scroll vertical limpio y
+               click solo en taps reales.                                  */
             touchAction: "pan-y",
             userSelect: "none",
+            WebkitUserSelect: "none",
+            // iOS: matar el highlight azul + el menu de long-press
+            WebkitTapHighlightColor: "transparent",
+            WebkitTouchCallout: "none",
             perspective: "1600px",
             zIndex: 5,
             transform: "translateY(1cm)", // bajado 1cm los circulos de zapas
