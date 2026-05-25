@@ -442,6 +442,21 @@ function SneakerPlanetImpl({
           "inset 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(20,18,15,0.35)",
       }}
     >
+      {/* Overlay radial-gradient: pearl edge fade. Sin tocar la sphere ni el
+         render 3D. Transparente en el centro 68% (la sphere vive ahi), va
+         fundiendo a pearl en el edge 95-100%. Cubre el "dark crescent"
+         que se veia al lado del orbe sin alterar nada de la escena.       */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background:
+            "radial-gradient(circle at center, transparent 68%, var(--color-pearl) 100%)",
+          zIndex: 2,
+        }}
+      />
       <Canvas
         dpr={[1, isMobile ? 1.5 : 2]}
         gl={{
@@ -453,6 +468,7 @@ function SneakerPlanetImpl({
         }}
         camera={{ position: [0, 0, 4.7], fov: 36, near: 0.1, far: 60 }}
         frameloop="always"
+        style={{ position: "relative", zIndex: 1 }}
       >
         <Suspense fallback={null}>
           <PerformanceMonitor
