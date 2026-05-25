@@ -180,15 +180,34 @@ function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
     }
 
     /* Tween Y activo: avanzar segun tiempo. easeOutCubic = cae rapido,
-       frena al final → sensacion de aterrizaje con gravedad. */
+       frena al final → sensacion de aterrizaje con gravedad.
+       Si el modelo NO tiene clip de animacion (no hay actionRef),
+       agregamos rotacion procedural durante la caida para que tenga
+       sensacion de movimiento. Solo aplica a unrigged → no afecta
+       a los monos animados de Mixamo (que ya rotan via sus clips). */
     const startMs = tweenStartMsRef.current;
     if (startMs !== null) {
       const elapsed = (performance.now() - startMs) / 1000;
       const t = THREE.MathUtils.clamp(elapsed / clipDurationRef.current, 0, 1);
       const eased = easeOutCubic(t);
       obj.position.y = THREE.MathUtils.lerp(Y_DROP_FROM, Y_REST, eased);
+
+      /* Rotacion procedural para unrigged models: 1 vuelta sobre Y +
+         leve tilt en X que se asienta al final = sensacion de caer
+         girando como un objeto. eased en lugar de t para que la rotacion
+         siga el mismo perfil que la caida (rapida al principio, frena al
+         aterrizar). */
+      if (!actionRef.current) {
+        obj.rotation.y = eased * Math.PI * 2;
+        obj.rotation.x = (1 - eased) * Math.PI / 8;
+      }
+
       if (t >= 1) {
         obj.position.y = Y_REST;
+        if (!actionRef.current) {
+          obj.rotation.y = 0;
+          obj.rotation.x = 0;
+        }
         tweenStartMsRef.current = null;
       }
     }
