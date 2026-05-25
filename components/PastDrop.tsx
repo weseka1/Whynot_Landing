@@ -363,8 +363,19 @@ export default function PastDrop() {
     return () => window.removeEventListener("keydown", onKey);
   }, [advance]);
 
-  /* ---------- Video play/pause ---------- */
+  /* ---------- Video play/pause ----------
+     Triple-trigger para garantizar que el activo SIEMPRE este girando:
+     1) useEffect on activeIndex change → play(active), pause(otros)
+     2) registerRef on mount → si es el activo, play() apenas el <video>
+        existe (cubre el caso first-mount con preload="metadata", donde
+        el useEffect inicial puede ganarle al ref).
+     3) onLoadedMetadata → retry play si es el activo (cubre autoplay
+        policies + bufferings lentos).
+     ademas: <video autoPlay/> en el JSX como fallback nativo del browser. */
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
+
   useEffect(() => {
     videoRefs.current.forEach((v, i) => {
       if (!v) return;
@@ -372,9 +383,27 @@ export default function PastDrop() {
       else v.pause();
     });
   }, [activeIndex]);
-  const onLoadedMetadata = (el: HTMLVideoElement | null) => {
-    if (el && el.currentTime === 0) el.currentTime = 0.05;
-  };
+
+  const registerVideoRef = useCallback(
+    (i: number, el: HTMLVideoElement | null) => {
+      videoRefs.current[i] = el;
+      if (el && i === activeIndexRef.current) {
+        el.play().catch(() => {});
+      }
+    },
+    []
+  );
+
+  const onLoadedMetadata = useCallback(
+    (i: number, el: HTMLVideoElement | null) => {
+      if (!el) return;
+      if (el.currentTime === 0) el.currentTime = 0.05;
+      if (i === activeIndexRef.current) {
+        el.play().catch(() => {});
+      }
+    },
+    []
+  );
 
   /* ---------- HUD live data ---------- */
   const coordX = useTransform(position, (p) => {
@@ -548,8 +577,8 @@ export default function PastDrop() {
               spec={spec}
               tiltX={tiltX}
               tiltY={tiltY}
-              registerRef={(el) => { videoRefs.current[i] = el; }}
-              onLoadedMetadata={onLoadedMetadata}
+              registerRef={(el) => registerVideoRef(i, el)}
+              onLoadedMetadata={(el) => onLoadedMetadata(i, el)}
               activeIndex={activeIndex}
               layout={L}
               isMobile={isMobile}
@@ -1280,8 +1309,16 @@ function Capsule({
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="auto"
               onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
+              onCanPlay={(e) => {
+                /* Safety net: si es el activo y esta pausado, dar play.
+                   Cubre el caso de autoplay policy + first-load buffering.
+                   No es-activo: deja pausado (eso lo maneja el useEffect). */
+                if (index !== activeIndex) return;
+                const v = e.currentTarget;
+                if (v.paused) v.play().catch(() => {});
+              }}
               style={{
                 width: "100%",
                 height: "100%",
