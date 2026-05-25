@@ -301,13 +301,15 @@ export default function Mission() {
                 con el scroll (no es sticky); cada instancia dispara su
                 animacion cuando este pilar entra al viewport.
 
-                Asignacion por pilar (orden actual, 5 pilares) — swap .001 <-> .002:
+                Asignacion por pilar (orden actual, 5 pilares):
                   - .001 COMPRA     (i=0): default (Midnight Gorilla rigged)
-                  - .002 CANALES    (i=1): mono dorado (se repite con header)
+                  - .002 CANALES    (i=1): mono blanco-dorado (LV Ape, no rig,
+                                          igual cae por el tween de Y de
+                                          MissionPillarMonkey)
                   - .003 CABA       (i=2): mono blanco (Supreme Simian)
                   - .004 ARGENTINA  (i=3): gorila streetwear (Esenssial)
-                  - .005 DUDAS      (i=4): mono Louis Vuitton — era el .001
-                                          original, ahora cierra como ultimo. */}
+                  - .005 DUDAS      (i=4): mono Louis Vuitton
+                Header de Mission y closing siguen con mono dorado. */}
             <div
               data-pillar-monkey
               style={{
@@ -320,7 +322,7 @@ export default function Mission() {
               <MissionPillarMonkey
                 modelSrc={
                   i === 1
-                    ? "/assets/3d/mono-dorado.glb"
+                    ? "/assets/3d/mono-blanco-dorado.glb"
                     : i === 2
                     ? "/assets/3d/mono-blanco.glb"
                     : i === 3
