@@ -309,11 +309,8 @@ function ParallaxRig({ isMobile }: { isMobile: boolean }) {
    ============================================================================ */
 function Backdrop() {
   const { scene } = useThree();
-  /* scene.background = NULL: canvas transparente. El wrapper bg uniforme
-     oscuro se ve por detras. Esto mata cualquier mismatch tonal entre
-     canvas y wrapper que generaba el "dark crescent" al lado del orbe.   */
   useMemo(() => {
-    scene.background = null;
+    scene.background = new THREE.Color(SCENE_BG);
     return () => {
       scene.background = null;
     };
@@ -433,28 +430,23 @@ function SneakerPlanetImpl({
       style={{
         position: "absolute",
         inset: 0,
-        /* PORTHOLE: clipado circular. Bg UNIFORME que matchea con lo que
-           el canvas mostraba antes via scene.background. Ahora el canvas
-           es transparente, asi que el wrapper es la unica fuente de bg
-           oscuro -> imposible que aparezca un crescent dark de color
-           distinto. Drop-shadow exterior removida (sospechaba que estaba
-           sumando al crescent visible al lado del orbe).                  */
+        /* PORTHOLE: clipado circular del canvas oscuro sobre el pearl bg de
+           la seccion. Sin este clip el cuadrado oscuro del scene cortaba el
+           layout. Borde sutil para definir el orbe.                        */
         borderRadius: "50%",
         overflow: "hidden",
-        background: SCENE_BG,
-        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)",
+        background: posterSrc
+          ? `center / contain no-repeat url(${posterSrc}), #0a0b0f`
+          : "#0a0b0f",
+        boxShadow:
+          "inset 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(20,18,15,0.35)",
       }}
     >
       <Canvas
         dpr={[1, isMobile ? 1.5 : 2]}
         gl={{
-          /* alpha:true + premultipliedAlpha:true -> canvas TRANSPARENTE
-             encima del wrapper dark. Sin esto, el canvas era opaco y
-             cualquier pixel no-cubierto por el sphere mostraba un dark
-             potencialmente distinto del wrapper, creando crescents. */
           antialias: !isMobile,
-          alpha: true,
-          premultipliedAlpha: true,
+          alpha: false,
           powerPreference: "high-performance",
           stencil: false,
           depth: true,
