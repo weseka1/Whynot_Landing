@@ -30,11 +30,28 @@
    tiene `video`, el circulo reproduce <video>; sino renderiza imagen.
    ============================================================================ */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { site } from "@/data/site";
 import HoloFX from "./HoloFX";
+
+/* iOS Safari (y cualquier browser en iOS, porque todos usan WebKit) NO
+   respeta el canal alpha de VP9 webm — el video se decodea sin
+   transparencia y se ve la zapa sobre un rectangulo opaco del color
+   original del fondo procesado. Detectamos iOS y caemos al fallback de
+   imagen estatica .webp (que SI tiene alpha real, 512x384 con
+   transparencia, verificado con `file`).                                */
+function isIOS(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent;
+  // iPhone/iPad/iPod en cualquier browser + iPadOS 13+ (que reporta como Mac
+  // pero tiene touch events — heuristica estandar para diferenciarlo).
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (ua.includes("Mac") && typeof document !== "undefined" && "ontouchend" in document)
+  );
+}
 
 /* SneakerPlanet (escena WebGL) lazy-loaded para no inflar el bundle inicial.
    ssr:false porque usa WebGL/Canvas (no existe en server).
@@ -71,6 +88,17 @@ export default function Collections() {
   const items = site.collections.items;
   const [active, setActive] = useState(0);
   const current = items[active];
+
+  /* useIOSFallback: en iOS el alpha del webm VP9 no funciona — la zapa
+     queda sobre un rectangulo opaco. En lugar de mostrar WebGL roto,
+     caemos a la rama motion.img (la misma que se usa para items sin
+     video). Detectamos en client side post-mount; en SSR asumimos no-iOS
+     para que el primer paint sea optimista (Android/desktop ven WebGL
+     directo, iOS hace una transicion suave al fallback en ~50ms).        */
+  const [useIOSFallback, setUseIOSFallback] = useState(false);
+  useEffect(() => {
+    if (isIOS()) setUseIOSFallback(true);
+  }, []);
 
   return (
     <section
@@ -243,7 +271,13 @@ export default function Collections() {
               }}
             >
               <AnimatePresence mode="wait">
-                {"video" in current && current.video ? (
+                {/* iOS fallback: si detectamos iOS, NO renderizamos
+                    SneakerPlanet (el video webm queda sin alpha y se ve
+                    el rectangulo opaco). En su lugar, la rama motion.img
+                    muestra la imagen .webp con alpha real, igual look
+                    que items sin video. Lo demas (Android/desktop) usa
+                    WebGL como siempre.                                   */}
+                {"video" in current && current.video && !useIOSFallback ? (
                   <motion.div
                     key={current.id}
                     initial={{ opacity: 0 }}
