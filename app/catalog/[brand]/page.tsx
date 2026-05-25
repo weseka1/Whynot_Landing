@@ -93,11 +93,22 @@ export default async function BrandPage({ params }: Params) {
       <CornerBrackets />
 
       {/* ============ TOP HUD ============ */}
+      {/* CSS responsive: en mobile (<720px) ocultamos los segmentos secundarios
+          del breadcrumb (D://DATA_CORE y el separador) y compactamos el padding.
+          El BackButton sigue visible — es el escape garantizado para volver.   */}
+      <style>{`
+        .brand-hud { padding: 1.4rem 2.5rem; }
+        .brand-hud-extras { display: inline; }
+        @media (max-width: 720px) {
+          .brand-hud { padding: 1rem 1rem; gap: 0.5rem; }
+          .brand-hud-extras { display: none; }
+        }
+      `}</style>
       <div
+        className="brand-hud"
         style={{
           position: "sticky",
           top: 0,
-          padding: "1.4rem 2.5rem",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -113,24 +124,35 @@ export default async function BrandPage({ params }: Params) {
           WebkitBackdropFilter: "blur(10px)",
         }}
       >
-        <div style={{ display: "flex", gap: "1.2rem", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "0.8rem", alignItems: "center", minWidth: 0 }}>
           <span
             style={{
               color: "#ff5436",
               textShadow: "0 0 8px rgba(255,84,54,0.6)",
               fontSize: "0.6rem",
+              flexShrink: 0,
             }}
           >
             ●
           </span>
-          <span>D://DATA_CORE / ARCHIVE</span>
-          <span style={{ opacity: 0.4 }}>•</span>
-          <span style={{ color: DARK, fontWeight: 600 }}>{brandName}</span>
+          <span className="brand-hud-extras">D://DATA_CORE / ARCHIVE</span>
+          <span className="brand-hud-extras" style={{ opacity: 0.4 }}>•</span>
+          <span
+            style={{
+              color: DARK,
+              fontWeight: 600,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {brandName}
+          </span>
         </div>
         <BackButton
           fallbackHref="/#section-past-drop"
-          label="← BACK TO ARCHIVE"
-          style={{ color: DARK_DIM, fontWeight: 600 }}
+          label="← VOLVER"
+          style={{ color: DARK_DIM, fontWeight: 600, flexShrink: 0 }}
         />
       </div>
 
