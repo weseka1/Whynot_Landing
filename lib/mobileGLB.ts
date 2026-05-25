@@ -45,14 +45,25 @@ export function detectMobileTier(): boolean {
 }
 
 /**
- * Whitelist: solo estos GLBs tienen una variant ".mobile.glb" generada.
- * Si pedis mobileGLB() de una URL no listada, devuelve la URL original
- * (no asumimos que existe el .mobile.glb → evita 404 silencioso).
+ * Whitelist: solo estos GLBs tienen una variant ".mobile.glb" generada
+ * Y queremos servirla en mobile. Si pedis mobileGLB() de una URL no
+ * listada, devuelve la URL original (no asumimos que existe el
+ * .mobile.glb → evita 404 silencioso).
+ *
+ * mono.glb (Hero centerpiece) intencionalmente NO esta en el whitelist:
+ * la variant mobile tenia texturas a 256px (vs 512px) + simplify -60%
+ * y se veia borroso en pantalla mobile. El Hero es lo primero que ve
+ * el usuario y ocupa casi toda la pantalla, asi que la calidad importa
+ * mas que los ~700KB extra de descarga. El preloader caches el desktop
+ * GLB antes del primer paint, asi que el usuario no siente el delay.
+ *
+ * Los otros monos siguen con variant mobile porque son los pilares
+ * chicos del Mission section — el detalle de textura no se nota a esa
+ * escala y el ahorro de peso/triangulos es valioso (4 instancias).
  *
  * Mantener sincronizado con scripts/optimize-glb-mobile.mjs TARGETS.
  */
 const HAS_MOBILE_VARIANT = new Set<string>([
-  "/assets/3d/mono.glb",
   "/assets/3d/mono-dorado.glb",
   "/assets/3d/mono-blanco.glb",
   "/assets/3d/mono-blanco-dorado.glb",
