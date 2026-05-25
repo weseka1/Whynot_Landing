@@ -12,6 +12,7 @@
    ============================================================================ */
 
 import { useEffect, useRef, useState } from "react";
+import { mobileGLB } from "@/lib/mobileGLB";
 
 /* GLB del MONO CUERPO COMPLETO 3D — ~377KB (optimizado: textures 192x192
    webp + Draco mesh compression + simplify 0.45). Antes pesaba 23.9MB, lo
@@ -170,7 +171,7 @@ export default function MonoMascot({
       /* @ts-ignore — web component declarado en types/model-viewer.d.ts */
       <model-viewer
         ref={modelRef}
-        src={GLB_SRC}
+        src={mobileGLB(GLB_SRC)}
         alt="WHYNOT mono mascot"
         disable-zoom
         shadow-intensity="0"
@@ -180,6 +181,8 @@ export default function MonoMascot({
         field-of-view={fov}
         interaction-prompt="none"
         loading="eager"
+        /* Draco decoder local — sin dependencia de gstatic CDN. */
+        draco-decoder-location="/draco/"
         style={{
           width: "100%",
           height: "100%",

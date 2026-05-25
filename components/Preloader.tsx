@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { site } from "@/data/site";
 import CornerFrame from "./CornerFrame";
+import { mobileGLB, detectMobileTier } from "@/lib/mobileGLB";
 
 const MIN_TIME = 600;
 const MAX_TIME = 14000;
@@ -132,8 +133,19 @@ export default function Preloader() {
        se espera al fonts ready o a un chunk lento. */
     const FONTS_WEIGHT = 50;
     const CHUNK_WEIGHT = 40; // ~30-50KB gzipped por chunk dinamico
+
+    /* Mobile: re-mapear GLBs a .mobile.glb + bajar el weight estimado al
+       50%. Asi el totalWeight refleja lo que realmente baja el browser. */
+    const isMobileForWeights = detectMobileTier();
+    const assets = CRITICAL_ASSETS.map((a) => {
+      if (a.kind !== "fetch" || !a.url.endsWith(".glb")) return a;
+      const targetUrl = mobileGLB(a.url);
+      if (targetUrl === a.url) return a;
+      return { ...a, url: targetUrl, weight: Math.round(a.weight * 0.5) };
+    });
+
     const totalWeight =
-      CRITICAL_ASSETS.reduce((s, a) => s + a.weight, 0) +
+      assets.reduce((s, a) => s + a.weight, 0) +
       FONTS_WEIGHT +
       LAZY_CHUNKS.length * CHUNK_WEIGHT;
 
@@ -171,8 +183,9 @@ export default function Preloader() {
     };
 
     /* Disparar todos los fetchs en paralelo — cada uno aporta su weight
-       al doneWeight cuando termina. */
-    const jobs: Promise<void>[] = CRITICAL_ASSETS.map((a) => {
+       al doneWeight cuando termina. Usa el array `assets` ya re-mapeado
+       a variants mobile cuando corresponde.                              */
+    const jobs: Promise<void>[] = assets.map((a) => {
       const p = a.kind === "image" ? loadImage(a.url) : fetchAsset(a.url);
       return p.then(() => {
         if (!cancelled) doneWeight += a.weight;

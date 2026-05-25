@@ -18,15 +18,26 @@
      - LERP      → suavidad (0.05 muy amortiguado, 0.2 muy rápido)
    ============================================================================ */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { site } from "@/data/site";
 import FrameBorder from "./FrameBorder";
 import DiscoverButton from "./DiscoverButton";
 import MarqueeBanner from "./MarqueeBanner";
+import { mobileGLB } from "@/lib/mobileGLB";
 
 export default function Hero() {
   const modelRef = useRef<HTMLElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  /* mounted-gate: NO renderizamos el <model-viewer> en SSR. Solo en client,
+     y ahi resolvemos la variant correcta (desktop vs mobile) en un solo
+     fetch. Evita el patron de doble-download (cargar desktop primero,
+     despues cancelar y cargar mobile). Costo: ~50ms de delay del model
+     respecto al primer paint del Hero — el resto del Hero (sky bg, marquee,
+     UI) ya esta visible para entonces, asi que se nota poco.            */
+  const [glbSrc, setGlbSrc] = useState<string | null>(null);
+  useEffect(() => {
+    setGlbSrc(mobileGLB(site.hero.model));
+  }, []);
 
   useEffect(() => {
     const MAX_ANGLE = 22;       // grados a cada lado (rango acotado)
@@ -168,10 +179,11 @@ export default function Hero() {
           zIndex: 3,
         }}
       >
-        {/* @ts-ignore — web component */}
+        {glbSrc !== null && (
+        /* @ts-ignore — web component */
         <model-viewer
           ref={modelRef}
-          src={site.hero.model}
+          src={glbSrc}
           alt="3D centerpiece"
           disable-zoom
           shadow-intensity="0.5"
@@ -182,12 +194,16 @@ export default function Hero() {
           field-of-view="26deg"
           interaction-prompt="none"
           loading="eager"
+          /* Draco decoder local — evita depender de gstatic CDN (que a veces
+             no responde en redes mobile flojas y deja el modelo sin cargar). */
+          draco-decoder-location="/draco/"
           style={{
             width:  "100%",
             height: "100%",
             background: "transparent",
           }}
         />
+        )}
       </div>
 
       {/* — UI superpuesta — */}

@@ -33,6 +33,8 @@ import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
 // Side-effect import: configura Draco decoder local (evita dependencia de gstatic)
 import "@/lib/three-setup";
+import { mobileGLB } from "@/lib/mobileGLB";
+import R3FErrorBoundary from "./R3FErrorBoundary";
 
 const MONO_SRC_DEFAULT        = "/assets/3d/mono-rigged.glb";
 const MONO_SRC_GOTILA         = "/assets/3d/gotila-esenssial.glb";
@@ -40,12 +42,15 @@ const MONO_SRC_BLANCO         = "/assets/3d/mono-blanco.glb";
 const MONO_SRC_LOUIS          = "/assets/3d/mono-louis.glb";
 const MONO_SRC_DORADO         = "/assets/3d/mono-dorado.glb";
 const MONO_SRC_BLANCO_DORADO  = "/assets/3d/mono-blanco-dorado.glb";
-useGLTF.preload(MONO_SRC_DEFAULT);
-useGLTF.preload(MONO_SRC_GOTILA);
-useGLTF.preload(MONO_SRC_BLANCO);
-useGLTF.preload(MONO_SRC_LOUIS);
-useGLTF.preload(MONO_SRC_DORADO);
-useGLTF.preload(MONO_SRC_BLANCO_DORADO);
+/* Preload: en mobile se carga la variant .mobile.glb (textures 256px,
+   simplify mas agresivo, ~50% del peso). mobileGLB es no-op en desktop
+   o si el GLB no esta en la whitelist.                                 */
+useGLTF.preload(mobileGLB(MONO_SRC_DEFAULT));
+useGLTF.preload(mobileGLB(MONO_SRC_GOTILA));
+useGLTF.preload(mobileGLB(MONO_SRC_BLANCO));
+useGLTF.preload(mobileGLB(MONO_SRC_LOUIS));
+useGLTF.preload(mobileGLB(MONO_SRC_DORADO));
+useGLTF.preload(mobileGLB(MONO_SRC_BLANCO_DORADO));
 
 const ANIM_MIN_DURATION_S = 0.5;
 const TARGET_SIZE         = 2.5;
@@ -73,7 +78,10 @@ interface MonkeyProps {
 }
 
 function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
-  const { scene, animations } = useGLTF(modelSrc);
+  /* mobileGLB() decide entre el GLB original (desktop) y la variant mobile
+     en runtime. Es sync + idempotente: si el cliente ya recibio el preload
+     de la variant correcta, useGLTF hit cache.                            */
+  const { scene, animations } = useGLTF(mobileGLB(modelSrc));
   const ref = useRef<THREE.Group>(null);
 
   /* SkeletonUtils.clone clona scene + skeleton + skinned-mesh binding —
@@ -261,6 +269,7 @@ export default function MissionPillarMonkey({
       aria-hidden
     >
       {!shouldMount ? null : (
+       <R3FErrorBoundary>
         <Canvas
           frameloop="always"
           camera={{ position: [0, 0.4, 6.5], fov: 36 }}
@@ -303,6 +312,7 @@ export default function MissionPillarMonkey({
             <Monkey triggerSignalRef={triggerSignalRef} modelSrc={modelSrc} />
           </Suspense>
         </Canvas>
+       </R3FErrorBoundary>
       )}
     </div>
   );

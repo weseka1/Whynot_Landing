@@ -9,6 +9,7 @@
     "lint": "next lint",
     "optimize:assets": "node scripts/optimize-assets.mjs",
     "optimize:glb": "node scripts/optimize-glb.mjs",
+    "optimize:glb:mobile": "node scripts/optimize-glb-mobile.mjs",
     "bg:setup": "node scripts/process-shoe-video/verify.mjs",
     "bg:process": "node scripts/process-shoe-video/index.mjs",
     "interp:encode": "node scripts/process-shoe-video/interpolate-and-encode.mjs"

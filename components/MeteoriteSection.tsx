@@ -32,10 +32,13 @@ import {
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
 import { useInViewport } from "./useInViewport";
+// Side-effect import: configura Draco decoder local (evita dependencia de gstatic)
+import "@/lib/three-setup";
+import R3FErrorBoundary from "./R3FErrorBoundary";
 
 /* Asset optimizado con `npm run optimize:glb` → 41.25 MB → 1.21 MB
-   (Draco mesh + WebP textures + 1024px max). Drei useGLTF carga el decoder
-   Draco desde gstatic CDN automáticamente.                                */
+   (Draco mesh + WebP textures + 1024px max). El decoder Draco se sirve
+   desde /draco/ local (via lib/three-setup) — sin dependencia de gstatic. */
 const ARTIFACT_SRC = "/assets/3d/balenciaga-3xl.glb";
 useGLTF.preload(ARTIFACT_SRC);
 
@@ -268,6 +271,7 @@ export default function MeteoriteSection() {
           />
         ))}
 
+       <R3FErrorBoundary>
         <Canvas
           frameloop={isInView ? "always" : "never"}
           camera={{ position: [0, 0.6, 5.2], fov: 35 }}
@@ -334,6 +338,7 @@ export default function MeteoriteSection() {
             </Float>
           </Suspense>
         </Canvas>
+       </R3FErrorBoundary>
       </div>
 
       {/* BOTTOM INFO */}

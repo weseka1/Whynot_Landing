@@ -163,37 +163,26 @@ export default function RootLayout({
           href="/assets/marquee/whynot-text.webp"
           type="image/webp"
         />
-        <link
-          rel="preload"
-          as="fetch"
-          href="/assets/3d/mono.glb"
-          crossOrigin=""
-          // @ts-ignore
-          fetchpriority="high"
-        />
+        {/* mono.glb preload REMOVIDO — antes forzaba descarga del GLB desktop
+            (~1MB) en TODOS los clientes, incluido mobile. Ahora el Hero hace
+            mounted-gate y carga la variant correcta (mono.glb o mono.mobile.glb)
+            en un solo fetch. El Preloader tambien usa mobileGLB() para
+            estimar el progreso correcto. Trade-off: ~150ms mas tarde aparece
+            el modelo en desktop (FCP del Hero ya quedo visible mucho antes,
+            asi que no se nota), pero AHORRAMOS 660KB en mobile.            */}
 
-        {/* Preconnect al CDN del decoder Draco que usa @react-three/drei para
-            los GLBs de Mission + Meteorite — abre la conexion TLS antes y
-            ahorra ~200ms cuando arranca la descarga del decoder.            */}
-        <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="" />
+        {/* Preconnect a gstatic REMOVIDO — el Draco decoder ahora se sirve
+            desde /draco/ local (ver lib/three-setup.ts + public/draco/). Sin
+            dependencia de CDN externo, mas confiable en redes mobile flojas. */}
 
-        {/* Prefetch (baja prioridad) del resto de GLBs y assets de toda la
-            home — el browser los baja en idle time sin pelearle ancho de
-            banda al preload del hero. Cuando el preloader pide estos mismos
-            URLs en sus jobs, ya estan calientes en cache HTTP, asi el % de
-            0->100 avanza solo a velocidad de procesar, no de red.            */}
+        {/* Prefetch (baja prioridad) del resto de assets de la home — el
+            browser los baja en idle time. Para los GLBs ya no prefetcheamos
+            aca: cada componente que los usa hace useGLTF.preload(mobileGLB(...))
+            a module-load, lo que respeta el tier del cliente.                 */}
         {/* CloudBand */}
         <link rel="prefetch" href="/nuves/cloud-center.webp" as="image" />
         <link rel="prefetch" href="/nuves/cloud-2.webp" as="image" />
         <link rel="prefetch" href="/nuves/cloud-center-bottom.webp" as="image" />
-        {/* Mission monos */}
-        <link rel="prefetch" href="/assets/3d/mono-dorado.glb" as="fetch" crossOrigin="" />
-        <link rel="prefetch" href="/assets/3d/mono-rigged.glb" as="fetch" crossOrigin="" />
-        <link rel="prefetch" href="/assets/3d/mono-blanco.glb" as="fetch" crossOrigin="" />
-        <link rel="prefetch" href="/assets/3d/mono-louis.glb" as="fetch" crossOrigin="" />
-        <link rel="prefetch" href="/assets/3d/gotila-esenssial.glb" as="fetch" crossOrigin="" />
-        {/* Meteorite */}
-        <link rel="prefetch" href="/assets/3d/balenciaga-3xl.glb" as="fetch" crossOrigin="" />
         {/* Collections */}
         <link rel="prefetch" href="/assets/hero/golden-goose-white-black.webp" as="image" />
         <link rel="prefetch" href="/assets/hero/golden-goose-silver-star.webp" as="image" />
