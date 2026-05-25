@@ -16,14 +16,48 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { site } from "@/data/site";
+import { HERO_SPECS } from "@/data/catalog";
 import CornerFrame from "./CornerFrame";
 import { mobileGLB, detectMobileTier } from "@/lib/mobileGLB";
 
 const MIN_TIME = 600;
-const MAX_TIME = 14000;
+/* MAX_TIME subido a 20s: ahora precargamos los 15 videos 360 de PastDrop
+   (~6.7MB extra). En 4G urbana 2-4s, en 3G hasta 15s — el cap de 20s
+   garantiza que nadie se quede mirando el preloader infinito.            */
+const MAX_TIME = 20000;
 
 /* ----------------------------- ASSETS / WEIGHTS -------------------------- */
 type Asset = { url: string; kind: "image" | "fetch"; weight: number };
+
+/* Pesos reales (en KB redondeados) de los 15 videos 360 de PastDrop.
+   Map separado para keep-clean del array principal. Si cambia un video,
+   actualizar aca para que el progreso del preloader sume correcto.       */
+const PAST_DROP_VIDEO_WEIGHTS: Record<string, number> = {
+  "/videos-360/LUISVOUITTON.mp4": 549,
+  "/videos-360/adidasbape.mp4": 420,
+  "/videos-360/amiri.mp4": 453,
+  "/videos-360/asicsgel-kayano.mp4": 729,
+  "/videos-360/balenciaga.mp4": 397,
+  "/videos-360/bape.mp4": 464,
+  "/videos-360/jordan3blackcat.mp4": 409,
+  "/videos-360/jordanpatentgold.mp4": 687,
+  "/videos-360/lanvin.mp4": 373,
+  "/videos-360/nikeairforce1triplewhite.mp4": 343,
+  "/videos-360/nikejordantatum.mp4": 419,
+  "/videos-360/offwhitebe-right-4x-RIFE-RIFE3.1-16fps.mp4": 590,
+  "/videos-360/pumared.mp4": 546,
+  "/videos-360/sbdunkverdy.mp4": 391,
+  "/videos-360/timberland6-InchBoot.mp4": 449,
+};
+
+/* Genera asset entries para los 15 videos 360 a partir de HERO_SPECS.
+   Asi si se agrega/quita un video del catalog, el preloader se ajusta
+   automaticamente (siempre y cuando este el peso en el map de arriba). */
+const PAST_DROP_VIDEO_ASSETS: Asset[] = HERO_SPECS.map((hs) => ({
+  url: hs.src,
+  kind: "fetch" as const,
+  weight: PAST_DROP_VIDEO_WEIGHTS[hs.src] ?? 450, // fallback ~450KB
+}));
 
 const CRITICAL_ASSETS: Asset[] = [
   { url: "/assets/hero/sky-background.webp",       kind: "image", weight: 40  },
@@ -54,6 +88,11 @@ const CRITICAL_ASSETS: Asset[] = [
   { url: "/assets/futuristic-fashion/man-05.webp",   kind: "image", weight: 118 },
   { url: "/assets/futuristic-fashion/woman-01.webp", kind: "image", weight: 103 },
   { url: "/assets/futuristic-fashion/woman-02.webp", kind: "image", weight: 88 },
+  /* Videos 360 de PastDrop (~6.7MB total). Antes se cargaban on-demand
+     cuando el usuario llegaba a la seccion → primer scroll trababa
+     hasta que cada video bufferaba. Ahora caen al cache del browser
+     durante el preloader y PastDrop los toma instantaneo desde cache.   */
+  ...PAST_DROP_VIDEO_ASSETS,
 ];
 
 const LAZY_CHUNKS = [
