@@ -28,29 +28,29 @@
    ContactShadows off, particulas /3.
    ============================================================================ */
 
-import {
-  Suspense,
-  memo,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, memo, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Environment,
   Sparkles,
   Stars,
-  Billboard,
+  Float,
   MeshTransmissionMaterial,
+  MeshReflectorMaterial,
   ContactShadows,
   AdaptiveDpr,
   AdaptiveEvents,
   PerformanceMonitor,
+  useGLTF,
 } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
+
+/* Mismo GLB que usa MeteoriteSection (al fondo). Pre-procesado con
+   `npm run optimize:glb` -> 41 MB -> 1.21 MB (Draco + WebP + 1024 max).  */
+const ARTIFACT_SRC = "/assets/3d/balenciaga-3xl.glb";
+useGLTF.preload(ARTIFACT_SRC);
 
 type Accent = "white" | "silver" | "gold";
 
@@ -67,87 +67,112 @@ const ACCENT: Record<
 };
 
 interface SneakerPlanetProps {
-  videoSrc: string;
+  /* videoSrc se mantiene en la API por compat con Collections — ya no se
+     usa (la zapa ahora es el GLB 3D Balenciaga 3XL, misma tecnica que
+     MeteoriteSection). El accent sigue cambiando lighting/rings/material. */
+  videoSrc?: string;
   accent?: Accent;
   posterSrc?: string;
 }
 
 /* ============================================================================
-   VIDEO TEXTURE
+   ARTIFACT — GLB 3D REAL (Balenciaga 3XL), misma tecnica que MeteoriteSection.
+   ============================================================================
+   Sustituye el viejo plane con video texture por geometria 3D real:
+     - useGLTF carga el .glb (Draco decoded, ya optimizado a 1.21 MB)
+     - scene.clone(true) -> instance independiente por mount (permite tener
+       2 escenas del mismo modelo si haria falta)
+     - bbox fit a TARGET_SIZE para que la zapa quepa dentro del cristal
+     - envMapIntensity boost segun accent -> reflejos del HDRI mas/menos
+       intensos (gold mas intenso, silver medio, white neutral)
+     - Float (drei) hace el motion organico (Y bobbing + slight tilt)
+     - useFrame rotation Y continua -> "spin" del producto
    ============================================================================ */
-function useVideoTexture(src: string): THREE.VideoTexture | null {
-  const [texture, setTexture] = useState<THREE.VideoTexture | null>(null);
+function Artifact({ accent, isMobile }: { accent: Accent; isMobile: boolean }) {
+  const { scene } = useGLTF(ARTIFACT_SRC);
+  const groupRef = useRef<THREE.Group>(null);
 
-  useEffect(() => {
-    const video = document.createElement("video");
-    video.src = src;
-    video.crossOrigin = "anonymous";
-    video.loop = true;
-    video.muted = true;
-    video.playsInline = true;
-    video.autoplay = true;
-    video.preload = "auto";
-    const p = video.play();
-    if (p && typeof p.catch === "function") p.catch(() => {});
+  /* Boost por accent: gold +50%, silver +30%, white neutral. */
+  const envBoost = accent === "gold" ? 1.55 : accent === "silver" ? 1.30 : 1.05;
+  /* Tamano: que entre comodo en la sphere (radio 1.55). 1.55 wide deja
+     ~0.05 de margen. */
+  const TARGET = 1.55;
 
-    const tex = new THREE.VideoTexture(video);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.minFilter = THREE.LinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    tex.generateMipmaps = false;
-    tex.premultiplyAlpha = false;
-    setTexture(tex);
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    c.updateMatrixWorld(true);
+    const bbox = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    const longest = Math.max(size.x, size.y, size.z) || 1;
+    const fitScale = TARGET / longest;
+    c.scale.setScalar(fitScale);
+    c.updateMatrixWorld(true);
+    bbox.setFromObject(c);
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+    c.position.sub(center);
 
-    return () => {
-      tex.dispose();
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-    };
-  }, [src]);
+    c.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) {
+        const mesh = o as THREE.Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
+        const mat = mesh.material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[];
+        const apply = (m: THREE.MeshStandardMaterial) => {
+          if ((m as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+            m.envMapIntensity = envBoost;
+          }
+        };
+        if (Array.isArray(mat)) mat.forEach(apply);
+        else apply(mat as THREE.MeshStandardMaterial);
+      }
+    });
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene, envBoost]);
 
-  return texture;
+  /* Spin continuo sobre Y (mostrar todas las caras del producto). */
+  useFrame((_, dt) => {
+    if (groupRef.current) groupRef.current.rotation.y += dt * 0.35;
+  });
+
+  return (
+    <Float
+      speed={isMobile ? 0 : 1.4}
+      rotationIntensity={isMobile ? 0 : 0.25}
+      floatIntensity={isMobile ? 0 : 0.35}
+      floatingRange={[-0.05, 0.05]}
+    >
+      <group ref={groupRef}>
+        <primitive object={cloned} />
+      </group>
+    </Float>
+  );
 }
 
 /* ============================================================================
-   SNEAKER — plane billboarded con video texture.
-   - depthTest:false + renderOrder=100 -> SIEMPRE visible
-   - toneMapped:true -> entra al pipeline, no satura el bloom
-   - alphaTest 0.04 -> elimina pixels casi transparentes que el bloom
-     amplificaria innecesariamente
+   REFLECTIVE FLOOR — piso espejado bajo el producto. Mismo recipe que
+   MeteoriteSection pero a escala porthole.
    ============================================================================ */
-function Sneaker({ videoSrc }: { videoSrc: string }) {
-  const texture = useVideoTexture(videoSrc);
-  const ref = useRef<THREE.Mesh>(null);
-
-  useFrame((state) => {
-    if (!ref.current) return;
-    const t = state.clock.elapsedTime;
-    ref.current.position.y = Math.sin(t * 0.5) * 0.05;
-    ref.current.rotation.z = Math.sin(t * 0.4) * 0.01;
-  });
-
-  if (!texture) return null;
-
-  /* Aspect 4:3 del WebM. Tamano: 1.85 wide -> ocupa ~70% del orbe sin
-     tocar los bordes, dejando que se vea el cristal alrededor.        */
-  const W = 1.85;
-  const H = 1.388;
-
+function ReflectiveFloor({ isMobile }: { isMobile: boolean }) {
   return (
-    <Billboard follow lockX={false} lockY={false} lockZ={false}>
-      <mesh ref={ref} renderOrder={100}>
-        <planeGeometry args={[W, H]} />
-        <meshBasicMaterial
-          map={texture}
-          transparent
-          depthTest={false}
-          depthWrite={false}
-          toneMapped
-          alphaTest={0.04}
-        />
-      </mesh>
-    </Billboard>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.0, 0]}>
+      <planeGeometry args={[8, 8]} />
+      <MeshReflectorMaterial
+        blur={isMobile ? [100, 50] : [280, 100]}
+        resolution={isMobile ? 256 : 512}
+        mixBlur={1.3}
+        mixStrength={0.95}
+        roughness={0.92}
+        depthScale={0.6}
+        minDepthThreshold={0.4}
+        maxDepthThreshold={1.4}
+        color="#0a0a0e"
+        metalness={0.55}
+        mirror={0}
+      />
+    </mesh>
   );
 }
 
@@ -303,12 +328,10 @@ function Backdrop({ accent }: { accent: Accent }) {
    SCENE
    ============================================================================ */
 function Scene({
-  videoSrc,
   accent,
   isMobile,
   perfDegraded,
 }: {
-  videoSrc: string;
   accent: Accent;
   isMobile: boolean;
   perfDegraded: boolean;
@@ -374,14 +397,17 @@ function Scene({
       {/* === GLASS SPHERE (renderOrder 5) === */}
       <GlassSphere accent={accent} isMobile={lowQuality} />
 
-      {/* === CONTACT SHADOW debajo del zapa para grounding === */}
+      {/* === PISO ESPEJADO debajo de la zapa (replica MeteoriteSection) === */}
+      <ReflectiveFloor isMobile={lowQuality} />
+
+      {/* === CONTACT SHADOW extra para reforzar el grounding sobre el piso === */}
       {!lowQuality && (
         <ContactShadows
-          position={[0, -1.45, 0]}
-          opacity={0.42}
-          scale={4}
-          blur={2.6}
-          far={3.5}
+          position={[0, -0.99, 0]}
+          opacity={0.55}
+          scale={3.5}
+          blur={2.4}
+          far={3}
           resolution={256}
           color="#000000"
         />
@@ -397,8 +423,8 @@ function Scene({
         color={c.particles}
       />
 
-      {/* === SNEAKER (renderOrder 100, siempre arriba) === */}
-      <Sneaker videoSrc={videoSrc} />
+      {/* === ARTIFACT GLB 3D real (misma tecnica que MeteoriteSection) === */}
+      <Artifact accent={accent} isMobile={lowQuality} />
 
       {/* === POSTPROC - Bloom MUY sutil + Vignette. Sin chromatic ab. === */}
       {!lowQuality && (
@@ -421,7 +447,6 @@ function Scene({
    ROOT — wrapper circular clipado (porthole)
    ============================================================================ */
 function SneakerPlanetImpl({
-  videoSrc,
   accent = "gold",
   posterSrc,
 }: SneakerPlanetProps) {
@@ -467,7 +492,6 @@ function SneakerPlanetImpl({
           <AdaptiveEvents />
           <ParallaxRig isMobile={isMobile} />
           <Scene
-            videoSrc={videoSrc}
             accent={accent}
             isMobile={isMobile}
             perfDegraded={perfDegraded}
