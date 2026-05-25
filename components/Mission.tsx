@@ -303,9 +303,9 @@ export default function Mission() {
 
                 Asignacion por pilar (orden actual, 5 pilares):
                   - .001 COMPRA     (i=0): default (Midnight Gorilla rigged)
-                  - .002 CANALES    (i=1): mono blanco-dorado (LV Ape, no rig,
-                                          igual cae por el tween de Y de
-                                          MissionPillarMonkey)
+                  - .002 CANALES    (i=1): mono blanco-dorado (LV Ape, rigged
+                                          via transfer-rig-to-obj.py + FBX
+                                          Mixamo Falling To Landing)
                   - .003 CABA       (i=2): mono blanco (Supreme Simian)
                   - .004 ARGENTINA  (i=3): gorila streetwear (Esenssial)
                   - .005 DUDAS      (i=4): mono Louis Vuitton
