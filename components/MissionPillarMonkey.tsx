@@ -31,6 +31,8 @@ import { useAnimations, useGLTF } from "@react-three/drei";
 import { clone as cloneSkeletal } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
+// Side-effect import: configura Draco decoder local (evita dependencia de gstatic)
+import "@/lib/three-setup";
 
 const MONO_SRC_DEFAULT        = "/assets/3d/mono-rigged.glb";
 const MONO_SRC_GOTILA         = "/assets/3d/gotila-esenssial.glb";
@@ -78,24 +80,9 @@ function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
      necesario para multi-instancia del mismo GLB cacheado. CRITICO:
      llamar updateMatrixWorld(true) en el clone ANTES de calcular el bbox,
      sino el bbox sale con world matrix sin actualizar y la escala/centro
-     son incorrectos (resultado: mono enorme con la camara dentro).
-
-     IMPORTANTE: ademas hay que resetear el skeleton a su bind pose
-     (skeleton.pose()) ANTES del bbox. Sin esto, si el GLB viene con los
-     bones en pose animada (ej: mono-blanco-dorado export de Mixamo →
-     bones en frame 0 de Falling To Landing → mesh en pose "cayendo con
-     brazos abiertos"), el bbox sale enorme (1.9 wide en vez de 0.5) y
-     el TARGET_SIZE / size.y daria un fitScale demasiado bajo → mono
-     fuera de cuadro o demasiado grande. skeleton.pose() resetea bones
-     a bind, equivalente a forzar T-pose: bbox sale de la mesh autorada,
-     no del frame 0 de animacion. */
+     son incorrectos (resultado: mono enorme con la camara dentro). */
   const cloned = useMemo(() => {
     const c = cloneSkeletal(scene);
-    c.traverse((obj) => {
-      if ((obj as THREE.SkinnedMesh).isSkinnedMesh) {
-        (obj as THREE.SkinnedMesh).skeleton.pose();
-      }
-    });
     c.updateMatrixWorld(true);
     const bbox = new THREE.Box3().setFromObject(c);
     const size = new THREE.Vector3();
