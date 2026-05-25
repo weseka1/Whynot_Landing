@@ -65,14 +65,18 @@ export default function Page() {
       <Header />
 
       <main>
+        {/* Orden de secciones reorganizado por pedido del usuario:
+            1. Hero  2. CloudBand  3. Collections  5. PastDrop
+            6. FuturisticGallery  8. MeteoriteSection  4. Mission
+            7. IdeaForm  9. WhyNotEnd                                  */}
         <Hero />
         <CloudBand />
         <Collections />
-        <Mission />
         <PastDrop />
         <FuturisticGallery />
-        <IdeaForm />
         <MeteoriteSection />
+        <Mission />
+        <IdeaForm />
         <WhyNotEnd />
       </main>
 
