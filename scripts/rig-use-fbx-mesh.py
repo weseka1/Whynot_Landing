@@ -111,8 +111,30 @@ def main():
     fbx_mesh.data.materials.clear()
     fbx_mesh.data.materials.append(mat)
 
-    print("[4/4] Pre-rotacion + exportando GLB...")
+    print("[4/4] Push action a NLA + reset pose a REST + pre-rotacion + exportando GLB...")
     if armature is not None:
+        # CRITICO: el FBX de Mixamo viene con los pose bones en frame 0 de la
+        # animacion (pose "cayendo con brazos abiertos"). Si exportamos asi,
+        # las NODE TRANSFORMS de los bones en el GLB quedan en esa pose →
+        # antes de que la AnimationMixer arranque, el mesh se renderiza
+        # deformado y MissionPillarMonkey calcula el bbox mal.
+        # FIX: pushear el active action a un NLA strip (asi se exporta
+        # igual via export_nla_strips=True), despues clearear el active
+        # action y limpiar todas las pose bone transforms → Blender exporta
+        # con bones en REST.
+        import mathutils
+        if armature.animation_data and armature.animation_data.action:
+            action = armature.animation_data.action
+            if not armature.animation_data.nla_tracks:
+                track = armature.animation_data.nla_tracks.new()
+                start_frame = int(action.frame_range[0]) if action.frame_range else 1
+                track.strips.new(action.name, start_frame, action)
+            armature.animation_data.action = None
+        for pbone in armature.pose.bones:
+            pbone.matrix_basis = mathutils.Matrix.Identity(4)
+        armature.data.pose_position = "REST"
+        # Pre-rotacion -90 X (mismo hack que el script de los otros monos):
+        # compensa el export_yup=False para que el mono salga Y-up.
         armature.rotation_euler[0] = math.radians(-90)
     bpy.context.view_layer.update()
 
