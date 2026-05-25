@@ -152,11 +152,15 @@ export default function Mission() {
     <section
       id="section-mission"
       ref={sectionRef}
-      data-bg-color="#cdb5f0"
-      data-text-color="#0a0a14"
       style={{
         position: "relative",
-        background: "var(--page-bg)",
+        /* Mission queda FUERA del sweep DICH (pedido del usuario): los
+           monos 3D que caen desde arriba entraban al viewport con el
+           fondo de la seccion anterior (Meteorite oscuro) y cambiaban
+           al lila solo despues de cruzar el 50%. Se veian "cambiando
+           de color". Ahora Mission tiene su lila fijo y los monos
+           siempre estan sobre el mismo fondo.                            */
+        background: "#cdb5f0",
         color: "#0a0a14",
       }}
     >
