@@ -1361,21 +1361,31 @@ function Capsule({
         </>
       )}
 
-      {/* ===== ENTER prompt (debajo del activo, indica clickeable) ===== */}
+      {/* ===== BRAND LABEL en T-12 (debajo de TODA cápsula, no solo activa).
+              Activa: brackets [ ] que respiran + chrome gradient en el texto
+              + scan-line bajo el nombre. Inactiva: nombre en flat dark con
+              opacity baja (queda como tag pasivo). ===== */}
+      <BrandLabel
+        brand={spec.brand}
+        isActive={isActive}
+        isMobile={isMobile}
+      />
+
+      {/* ===== ENTER prompt (debajo del brand label, solo activo+clickeable) */}
       {spec.href && (
         <motion.div
           aria-hidden
           style={{
             position: "absolute",
-            bottom: -42,
+            bottom: isMobile ? -78 : -96,
             left: "50%",
             translateX: "-50%",
             opacity: isActive,
             pointerEvents: "none",
             fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.62rem",
+            fontSize: "0.58rem",
             letterSpacing: "0.4em",
-            color: "#0a0a14",
+            color: "rgba(10,10,20,0.7)",
             fontWeight: 600,
             whiteSpace: "nowrap",
             display: "flex",
@@ -1389,9 +1399,167 @@ function Capsule({
           >
             ▸
           </motion.span>
-          OPEN {spec.brand} ARCHIVE
+          OPEN ARCHIVE
         </motion.div>
       )}
+    </motion.div>
+  );
+}
+
+/* ============================================================================
+   BrandLabel — nombre de la marca en T-12, debajo de la cápsula.
+   - Inactiva: tipografía en gris-oscuro tenue, brackets pasivos.
+   - Activa: brackets [ ] que respiran, chrome gradient sobre el texto,
+     scan-line animado debajo. Crea un "name plate" futurista que ancla
+     visualmente cada cápsula a su marca.
+   ============================================================================ */
+function BrandLabel({
+  brand,
+  isActive,
+  isMobile,
+}: {
+  brand: string;
+  isActive: MotionValue<number>;
+  isMobile: boolean;
+}) {
+  /* Opacities derivadas: la marca SIEMPRE visible (mínimo 0.45 incluso
+     en cápsulas alejadas), pero los adornos (brackets, scanline, chrome)
+     solo aparecen cuando la cápsula se acerca al centro. */
+  const baseOpacity = useTransform(isActive, (a) => 0.45 + a * 0.55);
+  const ornamentOpacity = useTransform(isActive, (a) => a);
+
+  const size = isMobile ? "0.95rem" : "1.35rem";
+  const bracketSize = isMobile ? "1rem" : "1.5rem";
+  const bottom = isMobile ? -42 : -56;
+
+  return (
+    <motion.div
+      aria-hidden
+      style={{
+        position: "absolute",
+        bottom,
+        left: "50%",
+        translateX: "-50%",
+        display: "flex",
+        alignItems: "center",
+        gap: isMobile ? "0.4rem" : "0.6rem",
+        pointerEvents: "none",
+        whiteSpace: "nowrap",
+        opacity: baseOpacity,
+      }}
+    >
+      {/* Bracket izquierdo — solo activo, respira */}
+      <motion.span
+        animate={{ opacity: [0.55, 1, 0.55] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          opacity: ornamentOpacity,
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: bracketSize,
+          fontWeight: 300,
+          color: "#0a0a14",
+          lineHeight: 1,
+          translate: "0 -1px",
+        }}
+      >
+        [
+      </motion.span>
+
+      {/* Nombre de la marca en T-12, con stack visual:
+          - Capa base: texto plano dark (siempre legible).
+          - Capa overlay: gradient cromado (silver→pearl→silver) con
+            background-clip text, solo visible en activo.                 */}
+      <span
+        style={{
+          position: "relative",
+          fontFamily: "var(--font-marquee)",
+          fontSize: size,
+          letterSpacing: "0.08em",
+          fontWeight: 400,
+          color: "#0a0a14",
+          lineHeight: 1,
+          textTransform: "uppercase",
+        }}
+      >
+        {brand}
+        {/* Chrome overlay — solo activo. Mismo glyph encima con gradient.   */}
+        <motion.span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: ornamentOpacity,
+            backgroundImage:
+              "linear-gradient(180deg, #ffffff 0%, #c8c4cc 45%, #4a4654 75%, #0a0a14 100%)",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            color: "transparent",
+            pointerEvents: "none",
+          }}
+        >
+          {brand}
+        </motion.span>
+        {/* Scan-line debajo del nombre — solo activo, recorre L→R en loop.  */}
+        <motion.span
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: -6,
+            height: 1,
+            opacity: ornamentOpacity,
+            overflow: "hidden",
+          }}
+        >
+          <motion.span
+            animate={{ x: ["-100%", "100%"] }}
+            transition={{
+              duration: 3.2,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            style={{
+              display: "block",
+              width: "60%",
+              height: "100%",
+              background:
+                "linear-gradient(90deg, transparent, #0a0a14 50%, transparent)",
+            }}
+          />
+        </motion.span>
+        {/* Línea estática base (siempre, muy tenue) bajo el nombre. */}
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: -6,
+            height: 1,
+            background: "rgba(10,10,20,0.18)",
+            zIndex: -1,
+          }}
+        />
+      </span>
+
+      {/* Bracket derecho — espejo del izquierdo */}
+      <motion.span
+        animate={{ opacity: [0.55, 1, 0.55] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
+        style={{
+          opacity: ornamentOpacity,
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: bracketSize,
+          fontWeight: 300,
+          color: "#0a0a14",
+          lineHeight: 1,
+          translate: "0 -1px",
+        }}
+      >
+        ]
+      </motion.span>
     </motion.div>
   );
 }
