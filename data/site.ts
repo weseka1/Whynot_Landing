@@ -21,7 +21,7 @@ type Pillar = {
 
 export const site = {
   brand: {
-    name: "DICH",
+    name: "WHYNOT",
     tagline: "Future Mode",
   },
 
@@ -60,7 +60,7 @@ export const site = {
   collections: {
     eyebrow: "D://DATA_CORE / COLLECTIONS",
     title:   "Oraniths",
-    ticker:  "Future Mode · DICH · Encrypted Couture",
+    ticker:  "Future Mode · Encrypted Couture",
     items: [
       /* image = preview del thumb. video (opcional) = lo que se muestra en
          el planeta cuando este item esta activo. Los .webm tienen alpha

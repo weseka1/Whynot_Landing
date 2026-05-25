@@ -24,8 +24,10 @@ import FrameBorder from "./FrameBorder";
 import DiscoverButton from "./DiscoverButton";
 import MarqueeBanner from "./MarqueeBanner";
 import { mobileGLB } from "@/lib/mobileGLB";
+import { useIsMobile } from "./useIsMobile";
 
 export default function Hero() {
+  const isMobile = useIsMobile();
   const modelRef = useRef<HTMLElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   /* mounted-gate: NO renderizamos el <model-viewer> en SSR. Solo en client,
@@ -154,11 +156,17 @@ export default function Hero() {
       {/* — Marco completo: 4 esquinas + 4 lineas laterales — */}
       <FrameBorder color="var(--color-accent)" inset={14} corner={40} gap={10} />
 
-      {/* — MARQUEE — */}
+      {/* — MARQUEE —
+           Desktop: top -22vh, imageHeight clamp(9rem, 38vw, 32rem). Antes
+           el banner WHYNOT quedaba muy alto y chico en mobile (clamp llegaba
+           al min 9rem = ~144px) y al usuario no se le veia bien. En mobile
+           bajamos el top a -8vh (queda mas visible dentro del viewport) y
+           subimos el imageHeight a 16vh (~107px en 667vh, mas legible
+           proporcionalmente a la pantalla chica).                          */}
       <div
         style={{
           position: "absolute",
-          top: "-22vh",
+          top: isMobile ? "-8vh" : "-22vh",
           left: 0,
           right: 0,
           zIndex: 2,
@@ -166,7 +174,7 @@ export default function Hero() {
       >
         <MarqueeBanner
           image="/assets/marquee/whynot-text.webp"
-          imageHeight="clamp(9rem, 38vw, 32rem)"
+          imageHeight={isMobile ? "16vh" : "clamp(9rem, 38vw, 32rem)"}
         />
       </div>
 
