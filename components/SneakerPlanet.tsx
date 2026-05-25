@@ -28,29 +28,30 @@
    ContactShadows off, particulas /3.
    ============================================================================ */
 
-import { Suspense, memo, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Environment,
   Sparkles,
   Stars,
-  Float,
+  Billboard,
   MeshTransmissionMaterial,
   MeshReflectorMaterial,
   ContactShadows,
   AdaptiveDpr,
   AdaptiveEvents,
   PerformanceMonitor,
-  useGLTF,
 } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
-
-/* Mismo GLB que usa MeteoriteSection (al fondo). Pre-procesado con
-   `npm run optimize:glb` -> 41 MB -> 1.21 MB (Draco + WebP + 1024 max).  */
-const ARTIFACT_SRC = "/assets/3d/balenciaga-3xl.glb";
-useGLTF.preload(ARTIFACT_SRC);
 
 type Accent = "white" | "silver" | "gold";
 
@@ -67,87 +68,84 @@ const ACCENT: Record<
 };
 
 interface SneakerPlanetProps {
-  /* videoSrc se mantiene en la API por compat con Collections — ya no se
-     usa (la zapa ahora es el GLB 3D Balenciaga 3XL, misma tecnica que
-     MeteoriteSection). El accent sigue cambiando lighting/rings/material. */
-  videoSrc?: string;
+  videoSrc: string;
   accent?: Accent;
   posterSrc?: string;
 }
 
 /* ============================================================================
-   ARTIFACT — GLB 3D REAL (Balenciaga 3XL), misma tecnica que MeteoriteSection.
-   ============================================================================
-   Sustituye el viejo plane con video texture por geometria 3D real:
-     - useGLTF carga el .glb (Draco decoded, ya optimizado a 1.21 MB)
-     - scene.clone(true) -> instance independiente por mount (permite tener
-       2 escenas del mismo modelo si haria falta)
-     - bbox fit a TARGET_SIZE para que la zapa quepa dentro del cristal
-     - envMapIntensity boost segun accent -> reflejos del HDRI mas/menos
-       intensos (gold mas intenso, silver medio, white neutral)
-     - Float (drei) hace el motion organico (Y bobbing + slight tilt)
-     - useFrame rotation Y continua -> "spin" del producto
+   VIDEO TEXTURE — Golden Goose webm como THREE.VideoTexture. La zapa real
+   del producto, no un GLB generico.
    ============================================================================ */
-function Artifact({ accent, isMobile }: { accent: Accent; isMobile: boolean }) {
-  const { scene } = useGLTF(ARTIFACT_SRC);
-  const groupRef = useRef<THREE.Group>(null);
+function useVideoTexture(src: string): THREE.VideoTexture | null {
+  const [texture, setTexture] = useState<THREE.VideoTexture | null>(null);
 
-  /* Boost por accent: gold +50%, silver +30%, white neutral. */
-  const envBoost = accent === "gold" ? 1.55 : accent === "silver" ? 1.30 : 1.05;
-  /* Tamano: que entre comodo en la sphere (radio 1.55). 1.55 wide deja
-     ~0.05 de margen. */
-  const TARGET = 1.55;
+  useEffect(() => {
+    const video = document.createElement("video");
+    video.src = src;
+    video.crossOrigin = "anonymous";
+    video.loop = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.preload = "auto";
+    const p = video.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
 
-  const cloned = useMemo(() => {
-    const c = scene.clone(true);
-    c.updateMatrixWorld(true);
-    const bbox = new THREE.Box3().setFromObject(c);
-    const size = new THREE.Vector3();
-    bbox.getSize(size);
-    const longest = Math.max(size.x, size.y, size.z) || 1;
-    const fitScale = TARGET / longest;
-    c.scale.setScalar(fitScale);
-    c.updateMatrixWorld(true);
-    bbox.setFromObject(c);
-    const center = new THREE.Vector3();
-    bbox.getCenter(center);
-    c.position.sub(center);
+    const tex = new THREE.VideoTexture(video);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    tex.premultiplyAlpha = false;
+    setTexture(tex);
 
-    c.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) {
-        const mesh = o as THREE.Mesh;
-        mesh.castShadow = true;
-        mesh.receiveShadow = false;
-        const mat = mesh.material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[];
-        const apply = (m: THREE.MeshStandardMaterial) => {
-          if ((m as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
-            m.envMapIntensity = envBoost;
-          }
-        };
-        if (Array.isArray(mat)) mat.forEach(apply);
-        else apply(mat as THREE.MeshStandardMaterial);
-      }
-    });
-    return c;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scene, envBoost]);
+    return () => {
+      tex.dispose();
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [src]);
 
-  /* Spin continuo sobre Y (mostrar todas las caras del producto). */
-  useFrame((_, dt) => {
-    if (groupRef.current) groupRef.current.rotation.y += dt * 0.35;
+  return texture;
+}
+
+/* ============================================================================
+   SNEAKER — plane billboarded con video Golden Goose (alpha real).
+   - depthTest:false + renderOrder=100 -> SIEMPRE visible
+   - toneMapped:true -> entra al pipeline, no satura el bloom
+   ============================================================================ */
+function Sneaker({ videoSrc }: { videoSrc: string }) {
+  const texture = useVideoTexture(videoSrc);
+  const ref = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (!ref.current) return;
+    const t = state.clock.elapsedTime;
+    ref.current.position.y = Math.sin(t * 0.5) * 0.05;
+    ref.current.rotation.z = Math.sin(t * 0.4) * 0.01;
   });
 
+  if (!texture) return null;
+
+  const W = 1.85;
+  const H = 1.388;
+
   return (
-    <Float
-      speed={isMobile ? 0 : 1.4}
-      rotationIntensity={isMobile ? 0 : 0.25}
-      floatIntensity={isMobile ? 0 : 0.35}
-      floatingRange={[-0.05, 0.05]}
-    >
-      <group ref={groupRef}>
-        <primitive object={cloned} />
-      </group>
-    </Float>
+    <Billboard follow lockX={false} lockY={false} lockZ={false}>
+      <mesh ref={ref} renderOrder={100}>
+        <planeGeometry args={[W, H]} />
+        <meshBasicMaterial
+          map={texture}
+          transparent
+          depthTest={false}
+          depthWrite={false}
+          toneMapped
+          alphaTest={0.04}
+        />
+      </mesh>
+    </Billboard>
   );
 }
 
@@ -241,49 +239,38 @@ function GlassSphere({
 }
 
 /* ============================================================================
-   ORBIT RING — anillo Saturno cerca de la equatorial. Sin tick extra (era
-   la causa de las "rajaduras" diagonales del v1).
+   ORBIT RINGS — 3 toruses delgados rotando en ejes desincronizados. EXACTO
+   recipe que MeteoriteSection (orange / blue / white, meshBasicMaterial,
+   tilts fijos en el group + rotation animada en el mesh propio).
+   Misma estetica HUD 3D sutil que la seccion del 3xl al final de la pagina.
    ============================================================================ */
-function OrbitRing({
-  radius,
-  thickness,
-  tilt,
-  speed,
-  color,
-  emissiveBoost = 1,
-  segments = 160,
-}: {
-  radius: number;
-  thickness: number;
-  tilt: [number, number, number];
-  speed: number;
-  color: string;
-  emissiveBoost?: number;
-  segments?: number;
-}) {
-  const ref = useRef<THREE.Group>(null);
+function OrbitRings({ isMobile }: { isMobile: boolean }) {
+  const a = useRef<THREE.Mesh>(null);
+  const b = useRef<THREE.Mesh>(null);
+  const c = useRef<THREE.Mesh>(null);
 
   useFrame((_, dt) => {
-    if (ref.current) ref.current.rotation.y += dt * speed;
+    if (a.current) a.current.rotation.z += dt * 0.18;
+    if (b.current) b.current.rotation.x += dt * 0.22;
+    if (c.current) c.current.rotation.y += dt * 0.10;
   });
 
   return (
-    <group rotation={tilt}>
-      <group ref={ref}>
-        <mesh renderOrder={-5}>
-          <torusGeometry args={[radius, thickness, 32, segments]} />
-          <meshStandardMaterial
-            color={color}
-            emissive={color}
-            emissiveIntensity={0.65 * emissiveBoost}
-            metalness={0.90}
-            roughness={0.18}
-            transparent
-            opacity={0.78}
-            depthWrite={false}
-          />
+    <group>
+      <mesh ref={a} rotation={[Math.PI / 2.3, 0, 0]}>
+        <torusGeometry args={[2.2, 0.005, 8, 96]} />
+        <meshBasicMaterial color="#f4a982" transparent opacity={0.55} />
+      </mesh>
+      {!isMobile && (
+        <mesh ref={b} rotation={[Math.PI / 3, Math.PI / 6, 0]}>
+          <torusGeometry args={[2.6, 0.004, 8, 96]} />
+          <meshBasicMaterial color="#5da3ff" transparent opacity={0.38} />
         </mesh>
-      </group>
+      )}
+      <mesh ref={c} rotation={[0, 0, Math.PI / 4]}>
+        <torusGeometry args={[3.0, 0.003, 8, 96]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.18} />
+      </mesh>
     </group>
   );
 }
@@ -328,10 +315,12 @@ function Backdrop({ accent }: { accent: Accent }) {
    SCENE
    ============================================================================ */
 function Scene({
+  videoSrc,
   accent,
   isMobile,
   perfDegraded,
 }: {
+  videoSrc: string;
   accent: Accent;
   isMobile: boolean;
   perfDegraded: boolean;
@@ -343,7 +332,8 @@ function Scene({
     <>
       <Backdrop accent={accent} />
 
-      {/* === LIGHTING - 3 sources solo (key + fill + Environment) === */}
+      {/* === LIGHTING — mismo recipe que MeteoriteSection (key warm + rim
+              fria + fill warm bajo). Tinted con el accent.                */}
       <ambientLight intensity={0.30} />
       <directionalLight
         position={[3.5, 4, 4]}
@@ -356,55 +346,50 @@ function Scene({
         intensity={0.35}
         color={c.rim}
       />
+      {/* point light calida atras-abajo, replica del 3xl */}
+      <pointLight position={[0, 1.0, -3]} intensity={0.55} color="#f4a982" />
 
-      {/* === HDRI - "studio" da reflejos limpios para producto luxury.
-              "city" era mas "city street" - mas sucio.                 */}
-      {!lowQuality && <Environment preset="studio" />}
+      {/* === HDRI "city" — mismo preset que el 3xl, para que los reflejos
+              en el cristal se sientan iguales en las 2 escenas.            */}
+      {!lowQuality && <Environment preset="city" background={false} />}
 
-      {/* === STARS de fondo, mucho mas sutiles que v1 (eran 1200) === */}
+      {/* === STARS — config IDENTICA al 3xl: radius 50, depth 50,
+              count 1200, factor 3, speed 0.4 (en desktop). */}
       <Stars
-        radius={28}
-        depth={16}
-        count={lowQuality ? 180 : 520}
-        factor={1.4}
+        radius={50}
+        depth={50}
+        count={lowQuality ? 300 : 1200}
+        factor={3}
         saturation={0}
         fade
-        speed={0.18}
+        speed={lowQuality ? 0 : 0.4}
       />
 
-      {/* === 2 ANILLOS cerca de la equatorial — pasan POR DETRAS del zapa
-              en el frente y POR DELANTE atras. Tilts chicos (PI/2 ± 0.18)
-              dejan el centro horizontal libre, la zapa no es cruzada.   */}
-      <OrbitRing
-        radius={2.05}
-        thickness={0.008}
-        tilt={[Math.PI / 2 + 0.18, 0.0, 0.05]}
-        speed={0.06}
-        color={c.ring}
-        emissiveBoost={1.0}
-        segments={lowQuality ? 96 : 200}
-      />
-      <OrbitRing
-        radius={2.55}
-        thickness={0.005}
-        tilt={[Math.PI / 2 - 0.22, 0.18, -0.04]}
-        speed={-0.04}
-        color={c.ring}
-        emissiveBoost={0.75}
-        segments={lowQuality ? 96 : 200}
+      {/* === SPARKLES — "pintitas tipo estrellas" igual al 3xl: color
+              naranja calido #f4a982, size 3, opacity 0.7, count 70. */}
+      <Sparkles
+        count={lowQuality ? 30 : 70}
+        scale={[6, 4, 6]}
+        size={3}
+        speed={0.35}
+        opacity={0.7}
+        color="#f4a982"
       />
 
-      {/* === GLASS SPHERE (renderOrder 5) === */}
+      {/* === ANILLOS — 3 toruses orange/blue/white EXACTOS al 3xl === */}
+      <OrbitRings isMobile={lowQuality} />
+
+      {/* === GLASS SPHERE — sigue envolviendo al producto en el porthole === */}
       <GlassSphere accent={accent} isMobile={lowQuality} />
 
       {/* === PISO ESPEJADO debajo de la zapa (replica MeteoriteSection) === */}
       <ReflectiveFloor isMobile={lowQuality} />
 
-      {/* === CONTACT SHADOW extra para reforzar el grounding sobre el piso === */}
+      {/* === CONTACT SHADOW extra para reforzar el grounding === */}
       {!lowQuality && (
         <ContactShadows
           position={[0, -0.99, 0]}
-          opacity={0.55}
+          opacity={0.45}
           scale={3.5}
           blur={2.4}
           far={3}
@@ -413,18 +398,8 @@ function Scene({
         />
       )}
 
-      {/* === PARTICULAS muy sutiles, casi solo polvo === */}
-      <Sparkles
-        count={lowQuality ? 28 : 75}
-        scale={[5, 4, 5]}
-        size={lowQuality ? 1.0 : 1.6}
-        speed={0.18}
-        opacity={0.55}
-        color={c.particles}
-      />
-
-      {/* === ARTIFACT GLB 3D real (misma tecnica que MeteoriteSection) === */}
-      <Artifact accent={accent} isMobile={lowQuality} />
+      {/* === SNEAKER Golden Goose (video texture, alpha real) === */}
+      <Sneaker videoSrc={videoSrc} />
 
       {/* === POSTPROC - Bloom MUY sutil + Vignette. Sin chromatic ab. === */}
       {!lowQuality && (
@@ -447,6 +422,7 @@ function Scene({
    ROOT — wrapper circular clipado (porthole)
    ============================================================================ */
 function SneakerPlanetImpl({
+  videoSrc,
   accent = "gold",
   posterSrc,
 }: SneakerPlanetProps) {
@@ -492,6 +468,7 @@ function SneakerPlanetImpl({
           <AdaptiveEvents />
           <ParallaxRig isMobile={isMobile} />
           <Scene
+            videoSrc={videoSrc}
             accent={accent}
             isMobile={isMobile}
             perfDegraded={perfDegraded}
