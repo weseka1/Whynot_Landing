@@ -119,9 +119,11 @@ function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
   const actionRef = useRef<THREE.AnimationAction | null>(null);
   /* Refs para el tween de caida Y. tweenStartMsRef = null cuando no hay
      tween activo. clipDurationRef = duracion del clip / timeScale para
-     sincronizar el tween con la animacion. */
+     sincronizar el tween con la animacion. Default 3s para modelos sin
+     animacion interna (antes era 1s, demasiado rapido — el tween de Y
+     se completaba en 1s y el mono quedaba estatico). */
   const tweenStartMsRef = useRef<number | null>(null);
-  const clipDurationRef = useRef<number>(1);
+  const clipDurationRef = useRef<number>(3);
 
   /* Posicion inicial del wrapper: ARRIBA del frame, fuera del viewport del
      canvas. Se setea siempre (haya o no clip de animacion) para que modelos
