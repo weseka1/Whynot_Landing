@@ -504,7 +504,10 @@ export default function PastDrop() {
       ref={sectionRef}
       style={{
         position: "relative",
-        minHeight: "260vh",
+        /* 180vh = 100vh sticky + 80vh de scroll para mover el carrusel
+           (= ~5.7vh por specimen, snappy). Antes 260vh dejaba 80vh extra
+           al final que se sentian "vacios" antes del corte a GALLERY.    */
+        minHeight: "180vh",
         background: "#e0b3f5", // vibrant pink-lavender (mas vivo que el #cdb5f0 anterior)
         color: "#0a0a14",
         overflow: "hidden",
