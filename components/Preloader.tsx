@@ -57,7 +57,7 @@ const CRITICAL_ASSETS: Asset[] = [
      Precargarlos en el HTTP cache evita el pop-in al scrollear.        */
   { url: "/assets/3d/mono-dorado.glb",             kind: "fetch", weight: 810 },
   { url: "/assets/3d/mono-rigged.glb",             kind: "fetch", weight: 706 },
-  { url: "/assets/3d/mono-blanco-dorado.glb",      kind: "fetch", weight: 1707 },
+  { url: "/assets/3d/mono-blanco-dorado.glb",      kind: "fetch", weight: 846 },
   { url: "/assets/3d/mono-blanco.glb",             kind: "fetch", weight: 737 },
   { url: "/assets/3d/mono-louis.glb",              kind: "fetch", weight: 463 },
   { url: "/assets/3d/gotila-esenssial.glb",        kind: "fetch", weight: 521 },
