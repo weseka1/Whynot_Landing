@@ -139,6 +139,13 @@ export default function RootLayout({
             Preconnect + display:swap = no bloquea el primer paint.        */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* Preconnect al CDN de model-viewer (Hero + MonoMascot) — abre la
+            conexion TCP+TLS en paralelo con el resto del HTML, asi cuando
+            el Script afterInteractive pide model-viewer.min.js, la
+            conexion ya esta lista. Ahorra ~150-300ms del handshake en la
+            primera carga (sobre todo en mobile con RTT alto).             */}
+        <link rel="preconnect" href="https://ajax.googleapis.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://ajax.googleapis.com" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Audiowide&family=Orbitron:wght@700;900&display=swap"

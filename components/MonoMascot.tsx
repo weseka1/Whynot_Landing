@@ -119,7 +119,7 @@ export default function MonoMascot({
     document.addEventListener("visibilitychange", onVis);
 
     window.addEventListener("mousemove", onMove, { passive: true });
-    window.addEventListener("mouseleave", onLeave);
+    window.addEventListener("mouseleave", onLeave, { passive: true });
     start();
 
     return () => {

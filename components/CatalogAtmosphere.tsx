@@ -161,7 +161,7 @@ export function CursorGlow() {
         el.style.transform = `translate3d(${e.clientX - 200}px, ${e.clientY - 200}px, 0)`;
       });
     };
-    window.addEventListener("mousemove", update);
+    window.addEventListener("mousemove", update, { passive: true });
     return () => {
       window.removeEventListener("mousemove", update);
       cancelAnimationFrame(raf);

@@ -172,11 +172,11 @@ export default function WhyNotEnd() {
       rafId = requestAnimationFrame(tick);
     }, 50);
 
-    window.addEventListener("resize", resize);
+    window.addEventListener("resize", resize, { passive: true });
     // En touch devices no agregamos listeners de mouse (no aplican y consume CPU)
     if (!isTouch) {
-      canvas.addEventListener("mousemove", onMove);
-      canvas.addEventListener("mouseleave", onLeave);
+      canvas.addEventListener("mousemove", onMove, { passive: true });
+      canvas.addEventListener("mouseleave", onLeave, { passive: true });
     }
 
     return () => {
