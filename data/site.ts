@@ -117,7 +117,7 @@ export const site = {
       {
         id:    ".005 DUDAS",
         label: "¿Tenés dudas?",
-        copy:  "Contactate con un asesor de ventas. Podés pedir un video unboxing del producto antes de la compra.",
+        copy:  "Contactate con un asesor de ventas. Podés pedir un video umboxing del producto antes de la compra.",
         channels: [
           { type: "whatsapp",  display: "Chat WhatsApp",     url: "https://wa.me/5491176295915" },
           { type: "instagram", display: "@whynot_exclusive", url: "https://www.instagram.com/whynot_exclusive/" },
