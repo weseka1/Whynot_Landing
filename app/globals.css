@@ -548,16 +548,29 @@ model-viewer {
   #section-mission > div:nth-of-type(2) > div:first-child h2 {
     font-size: clamp(2.5rem, 11vw, 4.5rem) !important;
   }
-  /* Monos del Mission visibles en mobile (4 pilares + header dorado).
-     El IntersectionObserver lazy-mount + frameloop:demand de drei mantienen
-     solo 1-2 canvas activos a la vez (los que estan en viewport). Total
-     WebGL contexts simultaneos: Hero(1) + Mission visibles(~2) +
-     Meteorite(1) = ~4. Dentro del limite de mobile.
+  /* CRITICO MOBILE: el cartel "Application error" volvio. Hipotesis solida:
+     WebGL context limit (mobile: 4-8 contexts). En la home navegando estaban
+     activos al mismo tiempo Hero + 5 Mission monkeys + Meteorite = 7
+     contexts. Al entrar al catalogo aparece tambien el MonoMascot del
+     header → llegamos a 8+. Browser mata contexts → R3F throw → cartel.
 
-     Division entre pilares: queremos que la linea (borderTop del siguiente
-     pilar) coincida visualmente con donde el mono "aterriza". Reducimos
-     el wrapper a 45vh y quitamos padding-bottom del pilar para que la
-     linea quede justo despues del wrapper del mono. */
+     Fix conservador: ocultamos los 5 monos del Mission en mobile via
+     display:none (el IO interno nunca los reporta intersecting →
+     shouldMount=false → no se crea Canvas → no se crea WebGL context).
+     En mobile el Mission queda como tipografia premium. Los monos vuelven
+     en desktop (>= 769px) donde el limite WebGL es 16.
+
+     Contextos en mobile despues de este fix:
+       - Hero <model-viewer>: 1
+       - MonoMascot del catalogo (cuando estas ahi): 1
+       - Meteorite <Canvas> (lazy mount): 1
+     Total: 3 max. Lejos del limite. */
+  #section-mission > div:nth-of-type(2) > div:first-child > div:nth-child(2) {
+    display: none !important;
+  }
+  #section-mission [data-pillar-monkey] {
+    display: none !important;
+  }
 
   /* Pilares: stack vertical texto-arriba mono-abajo en mobile.
      Nota: en el codigo el div interior es flex con justifyContent center
