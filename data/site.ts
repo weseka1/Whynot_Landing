@@ -107,12 +107,12 @@ export const site = {
       {
         id:    ".003 CABA",
         label: "¿Sos de CABA o GBA?",
-        copy:  "Los envíos son en el día. Y SÍ, podés abonar TODO al recibir 🫵🏼. Contactate con nosotros para coordinarlo 🫡",
+        copy:  "Los envíos son en el día. Y SÍ, podés abonar TODO al recibir. Contactate con nosotros para coordinarlo.",
       },
       {
         id:    ".004 ARGENTINA",
-        label: "¡Llegamos a TODO Argentina! 🇦🇷",
-        copy:  "De la mano de OCA y Correo Argentino despachamos tu pedido a cualquier parte del país. Entrega de 2 a 3 días hábiles 🔥 (excepción Tierra del Fuego: 5 a 7 días 📦).",
+        label: "¡Llegamos a TODO Argentina!",
+        copy:  "De la mano de OCA y Correo Argentino despachamos tu pedido a cualquier parte del país. Entrega de 2 a 3 días hábiles (excepción Tierra del Fuego: 5 a 7 días).",
       },
       {
         id:    ".005 DUDAS",
@@ -129,7 +129,7 @@ export const site = {
        con una frase grande abajo. Funciona como sello/firma de la
        seccion completa. */
     closing: {
-      phrase: "¡Estamos para ayudarte a encontrar tu mejor DROP! 🫵🏼🫡",
+      phrase: "¡Estamos para ayudarte a encontrar tu mejor DROP!",
     },
   },
 
