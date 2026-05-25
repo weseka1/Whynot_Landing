@@ -442,10 +442,16 @@ function SneakerPlanetImpl({
           "inset 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(20,18,15,0.35)",
       }}
     >
-      {/* Overlay radial-gradient: pearl edge fade. Sin tocar la sphere ni el
-         render 3D. Transparente en el centro 68% (la sphere vive ahi), va
-         fundiendo a pearl en el edge 95-100%. Cubre el "dark crescent"
-         que se veia al lado del orbe sin alterar nada de la escena.       */}
+      {/* Overlay radial pearl-edge: cubre el dark crescent al borde del
+         porthole, sin tocar la sphere ni el render 3D.
+         CLAVE: "circle 50% at center" → el 100% del gradient queda atado
+         al borde INSCRITO del circulo (porthole edge), no a la esquina
+         del cuadrado. Sin esto, el pearl quedaba en las esquinas
+         clipeadas por el borderRadius:50% y casi nada llegaba al edge
+         visible del porthole.
+         Stops: transparente al 65% (sphere vive ahi sin tocar), fade
+         denso hasta pearl al 92% -> cubre la franja oscura entre sphere
+         y borde con un transition suave que se siente como vineta.       */}
       <div
         aria-hidden
         style={{
@@ -453,7 +459,7 @@ function SneakerPlanetImpl({
           inset: 0,
           pointerEvents: "none",
           background:
-            "radial-gradient(circle at center, transparent 68%, var(--color-pearl) 100%)",
+            "radial-gradient(circle 50% at center, transparent 65%, var(--color-pearl) 92%)",
           zIndex: 2,
         }}
       />
