@@ -18,7 +18,7 @@
     10  HUD top+bottom    — SPEC_NNN, pulse dot, coords X//Y reactivas
    ============================================================================ */
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import {
   motion,
   useScroll,
@@ -34,6 +34,7 @@ import { site } from "@/data/site";
 import { HERO_SPECS, resolveHeroSpec, type CatalogEntry } from "@/data/catalog";
 import { Scanlines, CursorGlow } from "@/components/CatalogAtmosphere";
 import CommandPalette from "@/components/CommandPalette";
+import { useIsMobile } from "@/components/useIsMobile";
 
 /* ---------------- METADATA ----------------
    Cada Spec se construye a partir de un HeroSpec (video + path canonico al
@@ -105,13 +106,49 @@ function buildSpec(hs: typeof HERO_SPECS[number], i: number): Spec {
 const SPECS: Spec[] = HERO_SPECS.map(buildSpec);
 const N = SPECS.length;
 
-/* ---------------- LAYOUT ---------------- */
-const CIRCLE_SIZE = 340;  // diámetro de la cápsula activa (px)
-const SPACING = 290;      // distancia entre centros — overlap suave (~50px)
-const SIDE_SCALE = 0.48;  // off=±1 — bastante más chicas (deja respirar al activo)
-const OUTER_SCALE = 0.32; // off=±2
-const FADE_START = 1.7;
-const FADE_END = 2.5;
+/* ---------------- LAYOUT ----------------
+   Dos perfiles: desktop (mas grande, overlap suave entre vecinos para
+   sensacion de "profundidad") y mobile (mas chico, vecinos claramente
+   separados del activo para que un tap accidental sobre el vecino sea
+   imposible y el swipe se sienta natural). El factor critico es la
+   relacion SPACING/CIRCLE_SIZE — desktop 0.85 (overlap), mobile 1.18
+   (gap real entre vecinos).                                            */
+type Layout = {
+  CIRCLE_SIZE: number;
+  SPACING: number;
+  SIDE_SCALE: number;
+  OUTER_SCALE: number;
+  FADE_START: number;
+  FADE_END: number;
+  DRAG_THRESHOLD_PX: number;
+  /* Solo renderizamos el <video> y decoraciones pesadas de las capsulas
+     dentro de esta distancia del activo. El resto = disco blanco vacio.
+     Evita tener 14 <video> + 14 SVG ring + 14 scanning arc animandose
+     todo el tiempo en mobile.                                          */
+  VIDEO_RENDER_RANGE: number;
+};
+
+const LAYOUT_DESKTOP: Layout = {
+  CIRCLE_SIZE: 340,
+  SPACING: 290,
+  SIDE_SCALE: 0.48,
+  OUTER_SCALE: 0.32,
+  FADE_START: 1.7,
+  FADE_END: 2.5,
+  DRAG_THRESHOLD_PX: 4,
+  VIDEO_RENDER_RANGE: 3,
+};
+
+const LAYOUT_MOBILE: Layout = {
+  CIRCLE_SIZE: 220,
+  SPACING: 260,   // > CIRCLE_SIZE → gap real entre activo y vecinos
+  SIDE_SCALE: 0.42,
+  OUTER_SCALE: 0.22,
+  FADE_START: 1.2,
+  FADE_END: 2.0,
+  DRAG_THRESHOLD_PX: 10, // mas tolerante: el dedo se mueve sin querer
+  VIDEO_RENDER_RANGE: 2, // solo 5 videos vivos a la vez
+};
 
 const GOLD = "#e8c468";   // ámbar pálido — el accent del sistema
 const GOLD_DIM = "rgba(232,196,104,0.55)";
@@ -127,17 +164,21 @@ function wrapOffset(raw: number, total: number) {
   if (o < -total / 2) o += total;
   return o;
 }
-function scaleForOffset(off: number) {
-  const a = Math.abs(off);
-  if (a <= 1) return 1 - (1 - SIDE_SCALE) * a;
-  if (a <= 2) return SIDE_SCALE - (SIDE_SCALE - OUTER_SCALE) * (a - 1);
-  return OUTER_SCALE;
+function makeScaleForOffset(L: Layout) {
+  return (off: number) => {
+    const a = Math.abs(off);
+    if (a <= 1) return 1 - (1 - L.SIDE_SCALE) * a;
+    if (a <= 2) return L.SIDE_SCALE - (L.SIDE_SCALE - L.OUTER_SCALE) * (a - 1);
+    return L.OUTER_SCALE;
+  };
 }
-function opacityForOffset(off: number) {
-  const a = Math.abs(off);
-  if (a <= FADE_START) return 1;
-  if (a >= FADE_END) return 0;
-  return 1 - (a - FADE_START) / (FADE_END - FADE_START);
+function makeOpacityForOffset(L: Layout) {
+  return (off: number) => {
+    const a = Math.abs(off);
+    if (a <= L.FADE_START) return 1;
+    if (a >= L.FADE_END) return 0;
+    return 1 - (a - L.FADE_START) / (L.FADE_END - L.FADE_START);
+  };
 }
 
 /* ============================================================================ */
@@ -145,6 +186,14 @@ export default function PastDrop() {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  /* Layout responsive: mobile usa circulos mas chicos, vecinos separados
+     del activo, y threshold de drag mas alto para que el dedo se pueda
+     mover sin que se interprete como tap.                              */
+  const isMobile = useIsMobile();
+  const L = isMobile ? LAYOUT_MOBILE : LAYOUT_DESKTOP;
+  const scaleForOffset = useMemo(() => makeScaleForOffset(L), [L]);
+  const opacityForOffset = useMemo(() => makeOpacityForOffset(L), [L]);
 
   /* ---------- Command palette (search global) ---------- */
   const [searchOpen, setSearchOpen] = useState(false);
@@ -212,38 +261,52 @@ export default function PastDrop() {
   }, [mouseX, mouseY]);
 
   /* ---------- Drag handlers (con disambiguación click vs drag) ----------
-     Si el puntero se movió más de DRAG_THRESHOLD_PX entre down y up → fue
-     drag → no navegar. Si fue click puro → navegar al href del activo.    */
-  /* Threshold pixel para distinguir tap de swipe. En mobile, los dedos
-     mueven al menos 3-4px sin querer. Bajamos de 8 a 4 para que el swipe
-     se detecte temprano y NO se interprete como click → asi se puede
-     deslizar para cambiar de specimen en lugar de abrir el catalogo.    */
-  const DRAG_THRESHOLD_PX = 4;
+     Threshold viene del Layout: mobile 10px (los dedos se mueven sin
+     querer al posar), desktop 4px. Si el puntero se mueve mas que eso
+     entre down y up → fue swipe → NO navegamos. Ademas:
+     - Solo navegamos si el tap aterrizo CERCA del centro del stage
+       (sobre el activo). Tap sobre un vecino mientras se desliza no
+       abre el catalogo de la marca equivocada.
+     - Si el movimiento es claramente vertical (dy > dx*1.4), dejamos al
+       browser hacer scroll y NO movemos el carrusel. Evita que el carrusel
+       se arrastre al hacer scroll con el pulgar sobre la zona del stage. */
   const dragRef = useRef<{
     startX: number;
+    startY: number;
     baseOffset: number;
     didDrag: boolean;
+    landedOnActive: boolean;
   } | null>(null);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const distFromCenter = Math.abs(e.clientX - cx);
+      const landedOnActive = distFromCenter <= L.CIRCLE_SIZE / 2;
       dragRef.current = {
         startX: e.clientX,
+        startY: e.clientY,
         baseOffset: dragOffset.get(),
         didDrag: false,
+        landedOnActive,
       };
     },
-    [dragOffset]
+    [dragOffset, L.CIRCLE_SIZE]
   );
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!dragRef.current) return;
       const dx = e.clientX - dragRef.current.startX;
-      if (Math.abs(dx) > DRAG_THRESHOLD_PX) dragRef.current.didDrag = true;
-      dragOffset.set(dragRef.current.baseOffset - dx / SPACING);
+      const dy = e.clientY - dragRef.current.startY;
+      if (!dragRef.current.didDrag && Math.abs(dy) > Math.abs(dx) * 1.4) {
+        return;
+      }
+      if (Math.abs(dx) > L.DRAG_THRESHOLD_PX) dragRef.current.didDrag = true;
+      dragOffset.set(dragRef.current.baseOffset - dx / L.SPACING);
     },
-    [dragOffset]
+    [dragOffset, L.DRAG_THRESHOLD_PX, L.SPACING]
   );
   const onPointerUp = useCallback(
     (e: React.PointerEvent) => {
@@ -251,9 +314,9 @@ export default function PastDrop() {
       try {
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {}
-      const didDrag = dragRef.current.didDrag;
+      const { didDrag, landedOnActive } = dragRef.current;
       dragRef.current = null;
-      if (!didDrag) {
+      if (!didDrag && landedOnActive) {
         const href = SPECS[lastIdxRef.current]?.href;
         if (href) router.push(href);
       }
@@ -352,7 +415,7 @@ export default function PastDrop() {
         {/* ----- BACKGROUND LAYERS ----- */}
         <BackgroundAurora />
         <BackgroundGrid />
-        <BackgroundParticles />
+        <BackgroundParticles count={isMobile ? 8 : 22} />
 
         {/* ----- GIANT BRAND TEXT BEHIND -----
              Sobre lila: italic oscuro en lugar de white-on-dark. Sin
@@ -392,6 +455,7 @@ export default function PastDrop() {
           active={active}
           activeIndex={activeIndex}
           onSearchClick={() => setSearchOpen(true)}
+          isMobile={isMobile}
         />
 
         {/* ----- TITLE + EYEBROW ----- */}
@@ -486,16 +550,31 @@ export default function PastDrop() {
               tiltY={tiltY}
               registerRef={(el) => { videoRefs.current[i] = el; }}
               onLoadedMetadata={onLoadedMetadata}
+              activeIndex={activeIndex}
+              layout={L}
+              isMobile={isMobile}
+              scaleForOffset={scaleForOffset}
+              opacityForOffset={opacityForOffset}
             />
           ))}
         </div>
 
-        {/* ----- NAV ARROWS (hermanas del stage para no pisar el drag) ----- */}
-        <NavArrow direction="left" onClick={() => advance(-1)} />
-        <NavArrow direction="right" onClick={() => advance(1)} />
+        {/* ----- NAV ARROWS (hermanas del stage para no pisar el drag).
+                Mobile las oculta: el swipe es la interaccion natural y los
+                arrows se apretujaban con los vecinos en pantallas chicas. */}
+        {!isMobile && (
+          <>
+            <NavArrow direction="left" onClick={() => advance(-1)} />
+            <NavArrow direction="right" onClick={() => advance(1)} />
+          </>
+        )}
 
-        {/* ----- METADATA PANEL (left) ----- */}
-        <MetadataPanel active={active} activeIndex={activeIndex} luminosity={luminosity} />
+        {/* ----- METADATA PANEL (left). Mobile lo oculta — toda esa info ya
+                esta en el HUD top + bottom + corner labels del activo;
+                apretarla a la izquierda en 375px tapaba al specimen. ----- */}
+        {!isMobile && (
+          <MetadataPanel active={active} activeIndex={activeIndex} luminosity={luminosity} />
+        )}
 
         {/* ----- PROGRESS TICKS (scrubber visual del archive) ----- */}
         <ProgressTicks activeIndex={activeIndex} position={position} />
@@ -660,9 +739,12 @@ function BackgroundGrid() {
   );
 }
 
-function BackgroundParticles() {
-  /* Deterministic spread → mismo render en SSR y CSR */
-  const items = Array.from({ length: 22 }).map((_, i) => ({
+function BackgroundParticles({ count = 22 }: { count?: number }) {
+  /* Deterministic spread → mismo render en SSR y CSR.
+     Mobile pasa count=8 (vs 22 desktop) — el bg lila ya tiene movimiento
+     suficiente con el aurora, no necesita 22 puntos blureados animados
+     tirando GPU.                                                          */
+  const items = Array.from({ length: count }).map((_, i) => ({
     left: ((i * 37) % 97) + 1,
     top: ((i * 23) % 95) + 2,
     size: 1 + (i % 3),
@@ -709,10 +791,12 @@ function HudTop({
   active,
   activeIndex,
   onSearchClick,
+  isMobile,
 }: {
   active: Spec;
   activeIndex: number;
   onSearchClick?: () => void;
+  isMobile: boolean;
 }) {
   return (
     <div
@@ -728,13 +812,13 @@ function HudTop({
         zIndex: 10,
         color: "rgba(10,10,20,0.7)",
         fontFamily: "var(--font-mono, monospace)",
-        fontSize: "0.7rem",
+        fontSize: isMobile ? "0.62rem" : "0.7rem",
         letterSpacing: "0.22em",
         textTransform: "uppercase",
         pointerEvents: "none",
       }}
     >
-      <div style={{ display: "flex", gap: "1.2rem", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: isMobile ? "0.6rem" : "1.2rem", alignItems: "center" }}>
         <motion.span
           animate={{ opacity: [1, 0.25, 1] }}
           transition={{ duration: 1.8, repeat: Infinity }}
@@ -746,8 +830,10 @@ function HudTop({
         >
           ●
         </motion.span>
-        <span>D://DATA_CORE / ARCHIVE</span>
-        <span style={{ opacity: 0.4 }}>•</span>
+        {/* En mobile "D://DATA_CORE / ARCHIVE • SPEC_NNN" se chocaba con el
+            boton de search a la derecha. Mostramos solo el SPEC_NNN. */}
+        {!isMobile && <span>D://DATA_CORE / ARCHIVE</span>}
+        {!isMobile && <span style={{ opacity: 0.4 }}>•</span>}
         <span style={{ color: "#0a0a14", fontWeight: 600 }}>
           SPEC_{String(activeIndex + 1).padStart(3, "0")}
         </span>
@@ -755,12 +841,14 @@ function HudTop({
       <div
         style={{
           display: "flex",
-          gap: "1rem",
+          gap: isMobile ? "0.55rem" : "1rem",
           alignItems: "center",
           pointerEvents: "auto",
         }}
       >
-        {/* Search trigger glass pill */}
+        {/* Search trigger — en mobile, icono solo (sin "SEARCH" ni "⌘K")
+            para no quitarle ancho al [01/14] de la derecha. Tap target
+            agrandado a 36px minimo. */}
         {onSearchClick && (
           <motion.button
             onClick={onSearchClick}
@@ -772,7 +860,7 @@ function HudTop({
               display: "flex",
               alignItems: "center",
               gap: "0.55rem",
-              padding: "0.35rem 0.8rem",
+              padding: isMobile ? "0.45rem 0.55rem" : "0.35rem 0.8rem",
               background: "rgba(255,255,255,0.6)",
               border: "1.5px solid #0a0a14",
               borderRadius: 999,
@@ -787,25 +875,30 @@ function HudTop({
               WebkitBackdropFilter: "blur(6px)",
               boxShadow:
                 "0 4px 14px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.8)",
+              minWidth: isMobile ? 36 : undefined,
+              minHeight: isMobile ? 36 : undefined,
+              justifyContent: "center",
             }}
           >
-            <span style={{ fontSize: "0.85rem", lineHeight: 1 }}>⌖</span>
-            <span>SEARCH</span>
-            <span
-              style={{
-                padding: "1px 6px",
-                background: "rgba(244,220,63,0.6)",
-                border: "1px solid #0a0a14",
-                borderRadius: 4,
-                fontSize: "0.52rem",
-                letterSpacing: "0.18em",
-              }}
-            >
-              ⌘K
-            </span>
+            <span style={{ fontSize: "0.95rem", lineHeight: 1 }}>⌖</span>
+            {!isMobile && <span>SEARCH</span>}
+            {!isMobile && (
+              <span
+                style={{
+                  padding: "1px 6px",
+                  background: "rgba(244,220,63,0.6)",
+                  border: "1px solid #0a0a14",
+                  borderRadius: 4,
+                  fontSize: "0.52rem",
+                  letterSpacing: "0.18em",
+                }}
+              >
+                ⌘K
+              </span>
+            )}
           </motion.button>
         )}
-        <span style={{ opacity: 0.55 }}>{active.spec}</span>
+        {!isMobile && <span style={{ opacity: 0.55 }}>{active.spec}</span>}
         <span style={{ color: "#0a0a14", fontWeight: 600 }}>
           [{String(activeIndex + 1).padStart(2, "0")}/{String(N).padStart(2, "0")}]
         </span>
@@ -968,6 +1061,11 @@ type CapsuleProps = {
   tiltY: MotionValue<number>;
   registerRef: (el: HTMLVideoElement | null) => void;
   onLoadedMetadata: (el: HTMLVideoElement | null) => void;
+  activeIndex: number;
+  layout: Layout;
+  isMobile: boolean;
+  scaleForOffset: (off: number) => number;
+  opacityForOffset: (off: number) => number;
 };
 
 function Capsule({
@@ -978,15 +1076,28 @@ function Capsule({
   tiltY,
   registerRef,
   onLoadedMetadata,
+  activeIndex,
+  layout,
+  isMobile,
+  scaleForOffset,
+  opacityForOffset,
 }: CapsuleProps) {
   /* Offset continuo del item respecto al centro (wrap a [-N/2, N/2)). */
   const offset = useTransform(position, (p) => wrapOffset(index - p, N));
-  const x = useTransform(offset, (o) => o * SPACING);
+  const x = useTransform(offset, (o) => o * layout.SPACING);
   const s = useTransform(offset, scaleForOffset);
   const opacity = useTransform(offset, opacityForOffset);
   const zIndex = useTransform(offset, (o) =>
     Math.round(100 - Math.abs(o) * 10)
   );
+
+  /* Solo renderizamos <video> + decoraciones animadas dentro del rango
+     cercano al activo. Las capsulas lejanas son disco blanco vacio. La
+     opacity de la capsula igual las hace casi invisibles, asi que el
+     usuario no nota la diferencia, pero saltamos N-5 elementos <video>
+     simultaneos + N SVGs animandose — ahorro real de GPU en mobile.    */
+  const distFromActive = Math.abs(wrapOffset(index - activeIndex, N));
+  const renderHeavy = distFromActive <= layout.VIDEO_RENDER_RANGE;
 
   /* "isActive" continuo: 1 cuando offset ≈ 0, 0 cuando se aleja.
      Manija para el tilt (solo el activo se mueve con el mouse) y para
@@ -1016,10 +1127,10 @@ function Capsule({
         position: "absolute",
         left: "50%",
         top: "50%",
-        width: CIRCLE_SIZE,
-        height: CIRCLE_SIZE,
-        marginLeft: -CIRCLE_SIZE / 2,
-        marginTop: -CIRCLE_SIZE / 2,
+        width: layout.CIRCLE_SIZE,
+        height: layout.CIRCLE_SIZE,
+        marginLeft: -layout.CIRCLE_SIZE / 2,
+        marginTop: -layout.CIRCLE_SIZE / 2,
         x,
         scaleX: s,
         scaleY: s,
@@ -1056,68 +1167,80 @@ function Capsule({
         />
       </motion.div>
 
-      {/* ===== Orbital ring (dashed, slow rotation 60s) ===== */}
-      <motion.div
-        aria-hidden
-        animate={{ rotate: 360 }}
-        transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-        style={{
-          position: "absolute",
-          inset: -32,
-          opacity: orbitalOpacity,
-          pointerEvents: "none",
-        }}
-      >
-        <svg viewBox="0 0 400 400" width="100%" height="100%">
-          <circle
-            cx="200"
-            cy="200"
-            r="198"
-            fill="none"
-            stroke="rgba(10,10,20,0.6)"
-            strokeWidth="1"
-            strokeDasharray="2 8"
-          />
-        </svg>
-      </motion.div>
+      {/* ===== Orbital ring (dashed, slow rotation 60s). Solo cerca del
+              activo Y solo en desktop — en mobile el ring se pisa con los
+              markers de los vecinos. ===== */}
+      {renderHeavy && !isMobile && (
+        <motion.div
+          aria-hidden
+          animate={{ rotate: 360 }}
+          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+          style={{
+            position: "absolute",
+            inset: -32,
+            opacity: orbitalOpacity,
+            pointerEvents: "none",
+          }}
+        >
+          <svg viewBox="0 0 400 400" width="100%" height="100%">
+            <circle
+              cx="200"
+              cy="200"
+              r="198"
+              fill="none"
+              stroke="rgba(10,10,20,0.6)"
+              strokeWidth="1"
+              strokeDasharray="2 8"
+            />
+          </svg>
+        </motion.div>
+      )}
 
-      {/* ===== Scanning arc (60° visible, fast rotation 7s) — yellow DICH accent ===== */}
-      <motion.div
-        aria-hidden
-        animate={{ rotate: 360 }}
-        transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
-        style={{
-          position: "absolute",
-          inset: -12,
-          opacity: arcOpacity,
-          pointerEvents: "none",
-        }}
-      >
-        <svg viewBox="0 0 400 400" width="100%" height="100%">
-          <defs>
-            <linearGradient id={`arc-${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(244,220,63,0)" />
-              <stop offset="100%" stopColor="#f4dc3f" />
-            </linearGradient>
-          </defs>
-          <circle
-            cx="200"
-            cy="200"
-            r="196"
-            fill="none"
-            stroke={`url(#arc-${index})`}
-            strokeWidth="2"
-            strokeDasharray="200 1060"
-            strokeLinecap="round"
-          />
-        </svg>
-      </motion.div>
+      {/* ===== Scanning arc (60° visible, fast rotation 7s) — yellow DICH
+              accent. Mismo gating: cerca del activo + solo desktop. ===== */}
+      {renderHeavy && !isMobile && (
+        <motion.div
+          aria-hidden
+          animate={{ rotate: 360 }}
+          transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+          style={{
+            position: "absolute",
+            inset: -12,
+            opacity: arcOpacity,
+            pointerEvents: "none",
+          }}
+        >
+          <svg viewBox="0 0 400 400" width="100%" height="100%">
+            <defs>
+              <linearGradient id={`arc-${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(244,220,63,0)" />
+                <stop offset="100%" stopColor="#f4dc3f" />
+              </linearGradient>
+            </defs>
+            <circle
+              cx="200"
+              cy="200"
+              r="196"
+              fill="none"
+              stroke={`url(#arc-${index})`}
+              strokeWidth="2"
+              strokeDasharray="200 1060"
+              strokeLinecap="round"
+            />
+          </svg>
+        </motion.div>
+      )}
 
-      {/* ===== L-corner markers en el bounding-box del círculo ===== */}
-      <CornerMarker pos="tl" />
-      <CornerMarker pos="tr" />
-      <CornerMarker pos="bl" />
-      <CornerMarker pos="br" />
+      {/* ===== L-corner markers en el bounding-box del círculo. Mobile los
+              oculta para no apretujarse con el marker del vecino. ===== */}
+      {!isMobile && (
+        <>
+          <CornerMarker pos="tl" />
+          <CornerMarker pos="tr" />
+          <CornerMarker pos="bl" />
+          <CornerMarker pos="br" />
+        </>
+      )}
 
       {/* ===== Outer glass capsule (CÍRCULO) — adaptado para lila ===== */}
       <div
@@ -1136,7 +1259,11 @@ function Capsule({
           overflow: "hidden",
         }}
       >
-        {/* ===== Inner white platform (shoe stage) ===== */}
+        {/* ===== Inner white platform (shoe stage). Solo montamos el
+                <video> + decoraciones de la zapa en las capsulas cercanas
+                al activo (renderHeavy). Las lejanas son disco blanco vacio
+                — ya casi no se ven por opacity, asi que el usuario no
+                nota, pero saltamos N-5 elementos <video> simultaneos. */}
         <div
           style={{
             position: "absolute",
@@ -1146,83 +1273,93 @@ function Capsule({
             overflow: "hidden",
           }}
         >
-          <video
-            ref={registerRef}
-            src={spec.src}
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              transform: "scale(0.85)",
-              transformOrigin: "center",
-              pointerEvents: "none",
-              display: "block",
-            }}
-          />
-          {/* Contact shadow bajo la zapa */}
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              bottom: "13%",
-              left: "24%",
-              right: "24%",
-              height: 10,
-              background:
-                "radial-gradient(ellipse at center, rgba(0,0,0,0.22), transparent 70%)",
-              filter: "blur(5px)",
-              pointerEvents: "none",
-            }}
-          />
-          {/* Scan line vertical que recorre el activo (tinte oscuro suave) */}
-          <motion.div
-            aria-hidden
-            animate={{ y: ["-30%", "130%"] }}
-            transition={{ duration: 6.5, repeat: Infinity, ease: "linear" }}
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              height: 50,
-              background:
-                "linear-gradient(180deg, transparent, rgba(10,10,20,0.06), transparent)",
-              pointerEvents: "none",
-              opacity: isActive,
-            }}
-          />
+          {renderHeavy && (
+            <video
+              ref={registerRef}
+              src={spec.src}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                transform: "scale(0.85)",
+                transformOrigin: "center",
+                pointerEvents: "none",
+                display: "block",
+              }}
+            />
+          )}
+          {/* Contact shadow bajo la zapa — solo cuando hay zapa visible */}
+          {renderHeavy && (
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                bottom: "13%",
+                left: "24%",
+                right: "24%",
+                height: 10,
+                background:
+                  "radial-gradient(ellipse at center, rgba(0,0,0,0.22), transparent 70%)",
+                filter: "blur(5px)",
+                pointerEvents: "none",
+              }}
+            />
+          )}
+          {/* Scan line vertical solo en activo cercano */}
+          {renderHeavy && (
+            <motion.div
+              aria-hidden
+              animate={{ y: ["-30%", "130%"] }}
+              transition={{ duration: 6.5, repeat: Infinity, ease: "linear" }}
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                height: 50,
+                background:
+                  "linear-gradient(180deg, transparent, rgba(10,10,20,0.06), transparent)",
+                pointerEvents: "none",
+                opacity: isActive,
+              }}
+            />
+          )}
         </div>
       </div>
 
-      {/* ===== Floating data labels con líneas conectoras (solo en activo) =====
-          Posicionadas FUERA del círculo en las 4 esquinas del bounding box,
-          extendidas hacia los costados. Cada label tiene una thin connector
-          line que apunta hacia el círculo (data-viz minimal aesthetic).        */}
-      <FloatingLabel pos="tl" opacity={isActive}>
-        <span style={{ color: "#ff5436", fontSize: "0.5rem" }}>
-          <motion.span
-            animate={{ opacity: [1, 0.3, 1] }}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            style={{ display: "inline-block" }}
-          >
-            ●
-          </motion.span>
-        </span>{" "}
-        REC
-      </FloatingLabel>
-      <FloatingLabel pos="tr" opacity={isActive}>
-        {spec.year}
-      </FloatingLabel>
-      <FloatingLabel pos="bl" opacity={isActive}>
-        {spec.spec}
-      </FloatingLabel>
-      <FloatingLabel pos="br" opacity={isActive}>
-        <span style={{ color: "#0a0a14", fontWeight: 600 }}>{spec.code}</span>
-      </FloatingLabel>
+      {/* ===== Floating data labels con líneas conectoras (solo en activo).
+          Mobile las oculta: las etiquetas se posicionaban a -125/-110px
+          FUERA del circulo y en una pantalla de 375px desbordaban contra
+          los vecinos. Toda esa info ya esta en el HUD top/bottom. ===== */}
+      {!isMobile && (
+        <>
+          <FloatingLabel pos="tl" opacity={isActive}>
+            <span style={{ color: "#ff5436", fontSize: "0.5rem" }}>
+              <motion.span
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1.4, repeat: Infinity }}
+                style={{ display: "inline-block" }}
+              >
+                ●
+              </motion.span>
+            </span>{" "}
+            REC
+          </FloatingLabel>
+          <FloatingLabel pos="tr" opacity={isActive}>
+            {spec.year}
+          </FloatingLabel>
+          <FloatingLabel pos="bl" opacity={isActive}>
+            {spec.spec}
+          </FloatingLabel>
+          <FloatingLabel pos="br" opacity={isActive}>
+            <span style={{ color: "#0a0a14", fontWeight: 600 }}>{spec.code}</span>
+          </FloatingLabel>
+        </>
+      )}
 
       {/* ===== ENTER prompt (debajo del activo, indica clickeable) ===== */}
       {spec.href && (
