@@ -425,6 +425,19 @@ function SneakerPlanetImpl({
   const isMobile = useIsMobile();
   const [perfDegraded, setPerfDegraded] = useState(false);
 
+  /* Defensa contra el bug del dark crescent intermitente: R3F a veces
+     mide el canvas mientras el motion.div padre todavia tiene scale
+     animandose. CSS transforms NO disparan ResizeObserver, asi que el
+     canvas queda atascado en el size medido al inicio (chico). Forzamos
+     un resize manual al montar y de nuevo despues de 600ms para cubrir
+     cualquier animacion de entrada residual.                            */
+  useEffect(() => {
+    const fire = () => window.dispatchEvent(new Event("resize"));
+    fire();
+    const t = setTimeout(fire, 600);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div
       style={{
