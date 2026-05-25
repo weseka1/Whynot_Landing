@@ -9,7 +9,7 @@
 
    UX:
      - Loop horizontal continuo (marquee CSS de translateX 0 → -50%).
-     - Toggle abajo "WOMEN / MEN" → cambia el set. Tenemos 4 mujeres y 9
+     - Toggle abajo "WOMEN / MEN" → cambia el set. Tenemos 3 mujeres y 9
        hombres en la carpeta, asi que duplicamos el array hasta tener al
        menos 10 items en cada modo: el track tiene ancho parejo y el loop
        no muestra huecos.
@@ -35,7 +35,6 @@ const WOMEN = [
   "/assets/futuristic-fashion/woman-01.webp",
   "/assets/futuristic-fashion/woman-02.webp",
   "/assets/futuristic-fashion/woman-03.webp",
-  "/assets/futuristic-fashion/woman-04.webp",
 ];
 const MEN = [
   "/assets/futuristic-fashion/man-01.webp",
