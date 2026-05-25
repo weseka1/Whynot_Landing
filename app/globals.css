@@ -229,7 +229,6 @@ body::before {
 #section-past-drop,
 #section-meteorite,
 #section-futuristic-gallery,
-#section-form,
 #section-whynot-end,
 #section-anturax {
   contain: layout style paint;
@@ -710,24 +709,6 @@ model-viewer {
   #section-futuristic-gallery > div:nth-child(5) {
     flex-wrap: wrap;
     gap: 0.5rem !important;
-  }
-
-  /* ====================================================================
-     IDEA FORM
-     ==================================================================== */
-  #section-form > div {
-    grid-template-columns: 1fr !important;
-    gap: var(--space-md) !important;
-  }
-  #section-form > div > * {
-    grid-column: 1 !important;
-    justify-content: flex-start !important;
-  }
-  /* CTA button full-width en mobile (mejor tap target + UX premium). */
-  #section-form .form-cta {
-    width: 100%;
-    padding: var(--space-md) var(--space-lg) !important;
-    text-align: center;
   }
 
   /* ====================================================================

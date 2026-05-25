@@ -99,7 +99,6 @@ const LAZY_CHUNKS = [
   () => import("@/components/Collections"),
   () => import("@/components/PastDrop"),
   () => import("@/components/FuturisticGallery"),
-  () => import("@/components/IdeaForm"),
   () => import("@/components/WhyNotEnd"),
   () => import("@/components/Footer"),
   () => import("@/components/LiquidCursor"),

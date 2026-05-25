@@ -31,7 +31,6 @@ export const site = {
     { label: "Collections", href: "#section-collections" },
     { label: "Mission",     href: "#section-mission" },
     { label: "Past Drop",   href: "#section-past-drop" },
-    { label: "Your Idea",   href: "#section-form" },
   ],
 
   /* ---------------- PRELOADER ---------------- */
