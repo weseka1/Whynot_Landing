@@ -191,13 +191,21 @@ def main():
     bpy.ops.object.modifier_apply(modifier="DataTransfer")
     print(f"   {len(target_mesh.vertex_groups)} vertex groups con weights")
 
-    print("[7/8] Asignar armature modifier al OBJ + parent + material...")
+    print("[7/8] Asignar armature modifier al OBJ + material (NO parent)...")
     # Armature modifier para que el skinning funcione
     arm_mod = target_mesh.modifiers.new(name="Armature", type="ARMATURE")
     arm_mod.object = armature
-    # Parent al armature SIN regenerar weights (los vertex groups ya estan)
-    target_mesh.parent = armature
-    target_mesh.parent_type = "OBJECT"
+    # NO parentear al armature. Si seteamos target_mesh.parent = armature,
+    # Blender exporta el GLB con el mesh ANIDADO dentro del Armature node
+    # (scene roots = [Armature], children = [mesh, hips]). Eso rompe
+    # SkeletonUtils.clone en three.js: el skin reference del mesh clonado
+    # sigue apuntando al esqueleto ORIGINAL, no al clonado → mesh visible
+    # pero estatico (no se anima). Los GLBs que SI funcionan (mono-blanco,
+    # mono-louis, mono-dorado, etc) tienen mesh y armature como SIBLINGS
+    # en scene roots: [Armature, mesh]. Esa es la convencion Mixamo y la
+    # que three.js + SkeletonUtils.clone espera.
+    # El armature MODIFIER solo (sin parent) es suficiente para el binding
+    # del skinning en el export GLB.
     # Material con la textura correcta (la que mapea a los UVs del OBJ)
     mat = build_textured_material("MonkeyTextured", args.texture)
     target_mesh.data.materials.clear()
