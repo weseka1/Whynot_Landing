@@ -123,7 +123,11 @@ function Sneaker({ videoSrc }: { videoSrc: string }) {
   useFrame((state) => {
     if (!ref.current) return;
     const t = state.clock.elapsedTime;
+    /* Z fijo en 0.4 -> zapa adelantada hacia el frente del orbe (sphere
+       front face = z 1.55). Menos vidrio entre la zapa y la camara -> el
+       ghost de refraccion casi desaparece, sigue "adentro" del cristal.  */
     ref.current.position.y = Math.sin(t * 0.5) * 0.05;
+    ref.current.position.z = 0.4;
     ref.current.rotation.z = Math.sin(t * 0.4) * 0.01;
   });
 
@@ -213,24 +217,31 @@ function GlassSphere({
     );
   }
 
+  /* Cristal MAS SUTIL para matar el fantasma de la zapa refractada:
+     - transmission 1 -> 0.55  (menos refraccion = menos ghost visible)
+     - samples 6 -> 3          (menos bounces de refraccion interna)
+     - thickness 0.20 -> 0.08  (cristal mas fino, casi una piel de orbe)
+     - roughness 0.04 -> 0.10  (levemente frosted, suaviza cualquier residuo)
+     El attenuationColor tinted + clearcoat 1 conservan el "look luxury"
+     premium, pero el sphere es ahora mas highlight/halo y menos lente.   */
   return (
     <mesh ref={ref} renderOrder={5}>
       <sphereGeometry args={[1.55, 80, 80]} />
       <MeshTransmissionMaterial
         backside={false}
-        samples={6}
-        thickness={0.20}
+        samples={3}
+        thickness={0.08}
         chromaticAberration={0}
-        anisotropy={0.10}
+        anisotropy={0.08}
         distortion={0}
         distortionScale={0}
         temporalDistortion={0}
-        roughness={0.04}
-        ior={1.25}
+        roughness={0.10}
+        ior={1.20}
         attenuationColor={c.ring}
-        attenuationDistance={4.5}
+        attenuationDistance={5.5}
         color="#ffffff"
-        transmission={1}
+        transmission={0.55}
         clearcoat={1}
         clearcoatRoughness={0.06}
       />
