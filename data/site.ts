@@ -153,16 +153,6 @@ export const site = {
     copy:    "Heavier, sculpted line. Toggle the style to preview both states.",
     toggle:  { off: "DARK", on: "LIGHT" },
   },
-
-  /* ---------------- FORM / YOUR IDEA ---------------- */
-  form: {
-    eyebrow: "C://SYSTEM_FILES / INPUT",
-    title:   "Your Idea",
-    copy:    "Submit a concept. Selected ideas become real drops.",
-    cta:     "Send Signal",
-    fields:  { name: "Name", email: "Email", world: "World" },
-    success: "SIGNAL SENT — STATUS: OK",
-  },
 };
 
 export type Site = typeof site;
