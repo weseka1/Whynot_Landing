@@ -34,6 +34,7 @@ import { site } from "@/data/site";
 import { HERO_SPECS, resolveHeroSpec, type CatalogEntry } from "@/data/catalog";
 import { Scanlines, CursorGlow } from "@/components/CatalogAtmosphere";
 import CommandPalette from "@/components/CommandPalette";
+import BrandModelFilter from "@/components/BrandModelFilter";
 import { useIsMobile } from "@/components/useIsMobile";
 
 /* ---------------- METADATA ----------------
@@ -661,6 +662,14 @@ export default function PastDrop() {
             />
           </h2>
         </div>
+
+        {/* ----- BRAND × MODEL FILTER (search inline) -----
+             Dos dropdowns futuristas debajo del titulo "DROP". Brand →
+             selecciona marca → segundo dropdown se habilita con todos los
+             modelo/colorways. Click en un colorway → navega a la pagina
+             del catalogo del producto. zIndex alto para superponerse a
+             las capsulas cuando se despliega.                              */}
+        <BrandModelFilter isMobile={isMobile} />
 
         {/* ----- CAPSULE CAROUSEL STAGE ----- */}
         <div

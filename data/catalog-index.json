@@ -15,6 +15,10 @@
     "type": "image",
     "frames": 0
   },
+  "AMIRI/MA-1/Crystal": {
+    "type": "image",
+    "frames": 0
+  },
   "AMIRI/MA-1/Light Blue": {
     "type": "image",
     "frames": 0
@@ -460,6 +464,10 @@
     "frames": 36
   },
   "JORDAN/3 Retro/Lucky Shorts": {
+    "type": "360",
+    "frames": 36
+  },
+  "JORDAN/3 Retro/Midnight Navy": {
     "type": "360",
     "frames": 36
   },
