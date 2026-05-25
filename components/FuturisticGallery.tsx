@@ -9,13 +9,16 @@
 
    UX:
      - Loop horizontal continuo (marquee CSS de translateX 0 → -50%).
-     - Toggle abajo "WOMEN / MEN" → cambia el set. Solo hay 2 mujeres y 5
+     - Toggle abajo "WOMEN / MEN" → cambia el set. Tenemos 4 mujeres y 10
        hombres en la carpeta, asi que duplicamos el array hasta tener al
        menos 10 items en cada modo: el track tiene ancho parejo y el loop
        no muestra huecos.
-     - Mouse coords X/Y live en el footer (look HUD).
-     - prefers-reduced-motion: el track se detiene (sin animation) pero
-       sigue siendo scrollable manual con drag.
+     - Velocidad uniforme: medimos el scrollWidth real del track y derivamos
+       la duracion como width/2 / pxPerSecond (vs. hardcodear segundos, que
+       hacia que el set chico volara y el grande arrastrara).
+     - Mouse coords X/Y live en el footer (look HUD). Imperativo via ref +
+       rAF, no setState, para no re-renderizar el track entero por pixel.
+     - prefers-reduced-motion: el track se detiene (sin animation).
 
    Lo "futurista":
      - Fondo dark + grid de puntos
@@ -26,11 +29,13 @@
      - Scanlines suaves overlay
    ============================================================================ */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 const WOMEN = [
   "/assets/futuristic-fashion/woman-01.webp",
   "/assets/futuristic-fashion/woman-02.webp",
+  "/assets/futuristic-fashion/woman-03.webp",
+  "/assets/futuristic-fashion/woman-04.webp",
 ];
 const MEN = [
   "/assets/futuristic-fashion/man-01.webp",
@@ -38,11 +43,24 @@ const MEN = [
   "/assets/futuristic-fashion/man-03.webp",
   "/assets/futuristic-fashion/man-04.webp",
   "/assets/futuristic-fashion/man-05.webp",
+  "/assets/futuristic-fashion/man-06.webp",
+  "/assets/futuristic-fashion/man-07.webp",
+  "/assets/futuristic-fashion/man-08.webp",
+  "/assets/futuristic-fashion/man-09.webp",
+  "/assets/futuristic-fashion/man-10.webp",
 ];
 
 const MIN_ITEMS_FOR_LOOP = 10;
+const MARQUEE_PX_PER_SECOND = 60;
+const EAGER_COUNT = 4;
+/* useIsomorphicLayoutEffect — useLayoutEffect en cliente, useEffect en SSR
+   (Next imprime warning si se usa useLayoutEffect en el servidor).        */
+const useIsoLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 type Mode = "women" | "men";
+
+const fmtCoord = (n: number) => n.toFixed(4).slice(2); // ".XXXX" → "XXXX"
 
 function buildLoopList(list: string[]): string[] {
   if (list.length === 0) return [];
@@ -59,25 +77,69 @@ export default function FuturisticGallery() {
   const list = mode === "women" ? WOMEN : MEN;
   const loop = useMemo(() => buildLoopList(list), [list]);
 
-  /* Mouse-tracked coords HUD. Solo se actualizan cuando el cursor esta
-     sobre el contenedor de la galeria (no global → no estorba a otros
-     componentes con sus propios listeners de pointer).                 */
   const sectionRef = useRef<HTMLElement>(null);
-  const [coords, setCoords] = useState({ x: 0.0, y: 0.0 });
+  const trackRef = useRef<HTMLDivElement>(null);
+  const coordRef = useRef<HTMLSpanElement>(null);
+
+  /* Duracion del marquee derivada del scrollWidth real. El track usa
+     translateX(0 → -50%) asi que la "vuelta" cubre la mitad del ancho.
+     Medimos despues de que las imagenes carguen (o como fallback en mount)
+     para que el calculo no use 0 inicial.                                  */
+  const [duration, setDuration] = useState<number>(40);
+  useIsoLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const measure = () => {
+      const halfWidth = track.scrollWidth / 2;
+      if (halfWidth > 0) {
+        setDuration(halfWidth / MARQUEE_PX_PER_SECOND);
+      }
+    };
+    measure();
+    /* Imagenes lazy hacen crecer el track al cargar → re-mide cuando llegan
+       (mejor que asumir el ancho final).                                   */
+    const imgs = Array.from(track.querySelectorAll("img"));
+    const onLoad = () => measure();
+    imgs.forEach((img) => {
+      if (!img.complete) img.addEventListener("load", onLoad, { once: true });
+    });
+    const ro = new ResizeObserver(measure);
+    ro.observe(track);
+    return () => {
+      ro.disconnect();
+      imgs.forEach((img) => img.removeEventListener("load", onLoad));
+    };
+  }, [loop]);
+
+  /* Mouse-tracked coords HUD via ref + rAF: actualizar textContent
+     directamente evita re-renderizar todo el componente (incluyendo el
+     track de imagenes) en cada pixel de movimiento del cursor.            */
   useEffect(() => {
     const el = sectionRef.current;
-    if (!el) return;
+    const out = coordRef.current;
+    if (!el || !out) return;
+    let pending: { x: number; y: number } | null = null;
+    let rafId: number | null = null;
+    const flush = () => {
+      rafId = null;
+      if (!pending || !coordRef.current) return;
+      const { x, y } = pending;
+      coordRef.current.textContent = `X.${fmtCoord(x)} // Y.${fmtCoord(y)}`;
+      pending = null;
+    };
     const onMove = (e: PointerEvent) => {
       const rect = el.getBoundingClientRect();
-      const nx = (e.clientX - rect.left) / rect.width;
-      const ny = (e.clientY - rect.top) / rect.height;
-      setCoords({ x: Math.max(0, Math.min(1, nx)), y: Math.max(0, Math.min(1, ny)) });
+      const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      pending = { x: nx, y: ny };
+      if (rafId == null) rafId = requestAnimationFrame(flush);
     };
     el.addEventListener("pointermove", onMove);
-    return () => el.removeEventListener("pointermove", onMove);
+    return () => {
+      el.removeEventListener("pointermove", onMove);
+      if (rafId != null) cancelAnimationFrame(rafId);
+    };
   }, []);
-
-  const fmtCoord = (n: number) => n.toFixed(4).slice(2); // ".XXXX" → "XXXX"
 
   return (
     <section
@@ -252,6 +314,7 @@ export default function FuturisticGallery() {
       >
         <div
           key={mode}
+          ref={trackRef}
           className="futuristic-gallery-track"
           style={{
             display: "flex",
@@ -259,14 +322,14 @@ export default function FuturisticGallery() {
             alignItems: "flex-end",
             gap: "clamp(2rem, 6vw, 6rem)",
             paddingLeft: "clamp(2rem, 6vw, 6rem)",
-            animation: `futuristic-gallery-marquee ${
-              mode === "women" ? 28 : 60
-            }s linear infinite`,
+            animation: `futuristic-gallery-marquee ${duration}s linear infinite`,
+            willChange: "transform",
           }}
         >
           {loop.map((src, i) => {
             const idx = (i % list.length) + 1;
             const tag = `${mode === "women" ? "F" : "M"}_${String(idx).padStart(2, "0")}`;
+            const isEager = i < EAGER_COUNT;
             return (
               <figure
                 key={`${src}-${i}`}
@@ -279,7 +342,9 @@ export default function FuturisticGallery() {
                 <img
                   src={src}
                   alt={`Futuristic outfit ${tag}`}
-                  loading="lazy"
+                  loading={isEager ? "eager" : "lazy"}
+                  decoding="async"
+                  fetchPriority={isEager ? "high" : "low"}
                   draggable={false}
                   style={{
                     display: "block",
@@ -389,9 +454,10 @@ export default function FuturisticGallery() {
 
         <button
           type="button"
+          role="switch"
+          aria-checked={mode === "men"}
+          aria-label={`Gallery mode: showing ${mode}. Toggle to switch.`}
           onClick={() => setMode((m) => (m === "women" ? "men" : "women"))}
-          aria-pressed={mode === "men"}
-          aria-label="Toggle between women and men gallery"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -453,7 +519,9 @@ export default function FuturisticGallery() {
         </span>
       </div>
 
-      {/* FOOTER coords */}
+      {/* FOOTER coords — textContent escrito imperativamente desde rAF
+          (ver effect arriba). El span tiene un valor inicial estable para
+          que el SSR no marque hydration mismatch.                         */}
       <div
         style={{
           position: "relative",
@@ -468,7 +536,7 @@ export default function FuturisticGallery() {
           zIndex: 2,
         }}
       >
-        X.{fmtCoord(coords.x)} // Y.{fmtCoord(coords.y)}
+        <span ref={coordRef}>X.0000 // Y.0000</span>
       </div>
 
       {/* Keyframes locales del marquee + soporte reduced-motion. */}
