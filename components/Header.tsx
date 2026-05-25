@@ -114,7 +114,10 @@ export default function Header() {
             )}
           </button>
 
-          {/* Menu toggle OFF / ON */}
+          {/* Menu toggle — label "MENU" + switch visual a la derecha. El
+              switch sigue mostrando el state (animacion del dot) pero ya
+              no hay texto OFF/ON laterales: el label MENU dice qué hace
+              el boton.                                                     */}
           <button
             onClick={() => setOpen(true)}
             data-sound-hover
@@ -130,7 +133,7 @@ export default function Header() {
               borderRadius: "var(--radius-pill)",
             }}
           >
-          <span style={{ opacity: open ? 0.4 : 1 }}>OFF</span>
+          <span>MENU</span>
           <span
             style={{
               width: 24,
@@ -153,7 +156,6 @@ export default function Header() {
               }}
             />
           </span>
-          <span style={{ opacity: open ? 1 : 0.4 }}>ON</span>
         </button>
         </div>
       </header>
