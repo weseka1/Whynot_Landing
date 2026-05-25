@@ -56,13 +56,20 @@ type Accent = "white" | "silver" | "gold";
 /* Paleta tonal pensada para escena oscura (#0a0a0e bg):
      key = warm directional, rim = cool emisivo anillos,
      bg  = backdrop circular oscuro tonalmente con accent */
+/* bg UNIFORME para los 3 accents -> ningun lado del sphere muestra un
+   color distinto cuando el parallax o la rotacion exponen un crescent.
+   Antes silver=#0a0b0f, gold=#0e0c08 -> variaciones sutiles pero visibles
+   al lado del orbe iluminado. Todos a #0c0e12 (matchea con white que era
+   el que el usuario decia que se veia perfecto).                           */
+const SCENE_BG = "#0c0e12";
+
 const ACCENT: Record<
   Accent,
-  { key: string; rim: string; ring: string; bg: string; particles: string }
+  { key: string; rim: string; ring: string; particles: string }
 > = {
-  white:  { key: "#fbf6ec", rim: "#cad7e2", ring: "#e6edf4", bg: "#0c0e12", particles: "#f0f3f8" },
-  silver: { key: "#f3f4f6", rim: "#aebdce", ring: "#cdd5de", bg: "#0a0b0f", particles: "#dde2ea" },
-  gold:   { key: "#ffe6b8", rim: "#b7977a", ring: "#d3aa6d", bg: "#0e0c08", particles: "#e8c98c" },
+  white:  { key: "#fbf6ec", rim: "#cad7e2", ring: "#e6edf4", particles: "#f0f3f8" },
+  silver: { key: "#f3f4f6", rim: "#aebdce", ring: "#cdd5de", particles: "#dde2ea" },
+  gold:   { key: "#ffe6b8", rim: "#b7977a", ring: "#d3aa6d", particles: "#e8c98c" },
 };
 
 interface SneakerPlanetProps {
@@ -165,7 +172,7 @@ function GlassSphere({ isMobile }: { isMobile: boolean }) {
   if (isMobile) {
     return (
       <mesh ref={ref} renderOrder={5}>
-        <sphereGeometry args={[1.55, 32, 32]} />
+        <sphereGeometry args={[1.85, 32, 32]} />
         <meshPhysicalMaterial
           color="#ffffff"
           transmission={0}
@@ -195,9 +202,16 @@ function GlassSphere({ isMobile }: { isMobile: boolean }) {
      de la sphere quedaba oscuro/saturado, que era la "parte negra" que el
      usuario notaba en 02/03 vs 01. Ahora las 3 spheres son iguales
      opticamente; el accent solo cambia luces, particulas y anillos.       */
+  /* Sphere radius 1.55 -> 1.85: ahora SOBREPASA el viewport del canvas
+     (camera z=4.7, fov=36 -> visible half-height = 4.7*tan(18deg) = 1.53).
+     Sphere diametro 3.7 vs viewport 3.06 -> el sphere overshoots el canvas
+     en todos los costados, garantizando que NUNCA se vea el bg dark
+     crescent al lado del orbe (que era la "parte negra" que el usuario
+     veia en 02/03 cuando el parallax o la rotacion del sphere exponian
+     el bg).                                                                */
   return (
     <mesh ref={ref} renderOrder={5}>
-      <sphereGeometry args={[1.55, 80, 80]} />
+      <sphereGeometry args={[1.85, 80, 80]} />
       <MeshTransmissionMaterial
         backside={false}
         samples={3}
@@ -276,8 +290,12 @@ function ParallaxRig({ isMobile }: { isMobile: boolean }) {
 
   useFrame(() => {
     if (isMobile) return;
-    target.current.x = mouse.x * 0.32;
-    target.current.y = mouse.y * 0.22;
+    /* Parallax MUY sutil. Antes 0.32/0.22 -> exponia el bg crescent al
+       lado del sphere cuando el mouse iba al borde. Ahora 0.15/0.10
+       conserva el efecto cinematografico pero sin chance de mover el
+       sphere fuera del viewport.                                        */
+    target.current.x = mouse.x * 0.15;
+    target.current.y = mouse.y * 0.10;
     target.current.z = 4.7;
     camera.position.lerp(target.current, 0.04);
     camera.lookAt(0, 0, 0);
@@ -286,20 +304,17 @@ function ParallaxRig({ isMobile }: { isMobile: boolean }) {
 }
 
 /* ============================================================================
-   BACKDROP — fondo oscuro tonal dentro del scene (mejor que Canvas style bg
-   porque permite radial gradient real via shader).
+   BACKDROP — fondo oscuro UNIFORME para los 3 accents (matchea el wrapper
+   porthole, evita el crescent dark visible cuando el sphere no llena 100%).
    ============================================================================ */
-function Backdrop({ accent }: { accent: Accent }) {
-  const c = ACCENT[accent];
+function Backdrop() {
   const { scene } = useThree();
-  /* Set scene.background directo a un color tonal accent. */
   useMemo(() => {
-    scene.background = new THREE.Color(c.bg);
+    scene.background = new THREE.Color(SCENE_BG);
     return () => {
       scene.background = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [c.bg]);
+  }, [scene]);
   return null;
 }
 
@@ -322,7 +337,7 @@ function Scene({
 
   return (
     <>
-      <Backdrop accent={accent} />
+      <Backdrop />
 
       {/* === LIGHTING — mismo recipe que MeteoriteSection (key warm + rim
               fria + fill warm bajo). Tinted con el accent.                */}
