@@ -5,7 +5,7 @@
      propio lazy mount interno con IntersectionObserver — envolverlos en
      dynamic() rompe los monos).
    - Resto de secciones below-the-fold (Collections, PastDrop,
-     FuturisticGallery, IdeaForm, WhyNotEnd, Footer): dynamic con skeleton
+     FuturisticGallery, WhyNotEnd, Footer): dynamic con skeleton
      para no inflar el bundle inicial.
    - LiquidCursor: dynamic con ssr:false (depende de window.matchMedia).
    ============================================================================ */
@@ -43,9 +43,6 @@ const PastDrop = dynamic(() => import("@/components/PastDrop"), {
 const FuturisticGallery = dynamic(() => import("@/components/FuturisticGallery"), {
   loading: () => <SectionSkeleton id="section-futuristic-gallery" h="60vh" />,
 });
-const IdeaForm = dynamic(() => import("@/components/IdeaForm"), {
-  loading: () => <SectionSkeleton id="section-form" h="60vh" />,
-});
 const WhyNotEnd = dynamic(() => import("@/components/WhyNotEnd"), {
   loading: () => <SectionSkeleton id="section-whynot-end" h="60vh" />,
 });
@@ -70,10 +67,9 @@ export default function Page() {
       <Header />
 
       <main>
-        {/* Orden de secciones reorganizado por pedido del usuario:
-            1. Hero  2. CloudBand  3. Collections  5. PastDrop
-            6. FuturisticGallery  8. MeteoriteSection  4. Mission
-            7. IdeaForm  9. WhyNotEnd                                  */}
+        {/* Orden de secciones: Hero, CloudBand, Collections, PastDrop,
+            FuturisticGallery, MeteoriteSection, Mission, WhyNotEnd.
+            IdeaForm ("Your Idea") removido por pedido del usuario.   */}
         <Hero />
         <CloudBand />
         <Collections />
@@ -81,7 +77,6 @@ export default function Page() {
         <FuturisticGallery />
         <MeteoriteSection />
         <Mission />
-        <IdeaForm />
         <WhyNotEnd />
       </main>
 
