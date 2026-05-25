@@ -177,13 +177,24 @@ export default function RootLayout({
             ahorra ~200ms cuando arranca la descarga del decoder.            */}
         <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="" />
 
-        {/* Prefetch (baja prioridad) del resto de GLBs y assets soon-visibles
-            — el browser los baja en idle time sin pelearle ancho de banda al
-            preload del hero. Cuando el preloader pide estos mismos URLs en
-            sus jobs, ya estan calientes en cache HTTP.                       */}
+        {/* Prefetch (baja prioridad) del resto de GLBs y assets de toda la
+            home — el browser los baja en idle time sin pelearle ancho de
+            banda al preload del hero. Cuando el preloader pide estos mismos
+            URLs en sus jobs, ya estan calientes en cache HTTP, asi el % de
+            0->100 avanza solo a velocidad de procesar, no de red.            */}
+        {/* CloudBand */}
+        <link rel="prefetch" href="/nuves/cloud-center.webp" as="image" />
+        <link rel="prefetch" href="/nuves/cloud-2.webp" as="image" />
+        <link rel="prefetch" href="/nuves/cloud-center-bottom.webp" as="image" />
+        {/* Mission monos */}
         <link rel="prefetch" href="/assets/3d/mono-dorado.glb" as="fetch" crossOrigin="" />
         <link rel="prefetch" href="/assets/3d/mono-rigged.glb" as="fetch" crossOrigin="" />
-        <link rel="prefetch" href="/nuves/cloud-center.webp" as="image" />
+        <link rel="prefetch" href="/assets/3d/mono-blanco.glb" as="fetch" crossOrigin="" />
+        <link rel="prefetch" href="/assets/3d/mono-louis.glb" as="fetch" crossOrigin="" />
+        <link rel="prefetch" href="/assets/3d/gotila-esenssial.glb" as="fetch" crossOrigin="" />
+        {/* Meteorite */}
+        <link rel="prefetch" href="/assets/3d/balenciaga-3xl.glb" as="fetch" crossOrigin="" />
+        {/* Collections */}
         <link rel="prefetch" href="/assets/hero/golden-goose-white-black.webp" as="image" />
         <link rel="prefetch" href="/assets/hero/golden-goose-silver-star.webp" as="image" />
         <link rel="prefetch" href="/assets/hero/golden-goose-gold-star.webp" as="image" />
