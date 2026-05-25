@@ -31,9 +31,18 @@
    ============================================================================ */
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { site } from "@/data/site";
 import HoloFX from "./HoloFX";
+
+/* SneakerPlanet (escena WebGL) lazy-loaded para no inflar el bundle inicial.
+   ssr:false porque usa WebGL/Canvas (no existe en server).
+   Mientras carga, se ve el poster del item activo en background del slot. */
+const SneakerPlanet = dynamic(() => import("./SneakerPlanet"), {
+  ssr: false,
+  loading: () => null,
+});
 
 /* Mapeo del id del item activo a la paleta de acento del HoloFX. Los ids
    01/02/03 son las 3 Golden Goose; el 04 (extra capsule) usa el dorado.   */
@@ -192,21 +201,6 @@ export default function Collections() {
               <ArCornerBracket key={p} pos={p} />
             ))}
 
-            {/* --- HoloFX BACK: halo conico + anillos hologr. + particulas + sonar
-                Detras del producto (z:0). El accent se intercambia segun item. */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`fx-back-${current.id}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-              >
-                <HoloFX accent={accentFor(current.id)} layer="back" />
-              </motion.div>
-            </AnimatePresence>
-
             {/* --- Sombra al piso debajo del producto (da peso a la esfera) --- */}
             <div
               aria-hidden
@@ -225,12 +219,17 @@ export default function Collections() {
               }}
             />
 
-            {/* === PRODUCTO PLANO con alpha real ===
-                Items 01/02/03 son .webm VP9 yuva420p (144 frames 360 deg,
-                extraidos por scripts/process-shoe-video/extract-black-bg.py
-                con refinement VITMatte). El browser decodifica el alpha
-                horneado nativamente. Item 04 cae a <img> estatica.
-                Float CSS animation (floatGentle) da vida sin Three.js.    */}
+            {/* === PRODUCTO 3D — ESCENA WEBGL CINEMATOGRAFICA ===
+                SneakerPlanet renderiza:
+                  - el webm como video-texture en plane billboarded (siempre
+                    de frente y siempre arriba con depthTest:false)
+                  - esfera de cristal translucida con transmission/refraccion
+                  - 3 anillos tipo Saturno tilteados y contra-rotando
+                  - particulas + estrellas + HDRI city
+                  - postproc: Bloom selectivo + ChromaticAberration + Vignette
+                  - parallax con mouse en la camara
+                Items con `video` van por esta via. El 04 (extra) cae al
+                <img> estatico de siempre.                                  */}
             <div
               style={{
                 position: "absolute",
@@ -238,30 +237,31 @@ export default function Collections() {
                 display: "grid",
                 placeItems: "center",
                 pointerEvents: "none",
+                /* mix-blend overlay sutil para que el bloom se funda con el
+                   pearl bg sin sentirse "pegado" como un canvas. */
+                isolation: "isolate",
               }}
             >
               <AnimatePresence mode="wait">
                 {"video" in current && current.video ? (
-                  <motion.video
+                  <motion.div
                     key={current.id}
-                    src={current.video}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    initial={{ opacity: 0, scale: 0.92 }}
+                    initial={{ opacity: 0, scale: 0.94 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.92 }}
-                    transition={{ duration: 0.45, ease: "easeOut" }}
+                    exit={{ opacity: 0, scale: 0.94 }}
+                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                     style={{
-                      width: "88%",
-                      height: "88%",
-                      objectFit: "contain",
-                      animation: "floatGentle 5.5s ease-in-out infinite",
-                      filter:
-                        "drop-shadow(0 18px 22px rgba(46,42,37,0.18)) drop-shadow(0 4px 6px rgba(46,42,37,0.10))",
+                      position: "absolute",
+                      inset: 0,
+                      pointerEvents: "auto",
                     }}
-                  />
+                  >
+                    <SneakerPlanet
+                      videoSrc={current.video}
+                      accent={accentFor(current.id)}
+                      posterSrc={current.image}
+                    />
+                  </motion.div>
                 ) : (
                   <motion.img
                     key={current.id}
