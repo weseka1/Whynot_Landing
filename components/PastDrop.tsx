@@ -76,7 +76,11 @@ const BRAND_FALLBACKS: Record<string, { year: string; material: string }> = {
 function buildSpec(hs: typeof HERO_SPECS[number], i: number): Spec {
   const resolved = resolveHeroSpec(hs);
   const entry = resolved.entry;
-  const brand = entry?.brand ?? "—";
+  /* displayBrand permite overridear el brand del catalogo para el HUD
+     (ej: Jordan Tatum vive bajo "NIKE" en el catalogo pero queremos
+     mostrarlo como "JORDAN" en el carrusel). El click sigue navegando
+     al catalogPath original — esto es solo cosmetic display.            */
+  const brand = hs.displayBrand ?? entry?.brand ?? "—";
   const model = entry?.model ?? "";
   const colorway = entry?.colorway ?? "";
   const fb = BRAND_FALLBACKS[brand] ?? { year: "—", material: "—" };

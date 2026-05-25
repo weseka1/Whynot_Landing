@@ -181,6 +181,13 @@ export type HeroSpec = {
   src: string;          // ruta al .mp4 en public/videos-360
   label: string;        // display name corto
   catalogPath: string;  // path canónico en el catalog-index
+  /** Override del brand a mostrar en el HUD/label del PastDrop. Si está
+      presente, prevalece sobre el `entry.brand` del catálogo. Sirve para
+      modelos catalogados bajo una marca paraguas (ej: Jordan Tatum vive
+      bajo "NIKE" en el catalog-index pero se vende como "JORDAN"). NO
+      cambia la URL del producto — el click sigue navegando al catalogPath
+      original.                                                              */
+  displayBrand?: string;
 };
 
 export const HERO_SPECS: HeroSpec[] = [
@@ -205,7 +212,8 @@ export const HERO_SPECS: HeroSpec[] = [
   { src: "/videos-360/nikeairforce1triplewhite.mp4",            label: "AF1 JEWELS WHITE",
     catalogPath: "NIKE/Air Force 1/Jewels White" },
   { src: "/videos-360/nikejordantatum.mp4",                     label: "JORDAN TATUM",
-    catalogPath: "NIKE/Jordan Tatum 1/Red Cement" },
+    catalogPath: "NIKE/Jordan Tatum 1/Red Cement",
+    displayBrand: "JORDAN" /* override: catalogado bajo NIKE pero es Jordan */ },
   { src: "/videos-360/offwhitebe-right-4x-RIFE-RIFE3.1-16fps.mp4", label: "OFF-WHITE BE RIGHT",
     catalogPath: "OFF WHITE/Be-Right/White" },
   { src: "/videos-360/pumared.mp4",                             label: "PUMA LA FRANCÉ",
