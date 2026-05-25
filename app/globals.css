@@ -146,14 +146,16 @@
 
 html, body {
   /* background y color usan vars driven por useSectionColor para el
-     sweep DICH. La transition 700ms ease-in-out hace que el cambio se
-     vea como un fundido gradual entre secciones — el JS hace snap del
-     color, el browser lo interpola.                                      */
+     sweep DICH. La transition 1500ms con cubic-bezier suave hace que
+     el cambio se vea como un fundido GRADUAL (degrade) entre secciones
+     — el JS hace snap del color, el browser lo interpola lentamente.
+     Antes 700ms ease-in-out se sentia casi instantaneo, ahora 1500ms
+     da tiempo a percibir el degrade.                                    */
   background-color: var(--page-bg);
   color: var(--page-fg);
   transition:
-    background-color 700ms ease-in-out,
-    color 700ms ease-in-out;
+    background-color 1500ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 1500ms cubic-bezier(0.4, 0, 0.2, 1);
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.4;
@@ -231,6 +233,16 @@ body::before {
 #section-whynot-end,
 #section-anturax {
   contain: layout style paint;
+  /* Mismo transition que body — las secciones que tienen
+     background: var(--page-bg) cambian junto al body al hacer el sweep
+     DICH. Sin esta transition, el cambio en la var seria instantaneo
+     en la seccion y el degrade gradual solo se veria en el body
+     (debajo de la seccion). #hero no participa del sweep (no tiene
+     data-bg-color) pero le dejamos la transition por consistencia
+     — no se dispara mientras --page-bg no se aplique a hero.            */
+  transition:
+    background-color 1500ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 1500ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hairline-top    { border-top:    1px solid var(--color-line); }
