@@ -208,7 +208,13 @@ export default function PastDrop() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  /* ---------- Scroll → posición continua ---------- */
+  /* ---------- Scroll → posición continua ----------
+     Solo en MOBILE el scroll vertical del browser drivea el carrusel
+     (porque en mobile no hay flechas y el touch=swipe horizontal solo
+     mueve uno por vez). En DESKTOP el carrusel se mueve UNICAMENTE con
+     las flechas (← →) o arrastrando con el mouse — la rueda del mouse
+     scrollea la pagina normal hacia GALLERY. Por eso en desktop
+     dejamos la seccion en 100vh y no conectamos scrollYProgress.       */
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
@@ -221,9 +227,18 @@ export default function PastDrop() {
   /* ---------- Posición combinada ---------- */
   const targetPosition = useMotionValue(0);
   useMotionValueEvent(scrollPosition, "change", (v) => {
+    /* En desktop ignoramos el scroll: la rueda del mouse NO debe mover
+       las capsulas. Solo flechas + drag.                                 */
+    if (!isMobile) return;
     targetPosition.set(v + dragOffset.get());
   });
   useMotionValueEvent(dragOffset, "change", (v) => {
+    /* En desktop el scrollPosition no participa: targetPosition = dragOffset
+       puro (mas lo que sume advance() via dragOffset.set(...)).            */
+    if (!isMobile) {
+      targetPosition.set(v);
+      return;
+    }
     targetPosition.set(scrollPosition.get() + v);
   });
   /* Spring: en mobile bajamos stiffness y subimos damping. Resultado:
@@ -509,19 +524,23 @@ export default function PastDrop() {
       ref={sectionRef}
       style={{
         position: "relative",
-        /* 180vh = 100vh sticky + 80vh de scroll para mover el carrusel
-           (= ~5.7vh por specimen, snappy). Antes 260vh dejaba 80vh extra
-           al final que se sentian "vacios" antes del corte a GALLERY.    */
-        minHeight: "180vh",
+        /* Mobile: 180vh sticky = 100vh visible + 80vh de "track" para que
+           el scroll vertical drivee el carrusel (no hay flechas en mobile).
+           Desktop: 100vh — el carrusel se mueve solo con flechas/drag, la
+           rueda del mouse pasa de largo a la seccion siguiente.            */
+        minHeight: isMobile ? "180vh" : "100vh",
         background: "#e0b3f5", // vibrant pink-lavender (mas vivo que el #cdb5f0 anterior)
         color: "#0a0a14",
         overflow: "hidden",
       }}
     >
-      {/* ============ STICKY STAGE ============ */}
+      {/* ============ STAGE ============
+          Mobile: sticky para que se quede pegado mientras el track de 80vh
+                  drivea el scrollPosition del carrusel.
+          Desktop: simple 100vh — sin sticky, scroll natural de la pagina.   */}
       <div
         style={{
-          position: "sticky",
+          position: isMobile ? "sticky" : "relative",
           top: 0,
           height: "100vh",
           overflow: "hidden",
