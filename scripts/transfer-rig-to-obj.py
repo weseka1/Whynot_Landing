@@ -136,17 +136,25 @@ def main():
     print(f"   {armature.name}: {len(armature.data.bones)} bones")
 
     print("[4/8] Escalar OBJ al tamaño del FBX (Z axis match) + centrar...")
+    # Algunos FBX de Mixamo (no todos) vienen con el mesh offset en Z (lejos
+    # del armature). Antes el script centraba el OBJ AL FBX-mesh-center,
+    # entonces si el FBX-mesh estaba offset, el OBJ se iba con el → al
+    # animar (armature en origen, mesh lejos) salia roto/enorme.
+    # Fix: NO usar fbx_center; mover el OBJ y el FBX-mesh AMBOS al origen.
+    # La proximidad sigue funcionando porque ahora estan ambos en el mismo
+    # spot (origen). El armature (en origen) tambien queda alineado.
     if obj_size.z > 0 and fbx_size.z > 0:
         scale_factor = fbx_size.z / obj_size.z
         target_mesh.scale = (scale_factor, scale_factor, scale_factor)
         print(f"   scale_factor = {scale_factor:.4f}")
     bpy.context.view_layer.update()
-    _, _, _ = world_bbox_size(target_mesh)
+
     obj_min, obj_max, _ = world_bbox_size(target_mesh)
-    fbx_min, fbx_max, _ = world_bbox_size(source_mesh)
     obj_center = (obj_min + obj_max) / 2
+    target_mesh.location -= obj_center
+    fbx_min, fbx_max, _ = world_bbox_size(source_mesh)
     fbx_center = (fbx_min + fbx_max) / 2
-    target_mesh.location += fbx_center - obj_center
+    source_mesh.location -= fbx_center
     bpy.context.view_layer.update()
 
     # Apply transform → vertices del OBJ quedan a la misma escala/posicion
