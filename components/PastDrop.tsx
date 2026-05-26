@@ -610,23 +610,31 @@ export default function PastDrop() {
           isMobile={isMobile}
         />
 
-        {/* ----- TITLE + EYEBROW ----- */}
+        {/* ----- TITLE + EYEBROW + BRAND×MODEL FILTER -----
+             Wrapper unico para eyebrow / titulo / filtro. Antes el titulo
+             estaba absolute (top:9%) y el filtro tambien (top:16%), y en
+             mobile se superponian (la D y la P de "DROP" tapaban los pills
+             MARCA / MODEL/VAR). Ahora estan en el mismo grid con gap
+             responsivo: la separacion vertical sale del flujo natural y se
+             mantiene consistente en cualquier viewport.                     */}
         <div
           style={{
             position: "absolute",
             top: "calc(9% - 1cm)", // subido 1cm respecto a top:9% original
             left: 0, right: 0,
             textAlign: "center",
-            zIndex: 4,
+            zIndex: 7, // alto para que el dropdown se superponga a las capsulas
             padding: "0 var(--container-pad)",
-            pointerEvents: "none",
+            pointerEvents: "none", // children re-habilitan donde corresponde
+            display: "grid",
+            justifyItems: "center",
+            gap: "clamp(0.9rem, 2.4vw, 1.6rem)",
           }}
         >
           <div
             className="system-text"
             style={{
               color: "rgba(10,10,20,0.65)",
-              marginBottom: "0.6rem",
               fontSize: "0.72rem",
               letterSpacing: "0.3em",
             }}
@@ -661,15 +669,12 @@ export default function PastDrop() {
               }}
             />
           </h2>
-        </div>
 
-        {/* ----- BRAND × MODEL FILTER (search inline) -----
-             Dos dropdowns futuristas debajo del titulo "DROP". Brand →
-             selecciona marca → segundo dropdown se habilita con todos los
-             modelo/colorways. Click en un colorway → navega a la pagina
-             del catalogo del producto. zIndex alto para superponerse a
-             las capsulas cuando se despliega.                              */}
-        <BrandModelFilter isMobile={isMobile} />
+          {/* BRAND × MODEL filter — pills glass debajo del titulo. Click en
+              un colorway navega al catalogo del producto. Los dropdowns se
+              superponen a las capsulas cuando se abren (zIndex del wrapper). */}
+          <BrandModelFilter isMobile={isMobile} />
+        </div>
 
         {/* ----- CAPSULE CAROUSEL STAGE ----- */}
         <div

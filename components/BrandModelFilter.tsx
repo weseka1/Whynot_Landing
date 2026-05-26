@@ -129,16 +129,13 @@ export default function BrandModelFilter({ isMobile = false }: { isMobile?: bool
     <div
       ref={containerRef}
       style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        /* Justo debajo del título "DROP" (que está en top: calc(9% - 1cm)).
-           El title ocupa ~clamp(2.4-5rem). Dejamos un poquito de aire. */
-        top: isMobile ? "16%" : "18%",
+        /* Posicionado por el wrapper padre (PastDrop title block) — antes
+           era position:absolute con top:16-18% pero se solapaba con la
+           imagen del titulo "DROP" en mobile. Ahora es flow-relative. */
+        position: "relative",
+        width: "100%",
         display: "flex",
         justifyContent: "center",
-        zIndex: 7,
-        padding: "0 var(--container-pad)",
         pointerEvents: "none",
       }}
     >
