@@ -26,6 +26,10 @@ const GLASS = "rgba(255,255,255,0.62)";
 const GLASS_HOVER = "rgba(255,255,255,0.82)";
 const BRACKET_FONT = "var(--font-mono, monospace)";
 
+/* Sentinel key para el item "TODOS" en el dropdown MODEL/VAR: navega al
+   catalogo de la marca completa en vez de un colorway puntual.            */
+const ALL_KEY = "__all__";
+
 type ModelVariant = {
   model: string;
   colorway: string;
@@ -125,6 +129,14 @@ export default function BrandModelFilter({ isMobile = false }: { isMobile?: bool
     );
   };
 
+  const handleSelectAllForBrand = () => {
+    setOpenVariant(false);
+    if (variantsForBrand.length === 0) return;
+    /* Todas las variants de un brand comparten slug.brand — agarramos el
+       de la primera para construir la URL del catalogo de marca.           */
+    router.push(`/catalog/${variantsForBrand[0].entry.slug.brand}`);
+  };
+
   return (
     <div
       ref={containerRef}
@@ -168,7 +180,11 @@ export default function BrandModelFilter({ isMobile = false }: { isMobile?: bool
           flexBasis={isMobile ? "50%" : "260px"}
         />
 
-        {/* ============ MODEL / VARIANT DROPDOWN ============ */}
+        {/* ============ MODEL / VARIANT DROPDOWN ============
+             Cuando hay brand, prependeamos un item "TODOS" — al apretarlo
+             navegamos al catalogo de la marca completa (en lugar de un
+             colorway individual). Atajo para los que ya saben la marca y
+             quieren ver toda la grilla.                                    */}
         <Dropdown
           isMobile={isMobile}
           label="MODEL / VAR"
@@ -183,13 +199,24 @@ export default function BrandModelFilter({ isMobile = false }: { isMobile?: bool
           }}
           query={variantQuery}
           onQueryChange={setVariantQuery}
-          items={filteredVariants.map((v) => ({
-            key: `${v.model}/${v.colorway}`,
-            primary: v.model,
-            secondary: v.colorway,
-            data: v,
-          }))}
-          onSelect={(it) => handleSelectVariant(it.data as ModelVariant)}
+          items={[
+            ...(brand && variantsForBrand.length > 0
+              ? [{ key: ALL_KEY, primary: "TODOS", secondary: "VER MARCA" }]
+              : []),
+            ...filteredVariants.map((v) => ({
+              key: `${v.model}/${v.colorway}`,
+              primary: v.model,
+              secondary: v.colorway,
+              data: v,
+            })),
+          ]}
+          onSelect={(it) => {
+            if (it.key === ALL_KEY) {
+              handleSelectAllForBrand();
+            } else {
+              handleSelectVariant(it.data as ModelVariant);
+            }
+          }}
           emptyHint={brand ? "SIN MODELOS" : "—"}
           flexBasis={isMobile ? "50%" : "320px"}
         />

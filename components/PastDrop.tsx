@@ -430,14 +430,28 @@ export default function PastDrop() {
   /* ---------- Advance by ±1 specimen ----------
      Calcula el TARGET DESEADO (round(current) + delta), y ajusta dragOffset
      para que targetPosition se mueva ahí. El spring se encarga de la
-     animación smooth y los capsule transforms reaccionan vía useTransform. */
+     animación smooth y los capsule transforms reaccionan vía useTransform.
+
+     IMPORTANTE: en mobile targetPosition = scrollPosition + dragOffset, asi
+     que para que targetPosition aterrice en newTarget hay que setear
+     dragOffset = newTarget - scrollPosition. En desktop scrollPosition NO
+     participa de la formula (ver useMotionValueEvent de dragOffset arriba):
+     targetPosition = dragOffset directo. Restar scrollPosition.get() en
+     desktop hacia que cuando el usuario estaba scrolleado adentro de la
+     seccion (scrollPosition != 0) el spring tuviese que recorrer muchas
+     capsulas para llegar al target — el sintoma "gira un monton" reportado
+     por el usuario. Ahora cada formula matchea su modo.                    */
   const advance = useCallback(
     (delta: 1 | -1) => {
       const currentTarget = targetPosition.get();
       const newTarget = Math.round(currentTarget) + delta;
-      dragOffset.set(newTarget - scrollPosition.get());
+      if (isMobile) {
+        dragOffset.set(newTarget - scrollPosition.get());
+      } else {
+        dragOffset.set(newTarget);
+      }
     },
-    [targetPosition, dragOffset, scrollPosition]
+    [targetPosition, dragOffset, scrollPosition, isMobile]
   );
 
   /* ---------- Keyboard ← → ----------
