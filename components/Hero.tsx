@@ -180,6 +180,10 @@ export default function Hero() {
         <MarqueeBanner
           image="/assets/marquee/whynot-text.webp"
           imageHeight={isMobile ? "16vh" : "clamp(5rem, 18vw, 18rem)"}
+          /* split: recorta la imagen "WHYNOT AMK EXCLUSIVE" para mostrar
+              solo "WHY" + "NOT" con gap visible entre medio. Asi se ve
+              "WHY NOT" separado sin re-exportar el WebP.                */
+          splitWhyNot
         />
       </div>
 
