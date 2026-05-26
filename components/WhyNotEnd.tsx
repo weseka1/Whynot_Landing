@@ -14,8 +14,9 @@ const TEXT          = "WHY NOT";
 const LINE_COLOR    = "#ffdfc4";
 const LINES_COUNT   = 28;   // menos líneas = más espaciadas
 const CELL_WIDTH    = 5;
-const TYPE_CANVAS_W = 580;  // ancho suficiente para "WHY NOT" con espacio
-const TYPE_CANVAS_H = 90;
+/* TYPE_CANVAS_W/H ahora se calculan dinamicos por viewport en buildLines()
+   — antes eran 580×90 fijo y en mobile (canvas ~290px) las letras quedaban
+   sub-sampleadas y no se leia "WHY NOT".                                   */
 const FONT_FACTOR   = 0.14; // letras un poco más chicas
 const HEIGHT_OFFSET = 34;   // amplitud del relieve
 const H_PAD_FACTOR  = 0.03; // padding horizontal del canvas (3% = casi full-width)
@@ -54,22 +55,29 @@ export default function WhyNotEnd() {
     let rafId = 0;
 
     function buildLines(width: number, height: number) {
+      /* Type canvas adaptado al viewport real. Antes era 580×90 fijo: en
+         mobile el canvas display medía ~290px, las letras se sampleaban
+         con baja resolución y "WHY NOT" salía ilegible. Ahora el type
+         canvas matchea el aspect del display (clampeado para no romper
+         en pantallas extremas) y la tipografia escala proporcional.       */
+      const typeW = Math.max(360, Math.min(width * 2, 1200));
+      const typeH = Math.max(80, Math.min(height * 0.5, 200));
       const typeCanvas = document.createElement("canvas");
-      typeCanvas.width  = TYPE_CANVAS_W;
-      typeCanvas.height = TYPE_CANVAS_H;
+      typeCanvas.width  = typeW;
+      typeCanvas.height = typeH;
       const tctx = typeCanvas.getContext("2d");
       if (!tctx) return;
 
       tctx.fillStyle = "black";
-      tctx.fillRect(0, 0, TYPE_CANVAS_W, TYPE_CANVAS_H);
+      tctx.fillRect(0, 0, typeW, typeH);
       tctx.fillStyle = "white";
-      const fontSize = TYPE_CANVAS_W * FONT_FACTOR;
+      const fontSize = typeW * FONT_FACTOR;
       tctx.font = `900 ${fontSize}px "Orbitron", system-ui, sans-serif`;
       tctx.textBaseline = "middle";
       tctx.textAlign    = "center";
-      tctx.fillText(TEXT, TYPE_CANVAS_W / 2, TYPE_CANVAS_H / 2);
+      tctx.fillText(TEXT, typeW / 2, typeH / 2);
 
-      const data = tctx.getImageData(0, 0, TYPE_CANVAS_W, TYPE_CANVAS_H).data;
+      const data = tctx.getImageData(0, 0, typeW, typeH).data;
 
       const hPad = width < 768 ? 0 : width * H_PAD_FACTOR;
       const vPad = height * V_PAD_FACTOR;
@@ -84,9 +92,9 @@ export default function WhyNotEnd() {
         const line: Point[] = [];
         for (let j = 0; j < cols; j++) {
           const x = hPad + j * CELL_WIDTH;
-          const tx = Math.floor((j / cols) * TYPE_CANVAS_W);
-          const ty = Math.floor((i / LINES_COUNT) * TYPE_CANVAS_H);
-          const idx = (ty * TYPE_CANVAS_W + tx) * 4;
+          const tx = Math.floor((j / cols) * typeW);
+          const ty = Math.floor((i / LINES_COUNT) * typeH);
+          const idx = (ty * typeW + tx) * 4;
           const brightness = data[idx] || 0;
           const offset = (brightness / 255) * HEIGHT_OFFSET;
           const finalY = y - offset;
@@ -165,6 +173,22 @@ export default function WhyNotEnd() {
       mouse.x = -99999;
       mouse.y = -99999;
     }
+    /* Touch handlers: replican el comportamiento de mouse pero usando el
+       primer touch point. NO usamos preventDefault (passive:true) para no
+       bloquear el scroll vertical de la pagina — el dedo puede scrollear
+       y al pasarlo por el canvas ondulara las lineas de paso. touchend
+       limpia para que las lineas vuelvan a su posicion base.              */
+    function onTouchMove(e: TouchEvent) {
+      const t = e.touches[0];
+      if (!t) return;
+      const rect = canvas!.getBoundingClientRect();
+      mouse.x = t.clientX - rect.left;
+      mouse.y = t.clientY - rect.top;
+    }
+    function onTouchEnd() {
+      mouse.x = -99999;
+      mouse.y = -99999;
+    }
 
     // Pequeño delay para que el layout esté listo
     const startId = window.setTimeout(() => {
@@ -173,8 +197,12 @@ export default function WhyNotEnd() {
     }, 50);
 
     window.addEventListener("resize", resize, { passive: true });
-    // En touch devices no agregamos listeners de mouse (no aplican y consume CPU)
-    if (!isTouch) {
+    if (isTouch) {
+      canvas.addEventListener("touchstart", onTouchMove, { passive: true });
+      canvas.addEventListener("touchmove",  onTouchMove, { passive: true });
+      canvas.addEventListener("touchend",   onTouchEnd,  { passive: true });
+      canvas.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    } else {
       canvas.addEventListener("mousemove", onMove, { passive: true });
       canvas.addEventListener("mouseleave", onLeave, { passive: true });
     }
@@ -183,7 +211,12 @@ export default function WhyNotEnd() {
       clearTimeout(startId);
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
-      if (!isTouch) {
+      if (isTouch) {
+        canvas.removeEventListener("touchstart", onTouchMove);
+        canvas.removeEventListener("touchmove",  onTouchMove);
+        canvas.removeEventListener("touchend",   onTouchEnd);
+        canvas.removeEventListener("touchcancel", onTouchEnd);
+      } else {
         canvas.removeEventListener("mousemove", onMove);
         canvas.removeEventListener("mouseleave", onLeave);
       }
@@ -259,7 +292,7 @@ export default function WhyNotEnd() {
       >
         <canvas
           ref={canvasRef}
-          aria-label="WHYNOT — pasá el mouse para distorsionar"
+          aria-label="WHYNOT — pasá el dedo (mobile) o el mouse para distorsionar"
           style={{
             position: "absolute",
             inset: 0,
@@ -267,6 +300,11 @@ export default function WhyNotEnd() {
             height: "100%",
             display: "block",
             cursor: "crosshair",
+            /* touchAction:"pan-y" deja que el browser maneje el scroll
+               vertical de la pagina mientras el dedo sigue distorsionando
+               las lineas. Sin esto el navegador podria interpretar el
+               drag como gesto propio y bloquear el efecto.                */
+            touchAction: "pan-y",
           }}
         />
       </div>
