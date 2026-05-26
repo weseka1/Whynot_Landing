@@ -190,11 +190,29 @@ export default function WhyNotEnd() {
       mouse.y = -99999;
     }
 
-    // Pequeño delay para que el layout esté listo
-    const startId = window.setTimeout(() => {
+    /* Esperamos a que Orbitron este cargada antes de hacer buildLines.
+       En mobile (red lenta) el canvas se renderea antes de que llegue la
+       fuente de Google Fonts y `tctx.fillText` cae al fallback (system-ui /
+       Roboto), que tiene letras mas finas. El sampling no detecta el texto
+       y las lineas quedan casi planas — no se lee "WHY NOT".
+       document.fonts.load() devuelve cuando la fuente esta lista; si la
+       API no existe (browser viejo) caemos al setTimeout fallback.        */
+    let startId: number;
+    const FONT_SAMPLE = '900 80px "Orbitron"';
+    const startWhenReady = () => {
       resize();
       rafId = requestAnimationFrame(tick);
-    }, 50);
+    };
+    if (typeof document !== "undefined" && "fonts" in document) {
+      document.fonts.load(FONT_SAMPLE).then(() => {
+        // doble rAF: layout + paint settle antes de buildLines
+        requestAnimationFrame(() => requestAnimationFrame(startWhenReady));
+      }).catch(() => {
+        startId = window.setTimeout(startWhenReady, 50);
+      });
+    } else {
+      startId = window.setTimeout(startWhenReady, 50);
+    }
 
     window.addEventListener("resize", resize, { passive: true });
     if (isTouch) {
@@ -208,7 +226,7 @@ export default function WhyNotEnd() {
     }
 
     return () => {
-      clearTimeout(startId);
+      if (startId) clearTimeout(startId);
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
       if (isTouch) {
