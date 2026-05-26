@@ -55,13 +55,19 @@ export default function WhyNotEnd() {
     let rafId = 0;
 
     function buildLines(width: number, height: number) {
-      /* Type canvas adaptado al viewport real. Antes era 580×90 fijo: en
-         mobile el canvas display medía ~290px, las letras se sampleaban
-         con baja resolución y "WHY NOT" salía ilegible. Ahora el type
-         canvas matchea el aspect del display (clampeado para no romper
-         en pantallas extremas) y la tipografia escala proporcional.       */
-      const typeW = Math.max(360, Math.min(width * 2, 1200));
-      const typeH = Math.max(80, Math.min(height * 0.5, 200));
+      /* Type canvas con MISMO aspect ratio que el display canvas. Asi el
+         sampling no comprime/estira el texto entre canvases. Antes el
+         type canvas era 580x90 fijo (aspect 6.4:1) y el display mobile
+         era ~360x360 (aspect 1:1) → la silueta del texto se "aplastaba"
+         verticalmente al mapear y quedaba casi plana en cada columna.
+
+         Ademas: fontSize calculado dinamico con measureText para que
+         "WHY NOT" llene ~85% del ancho disponible — independiente de
+         que la fuente sea Orbitron o el fallback. Esto evita que con
+         una fuente fallback mas angosta (Roboto, Arial) el texto quede
+         chiquito y centrado en una columna sin tocar las laterales.    */
+      const typeW = Math.max(480, Math.min(width * 2, 1600));
+      const typeH = Math.max(160, Math.min(typeW * (height / Math.max(width, 1)), typeW));
       const typeCanvas = document.createElement("canvas");
       typeCanvas.width  = typeW;
       typeCanvas.height = typeH;
@@ -71,8 +77,26 @@ export default function WhyNotEnd() {
       tctx.fillStyle = "black";
       tctx.fillRect(0, 0, typeW, typeH);
       tctx.fillStyle = "white";
-      const fontSize = typeW * FONT_FACTOR;
-      tctx.font = `900 ${fontSize}px "Orbitron", system-ui, sans-serif`;
+
+      /* Fontfamily: Orbitron primary; "Impact" y "Arial Black" como
+         fallback HEAVY (siempre disponibles en mobile, mas anchas que
+         system-ui/Roboto). Asi aunque Orbitron tarde, el sampling
+         sigue capturando una silueta legible.                          */
+      const FONT_FAMILY = '"Orbitron", "Impact", "Arial Black", system-ui, sans-serif';
+
+      /* Buscamos el fontSize maximo que entre en el 85% del ancho del
+         type canvas. Empezamos en typeH * 0.7 (limite vertical) y
+         bajamos por ancho si hace falta.                                */
+      const targetW = typeW * 0.85;
+      let fontSize = typeH * 0.7;
+      tctx.font = `900 ${fontSize}px ${FONT_FAMILY}`;
+      let measured = tctx.measureText(TEXT).width;
+      if (measured > targetW) {
+        fontSize = fontSize * (targetW / measured);
+        tctx.font = `900 ${fontSize}px ${FONT_FAMILY}`;
+        measured = tctx.measureText(TEXT).width;
+      }
+
       tctx.textBaseline = "middle";
       tctx.textAlign    = "center";
       tctx.fillText(TEXT, typeW / 2, typeH / 2);
@@ -190,28 +214,40 @@ export default function WhyNotEnd() {
       mouse.y = -99999;
     }
 
-    /* Esperamos a que Orbitron este cargada antes de hacer buildLines.
-       En mobile (red lenta) el canvas se renderea antes de que llegue la
-       fuente de Google Fonts y `tctx.fillText` cae al fallback (system-ui /
-       Roboto), que tiene letras mas finas. El sampling no detecta el texto
-       y las lineas quedan casi planas — no se lee "WHY NOT".
-       document.fonts.load() devuelve cuando la fuente esta lista; si la
-       API no existe (browser viejo) caemos al setTimeout fallback.        */
+    /* Arrancamos YA con el fallback heavy (Impact/Arial Black) — el
+       buildLines() ahora calcula fontSize con measureText sobre lo que
+       tenga, asi el texto se ve aunque Orbitron no haya cargado todavia.
+       Cuando Orbitron carga (o cuando document.fonts.ready resuelve por
+       todas las fuentes pendientes), re-buildeamos para que la silueta
+       se refine al diseño de Orbitron. Sin esto, en mobile con red lenta
+       el primer render usaba el fallback y nunca actualizaba.            */
     let startId: number;
-    const FONT_SAMPLE = '900 80px "Orbitron"';
-    const startWhenReady = () => {
+    let rebuildId = 0;
+    const rebuildOnFontReady = () => {
+      // Solo si seguimos montados (canvas existe y dimensiones validas)
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) buildLines(rect.width, rect.height);
+    };
+    const startNow = () => {
       resize();
       rafId = requestAnimationFrame(tick);
     };
+
+    // Arranque inmediato (con fallback font si Orbitron no esta lista)
+    startId = window.setTimeout(startNow, 50);
+
+    // Si la API de fonts existe, reintenta el build cuando Orbitron
+    // este disponible Y cuando todas las fuentes terminen
     if (typeof document !== "undefined" && "fonts" in document) {
+      const FONT_SAMPLE = '900 80px "Orbitron"';
       document.fonts.load(FONT_SAMPLE).then(() => {
-        // doble rAF: layout + paint settle antes de buildLines
-        requestAnimationFrame(() => requestAnimationFrame(startWhenReady));
-      }).catch(() => {
-        startId = window.setTimeout(startWhenReady, 50);
-      });
-    } else {
-      startId = window.setTimeout(startWhenReady, 50);
+        rebuildId = window.setTimeout(rebuildOnFontReady, 0);
+      }).catch(() => {});
+      // fallback adicional: cuando todas las fuentes pendientes terminan
+      document.fonts.ready?.then(() => {
+        window.setTimeout(rebuildOnFontReady, 0);
+      }).catch(() => {});
     }
 
     window.addEventListener("resize", resize, { passive: true });
@@ -227,6 +263,7 @@ export default function WhyNotEnd() {
 
     return () => {
       if (startId) clearTimeout(startId);
+      if (rebuildId) clearTimeout(rebuildId);
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
       if (isTouch) {
