@@ -5,18 +5,24 @@
  */
 
 /* Canal de contacto: cada pilar opcionalmente tiene una lista de
-   channels[] que se renderiza como pills con icono inline en Mission.tsx. */
+   channels[] que se renderiza como pills con icono inline en Mission.tsx.
+   - note: descripcion corta que se muestra DEBAJO de la pill (ej:
+     "collabs, re-stock, sale"). Opcional.                                 */
 type Channel = {
   type:    "whatsapp" | "instagram" | "web" | "whatsapp-channel";
   display: string;
   url:     string;
+  note?:   string;
 };
 
+/* closing: parrafo final que aparece DEBAJO de los channel pills.
+   Usado p/ ej en el pilar .002 CANALES para el call-to-action.         */
 type Pillar = {
   id:        string;
   label:     string;
   copy:      string;
   channels?: Channel[];
+  closing?:  string;
 };
 
 export const site = {
@@ -92,16 +98,17 @@ export const site = {
       {
         id:    ".002 CANALES",
         label: "¿Cuáles son nuestros canales oficiales?",
-        copy:  "Entrá por donde te quede mejor — la conversación no se rompe entre canales.",
+        copy:  "Viví la experiencia WhyNot: drops semanales, lanzamientos exclusivos, promociones y STOCK LIMITADO.",
         channels: [
-          /* WhatsApp y Web los sacamos por redundancia: ya aparecen como
-             pills en otros pilares (.001 COMPRA y .005 DUDAS para WA,
-             y la URL se ve en el body). Aca solo dejamos los canales
-             "extra" que solo se muestran aca: Instagram + Canal WhatsApp. */
-          { type: "instagram",        display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
+          { type: "instagram",        display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/",
+            note: "collabs · re-stock · sale · new drops · compras" },
           /* TODO: reemplazar el "#" cuando me pases la URL del Canal de WhatsApp. */
-          { type: "whatsapp-channel", display: "Canal WhatsApp",      url: "#" },
+          { type: "whatsapp-channel", display: "Canal WhatsApp",      url: "#",
+            note: "promociones · detrás de cámara · unboxings · avisos de stock y re-stock" },
+          { type: "web",              display: "Web oficial",         url: "/",
+            note: "catálogo completo · drops activos · pre-venta" },
         ],
+        closing: "¿Querés ser exclusivo como nosotros? No te pierdas las novedades y enterate con prioridad de cada lanzamiento en nuestros canales. Ubicalo y colocalo.",
       },
       {
         id:    ".003 CABA",

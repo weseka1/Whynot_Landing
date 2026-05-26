@@ -39,6 +39,10 @@ type Channel = {
   type:    "whatsapp" | "instagram" | "web" | "whatsapp-channel";
   display: string;
   url:     string;
+  /* Descripcion corta opcional debajo del pill (ej: lo que vas a encontrar
+     en ese canal). Se renderea con tipografia mono fina para no competir
+     con el pill principal.                                                */
+  note?:   string;
 };
 
 function InstagramIcon({ size = 22 }: { size?: number }) {
@@ -100,46 +104,77 @@ function ChannelButtons({ channels }: { channels: Channel[] }) {
     "whatsapp-channel": "mission-social-wa-channel",
   };
 
+  /* Si alguno de los channels trae `note`, cambiamos el layout a columna
+     (cada pill apilado con su descripcion debajo). Si no, mantenemos el
+     row con wrap (comportamiento original).                              */
+  const hasNotes = channels.some((c) => c.note);
+
   return (
     <div
       style={{
         marginTop: "var(--space-md)",
         display: "flex",
+        flexDirection: hasNotes ? "column" : "row",
         flexWrap: "wrap",
-        gap: "0.85rem",
+        gap: hasNotes ? "1rem" : "0.85rem",
+        alignItems: hasNotes ? "flex-start" : "stretch",
       }}
     >
       {channels.map((c) => (
-        <a
+        <div
           key={c.type + c.url}
-          href={c.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          data-sound-hover
-          aria-label={`${c.type} ${c.display}`}
-          className={`mission-social-pill ${cls[c.type]}`}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "10px 18px 10px 14px",
-            borderRadius: 999,
-            border: "1px solid currentColor",
-            background: "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.0))",
-            color: "#0a0a14",
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.85rem",
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            textDecoration: "none",
-            position: "relative",
-            overflow: "hidden",
-            transition: "transform var(--speed-fast, 0.15s), box-shadow var(--speed-fast, 0.15s), color var(--speed-fast, 0.15s)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.4rem",
+            maxWidth: 460,
           }}
         >
-          <ChannelIcon type={c.type} />
-          <span>{c.display}</span>
-        </a>
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-sound-hover
+            aria-label={`${c.type} ${c.display}`}
+            className={`mission-social-pill ${cls[c.type]}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 18px 10px 14px",
+              borderRadius: 999,
+              border: "1px solid currentColor",
+              background: "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.0))",
+              color: "#0a0a14",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.85rem",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              textDecoration: "none",
+              position: "relative",
+              overflow: "hidden",
+              transition: "transform var(--speed-fast, 0.15s), box-shadow var(--speed-fast, 0.15s), color var(--speed-fast, 0.15s)",
+              alignSelf: "flex-start",
+            }}
+          >
+            <ChannelIcon type={c.type} />
+            <span>{c.display}</span>
+          </a>
+          {c.note && (
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.78rem",
+                lineHeight: 1.4,
+                color: "rgba(10,10,20,0.62)",
+                letterSpacing: "0.02em",
+                paddingLeft: "0.4rem",
+              }}
+            >
+              {c.note}
+            </span>
+          )}
+        </div>
       ))}
     </div>
   );
@@ -301,6 +336,24 @@ export default function Mission() {
               {p.channels && p.channels.length > 0 ? (
                 <ChannelButtons channels={p.channels} />
               ) : null}
+
+              {/* Parrafo de cierre opcional debajo de los pills (ej: CTA
+                  "querés ser exclusivo como nosotros..." en el pilar de
+                  canales).                                                  */}
+              {p.closing && (
+                <p
+                  style={{
+                    marginTop: "var(--space-md)",
+                    fontSize: "0.98rem",
+                    lineHeight: 1.55,
+                    color: "rgba(10,10,20,0.72)",
+                    maxWidth: 480,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {p.closing}
+                </p>
+              )}
             </div>
 
             {/* COLUMNA DERECHA — mono 3D embedded en el pilar. Se desplaza
