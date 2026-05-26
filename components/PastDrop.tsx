@@ -454,6 +454,43 @@ export default function PastDrop() {
     [targetPosition, dragOffset, scrollPosition, isMobile]
   );
 
+  /* ---------- Salto absoluto a un indice (no relativo) ----------
+     Usado por el BrandModelFilter: cuando el usuario elige una marca en
+     el dropdown, el carrusel rota automaticamente a la primera capsula
+     de esa marca. Toma el camino MAS CORTO en el wrap circular (si el
+     target esta a 10 de un lado y a 5 del otro, gira solo 5).            */
+  const goToIndex = useCallback(
+    (idx: number) => {
+      if (idx < 0 || idx >= N) return;
+      const currentTarget = targetPosition.get();
+      /* targetPosition no esta wrappeado — busco el equivalente de idx
+         mas cercano al currentTarget para que el spring no de la vuelta
+         larga. Algoritmo: tomo idx + k*N donde k es el entero que
+         minimiza la distancia con currentTarget.                          */
+      const k = Math.round((currentTarget - idx) / N);
+      const newTarget = idx + k * N;
+      if (isMobile) {
+        dragOffset.set(newTarget - scrollPosition.get());
+      } else {
+        dragOffset.set(newTarget);
+      }
+    },
+    [targetPosition, dragOffset, scrollPosition, isMobile]
+  );
+
+  /* ---------- Brand -> indice de la primera capsula con esa marca ----
+     El dropdown BrandModelFilter lista las marcas de getAllEntries()
+     (catalog.brand). Cada Spec tiene entry?.brand (catalog brand) — uso
+     ese match para encontrar la capsula. Si una marca tiene multiples
+     capsulas (ej: JORDAN con Black Cat + Patent Gold) vamos a la primera. */
+  const goToBrand = useCallback(
+    (catalogBrand: string) => {
+      const idx = SPECS.findIndex((s) => s.entry?.brand === catalogBrand);
+      if (idx >= 0) goToIndex(idx);
+    },
+    [goToIndex]
+  );
+
   /* ---------- Keyboard ← → ----------
      Listener global; ignora si el foco está en un input/textarea/contentEditable.
      PastDrop solo se monta en la home; la colorway page tiene su propio
@@ -686,8 +723,11 @@ export default function PastDrop() {
 
           {/* BRAND × MODEL filter — pills glass debajo del titulo. Click en
               un colorway navega al catalogo del producto. Los dropdowns se
-              superponen a las capsulas cuando se abren (zIndex del wrapper). */}
-          <BrandModelFilter isMobile={isMobile} />
+              superponen a las capsulas cuando se abren (zIndex del wrapper).
+              onBrandSelect: al elegir marca, el carrusel rota automaticamente
+              a la primera capsula de esa marca (UX: el dropdown te abre el
+              segundo combo Y mueve la zapa visible al mismo tiempo).         */}
+          <BrandModelFilter isMobile={isMobile} onBrandSelect={goToBrand} />
         </div>
 
         {/* ----- CAPSULE CAROUSEL STAGE ----- */}
@@ -720,7 +760,12 @@ export default function PastDrop() {
             WebkitTouchCallout: "none",
             perspective: "1600px",
             zIndex: 5,
-            transform: "translateY(1cm)", // bajado 1cm los circulos de zapas
+            /* Bajamos las capsulas para que NO queden tapadas por las pills
+               del filtro BRAND/MODEL que viven en el title block (top ~9%).
+               Mobile necesita mas offset porque el viewport es mas corto y
+               las pills son mas grandes proporcionalmente -> 2.4cm. Desktop
+               mantiene el 1cm original (mas espacio vertical).                */
+            transform: isMobile ? "translateY(2.4cm)" : "translateY(1cm)",
           }}
         >
           {SPECS.map((spec, i) => (

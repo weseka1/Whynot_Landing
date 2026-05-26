@@ -37,7 +37,16 @@ type ModelVariant = {
   label: string;
 };
 
-export default function BrandModelFilter({ isMobile = false }: { isMobile?: boolean }) {
+export default function BrandModelFilter({
+  isMobile = false,
+  onBrandSelect,
+}: {
+  isMobile?: boolean;
+  /* Callback opcional: cuando el usuario elige una marca en el dropdown,
+     el padre (PastDrop) rota el carrusel a la primera capsula de esa
+     marca. Se llama con el catalog.brand del entry seleccionado.         */
+  onBrandSelect?: (catalogBrand: string) => void;
+}) {
   const router = useRouter();
 
   /* ----- Datos del catalogo ----- */
@@ -117,6 +126,9 @@ export default function BrandModelFilter({ isMobile = false }: { isMobile?: bool
     setBrand(b);
     setOpenBrand(false);
     setVariantQuery("");
+    /* Avisamos al padre para que el carrusel rote a la primera capsula
+       de esta marca (PastDrop.goToBrand).                                  */
+    onBrandSelect?.(b);
     /* UX: al elegir brand, abrimos automaticamente el segundo dropdown
        para que el flujo brand→variant sea de un solo movimiento.          */
     setTimeout(() => setOpenVariant(true), 180);
