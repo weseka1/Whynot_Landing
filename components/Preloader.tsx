@@ -233,18 +233,35 @@ export default function Preloader() {
     let doneWeight = 0;
     let cancelled = false;
     let displayPct = 0;
+    /* Throttle de setPct: en vez de re-renderear React 60 veces por segundo
+       (cada uno con su 7 letras x 3 layers SVG + re-evaluacion del filtro
+       feTurbulence/feDisplacementMap del spray paint), solo seteamos cuando
+       el % redondeado cambia. Reduce los renders a ~100 totales sobre toda
+       la duracion del preloader.
+
+       pctRef.current se sigue actualizando cada frame (sin React) — las
+       particulas del canvas leen de ahi en su propio RAF y necesitan el
+       valor continuo decimal para getPointAtLength sobre el path activo. */
+    let lastIntPct = -1;
 
     const tick = () => {
       if (cancelled) return;
       const target = Math.min(100, (doneWeight / totalWeight) * 100);
       displayPct += (target - displayPct) * 0.18;
       pctRef.current = displayPct;
-      setPct(displayPct);
+      const intPct = Math.round(displayPct);
+      if (intPct !== lastIntPct) {
+        lastIntPct = intPct;
+        setPct(displayPct);
+      }
       if (displayPct < 99.5 || target < 100) {
         requestAnimationFrame(tick);
       } else {
         pctRef.current = 100;
-        setPct(100);
+        if (lastIntPct !== 100) {
+          lastIntPct = 100;
+          setPct(100);
+        }
       }
     };
     requestAnimationFrame(tick);
@@ -305,9 +322,21 @@ export default function Preloader() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    /* Mobile tier: bajamos AMBIENT (80→32) y SPARK burst (5→3) + interval
+       (14ms→22ms). El preloader corre en simultaneo con la descarga de
+       videos/GLBs/fontset → el CPU del mobile se queda sin ciclos y el
+       canvas + el filtro SVG del spray paint compiten por el frame. */
+    const isMobileTier = detectMobileTier();
+    const AMBIENT_COUNT = isMobileTier ? 32 : 80;
+    const SPARK_BURST = isMobileTier ? 3 : 5;
+    const SPARK_INTERVAL = isMobileTier ? 22 : 14;
+
     let raf = 0;
     let lastSpark = 0;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    /* dpr cap: 1.25 en mobile (vs 2 desktop) → menos pixeles para llenar
+       en cada frame del canvas. El usuario no nota la diferencia a esa
+       densidad de particulas chiquitas.                                   */
+    const dpr = Math.min(window.devicePixelRatio || 1, isMobileTier ? 1.25 : 2);
 
     const resize = () => {
       const w = window.innerWidth;
@@ -322,7 +351,7 @@ export default function Preloader() {
     window.addEventListener("resize", resize);
 
     type Ambient = { x:number; y:number; vx:number; vy:number; r:number; a:number; gold:boolean };
-    const ambient: Ambient[] = Array.from({ length: 80 }, () => ({
+    const ambient: Ambient[] = Array.from({ length: AMBIENT_COUNT }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
       vx: (Math.random() - 0.5) * 0.18,
@@ -375,9 +404,9 @@ export default function Preloader() {
             if (ctm) {
               const x = ctm.a * pt.x + ctm.c * pt.y + ctm.e;
               const y = ctm.b * pt.x + ctm.d * pt.y + ctm.f;
-              if (t - lastSpark > 14) {
+              if (t - lastSpark > SPARK_INTERVAL) {
                 lastSpark = t;
-                const burst = 5;
+                const burst = SPARK_BURST;
                 for (let i = 0; i < burst; i++) {
                   sparks.push({
                     x: x + (Math.random() - 0.5) * 6,
