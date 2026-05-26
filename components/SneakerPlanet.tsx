@@ -460,12 +460,17 @@ function SneakerPlanetImpl({
         inset: 0,
         /* PORTHOLE: clipado circular del canvas oscuro sobre el pearl bg de
            la seccion. Sin este clip el cuadrado oscuro del scene cortaba el
-           layout. Borde sutil para definir el orbe.                        */
+           layout. Borde sutil para definir el orbe.
+
+           IMPORTANTE: NO usar posterSrc como background del porthole. Antes
+           lo hacia para "tener algo" mientras el WebGL booteaba, pero el
+           usuario reportaba que el flash de la imagen estatica plana (zapa
+           con label "GGDB/SSTAR" sobre fondo oscuro, sin sphere/lens flares/
+           anillos) se veia horrible antes de que se acomode la escena. Mejor
+           porthole oscuro solido hasta que el Canvas dibuje el frame 1.    */
         borderRadius: "50%",
         overflow: "hidden",
-        background: posterSrc
-          ? `center / contain no-repeat url(${posterSrc}), #0a0b0f`
-          : "#0a0b0f",
+        background: "#0a0b0f",
         boxShadow:
           "inset 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(20,18,15,0.35)",
       }}
