@@ -129,9 +129,8 @@ export default function BrandModelFilter({
     /* Avisamos al padre para que el carrusel rote a la primera capsula
        de esta marca (PastDrop.goToBrand).                                  */
     onBrandSelect?.(b);
-    /* UX: al elegir brand, abrimos automaticamente el segundo dropdown
-       para que el flujo brand→variant sea de un solo movimiento.          */
-    setTimeout(() => setOpenVariant(true), 180);
+    /* No abrimos automaticamente el dropdown MODEL/VAR — el cliente lo
+       abre cuando quiere (pedido del usuario).                            */
   };
 
   const handleSelectVariant = (v: ModelVariant) => {
