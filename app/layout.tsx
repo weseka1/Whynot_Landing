@@ -14,8 +14,8 @@ import "./globals.css";
    ============================================================================ */
 
 const SITE_URL = "https://whynot-landing.onrender.com";
-const SITE_NAME = "WHYNOT";
-const SITE_TITLE = "WHYNOT — Future Fashion System";
+const SITE_NAME = "WHY NOT";
+const SITE_TITLE = "WHY NOT — Future Fashion System";
 const SITE_DESC = "Luxury sneaker drops. Encrypted couture. A cyber-fashion operating system.";
 
 export const metadata: Metadata = {
@@ -28,10 +28,10 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
   formatDetection: { telephone: false, email: false, address: false },
   keywords: [
-    "WHYNOT", "luxury sneakers", "future fashion", "drops",
+    "WHY NOT", "luxury sneakers", "future fashion", "drops",
     "Golden Goose", "Balenciaga 3XL", "cyber couture",
   ],
-  authors: [{ name: "WHYNOT" }],
+  authors: [{ name: "WHY NOT" }],
   creator: SITE_NAME,
   publisher: SITE_NAME,
   category: "fashion",
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
         url: "/assets/hero/character.webp",
         width: 1200,
         height: 1200,
-        alt: "WHYNOT — Future Fashion System",
+        alt: "WHY NOT — Future Fashion System",
       },
     ],
   },

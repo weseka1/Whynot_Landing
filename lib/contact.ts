@@ -23,7 +23,7 @@ export function buildProductMessage(
   size?: string
 ): string {
   const lines = [
-    "Hola WhyNot, quiero consultar por este modelo:",
+    "Hola Why Not, quiero consultar por este modelo:",
     `Marca: ${entry.brand}`,
     `Modelo: ${entry.model}`,
     `Colorway: ${entry.colorway}`,

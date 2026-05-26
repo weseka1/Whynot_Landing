@@ -135,7 +135,7 @@ export default function Collections() {
             letterSpacing: "0.32em",
           }}
         >
-          +++ WHYNOT // COLLECTIONS
+          +++ WHY NOT // COLLECTIONS
         </span>
         <span
           style={{

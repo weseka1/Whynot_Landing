@@ -309,7 +309,7 @@ export default function WhyNotEnd() {
           STUDY: 404 PAGE
         </span>
         <span className="system-text" style={{ color: "var(--color-accent)" }}>
-          WHYNOT // BOTTOM
+          WHY NOT // BOTTOM
         </span>
         <a
           href="#hero"
@@ -347,7 +347,7 @@ export default function WhyNotEnd() {
       >
         <canvas
           ref={canvasRef}
-          aria-label="WHYNOT — pasá el dedo (mobile) o el mouse para distorsionar"
+          aria-label="WHY NOT — pasá el dedo (mobile) o el mouse para distorsionar"
           style={{
             position: "absolute",
             inset: 0,
@@ -374,10 +374,10 @@ export default function WhyNotEnd() {
           borderTop: "1px solid var(--color-line)",
         }}
       >
-        <Info label="SITE BY:"    main="WHYNOT_DEV"        sub="BL/S0" />
-        <Info label="PROJECT:"    main="NEW ERA OF WHYNOT" />
+        <Info label="SITE BY:"    main="WHY NOT_DEV"        sub="BL/S0" />
+        <Info label="PROJECT:"    main="NEW ERA OF WHY NOT" />
         <Info label="LEGAL:"      main="@2025–2045" />
-        <Info label="MASTERCLASS" main="WHYNOT TEAM"       align="right" />
+        <Info label="MASTERCLASS" main="WHY NOT TEAM"       align="right" />
       </div>
     </section>
   );

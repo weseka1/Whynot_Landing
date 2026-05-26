@@ -27,7 +27,7 @@ type Pillar = {
 
 export const site = {
   brand: {
-    name: "WHYNOT",
+    name: "WHY NOT",
     tagline: "Future Mode",
   },
 
@@ -83,7 +83,7 @@ export const site = {
      canales oficiales, envios CABA/GBA, envios al interior, dudas/asesor. */
   mission: {
     eyebrow:  "// OUR MISSION",
-    title:    "Somos WhyNot",
+    title:    "Somos Why Not",
     subtitle: "Conocenos. Una forma distinta de comprar.",
     pillars: [
       {
@@ -98,7 +98,7 @@ export const site = {
       {
         id:    ".002 CANALES",
         label: "¿Cuáles son nuestros canales oficiales?",
-        copy:  "Viví la experiencia WhyNot: drops semanales, lanzamientos exclusivos, promociones y STOCK LIMITADO.",
+        copy:  "Viví la experiencia Why Not: drops semanales, lanzamientos exclusivos, promociones y STOCK LIMITADO.",
         channels: [
           { type: "instagram",        display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/",
             note: "collabs · re-stock · sale · new drops · compras" },

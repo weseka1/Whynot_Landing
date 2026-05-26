@@ -249,7 +249,7 @@ export default function FuturisticGallery() {
             color: "rgba(243,236,225,0.85)",
           }}
         >
-          WHYNOT // GALLERY
+          WHY NOT // GALLERY
         </span>
 
         <span
@@ -429,7 +429,7 @@ export default function FuturisticGallery() {
           zIndex: 2,
         }}
       >
-        WHYNOT
+        WHY NOT
       </div>
 
       {/* TOGGLE pill — switch entre women/men. Estética T-012 del proyecto:

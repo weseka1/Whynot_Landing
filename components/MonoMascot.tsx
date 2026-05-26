@@ -172,7 +172,7 @@ export default function MonoMascot({
       <model-viewer
         ref={modelRef}
         src={mobileGLB(GLB_SRC)}
-        alt="WHYNOT mono mascot"
+        alt="WHY NOT mono mascot"
         disable-zoom
         shadow-intensity="0"
         exposure="1.1"
