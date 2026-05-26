@@ -162,16 +162,16 @@ export default function Hero() {
       <FrameBorder color="var(--color-accent)" inset={14} corner={40} gap={10} />
 
       {/* — MARQUEE —
-           Desktop: top -22vh, imageHeight clamp(9rem, 38vw, 32rem). Antes
-           el banner WHYNOT quedaba muy alto y chico en mobile (clamp llegaba
-           al min 9rem = ~144px) y al usuario no se le veia bien. En mobile
-           bajamos el top a -8vh (queda mas visible dentro del viewport) y
-           subimos el imageHeight a 16vh (~107px en 667vh, mas legible
-           proporcionalmente a la pantalla chica).                          */}
+           Desktop: top -10vh, imageHeight clamp(5rem, 18vw, 18rem). Antes
+           el imageHeight desktop era clamp(9rem, 38vw, 32rem) — en viewports
+           anchos (1600px+) se renderizaba a ~608px de alto y las letras
+           gigantes tapaban media pantalla. Bajamos a la mitad para que el
+           WHYNOT se vea como cinta horizontal y no como mural. Mobile sigue
+           con 16vh (~107px en 667vh, ya estaba bien proporcionado).        */}
       <div
         style={{
           position: "absolute",
-          top: isMobile ? "-8vh" : "-22vh",
+          top: isMobile ? "-8vh" : "-10vh",
           left: 0,
           right: 0,
           zIndex: 2,
@@ -179,7 +179,7 @@ export default function Hero() {
       >
         <MarqueeBanner
           image="/assets/marquee/whynot-text.webp"
-          imageHeight={isMobile ? "16vh" : "clamp(9rem, 38vw, 32rem)"}
+          imageHeight={isMobile ? "16vh" : "clamp(5rem, 18vw, 18rem)"}
         />
       </div>
 
