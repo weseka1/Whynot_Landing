@@ -31,6 +31,7 @@
 import {
   Suspense,
   memo,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -83,8 +84,15 @@ interface SneakerPlanetProps {
    VIDEO TEXTURE — Golden Goose webm como THREE.VideoTexture. La zapa real
    del producto, no un GLB generico.
    ============================================================================ */
-function useVideoTexture(src: string): THREE.VideoTexture | null {
+function useVideoTexture(
+  src: string,
+  onReady?: () => void
+): THREE.VideoTexture | null {
   const [texture, setTexture] = useState<THREE.VideoTexture | null>(null);
+  /* Ref para que el effect no se re-corra si el padre pasa una callback
+     nueva en cada render — solo nos importa que apunte a la mas reciente. */
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     const video = document.createElement("video");
@@ -106,7 +114,22 @@ function useVideoTexture(src: string): THREE.VideoTexture | null {
     tex.premultiplyAlpha = false;
     setTexture(tex);
 
+    /* Notificar cuando el video tiene al menos el primer frame decodificado
+       (readyState >= 2 = HAVE_CURRENT_DATA). Antes de esto la videoTexture
+       existe pero no tiene contenido — pintarla daria un frame negro/raro
+       y producia el flash de "esfera negra sin zapatilla" que el usuario
+       reportaba.                                                            */
+    const fireReady = () => onReadyRef.current?.();
+    if (video.readyState >= 2) {
+      /* Si el video ya estaba cached (segunda visita) disparamos en el
+         proximo microtask para no chocar con el ciclo de mount.            */
+      queueMicrotask(fireReady);
+    } else {
+      video.addEventListener("loadeddata", fireReady, { once: true });
+    }
+
     return () => {
+      video.removeEventListener("loadeddata", fireReady);
       tex.dispose();
       video.pause();
       video.removeAttribute("src");
@@ -122,8 +145,14 @@ function useVideoTexture(src: string): THREE.VideoTexture | null {
    - depthTest:false + renderOrder=100 -> SIEMPRE visible
    - toneMapped:true -> entra al pipeline, no satura el bloom
    ============================================================================ */
-function Sneaker({ videoSrc }: { videoSrc: string }) {
-  const texture = useVideoTexture(videoSrc);
+function Sneaker({
+  videoSrc,
+  onReady,
+}: {
+  videoSrc: string;
+  onReady?: () => void;
+}) {
+  const texture = useVideoTexture(videoSrc, onReady);
   const ref = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
@@ -327,11 +356,13 @@ function Scene({
   accent,
   isMobile,
   perfDegraded,
+  onReady,
 }: {
   videoSrc: string;
   accent: Accent;
   isMobile: boolean;
   perfDegraded: boolean;
+  onReady?: () => void;
 }) {
   const c = ACCENT[accent];
   const lowQuality = isMobile || perfDegraded;
@@ -402,7 +433,7 @@ function Scene({
          la sphere queda uniformemente iluminada por el HDRI.              */}
 
       {/* === SNEAKER Golden Goose (video texture, alpha real) === */}
-      <Sneaker videoSrc={videoSrc} />
+      <Sneaker videoSrc={videoSrc} onReady={onReady} />
 
       {/* === POSTPROC - Bloom MUY sutil + Vignette. Sin chromatic ab. === */}
       {!lowQuality && (
@@ -431,6 +462,17 @@ function SneakerPlanetImpl({
 }: SneakerPlanetProps) {
   const isMobile = useIsMobile();
   const [perfDegraded, setPerfDegraded] = useState(false);
+  /* sceneReady = video tiene su primer frame decodificado (HAVE_CURRENT_DATA).
+     Hasta entonces el porthole queda invisible (opacity 0) — antes se veia
+     el orbe oscuro sin la zapatilla, y el usuario reportaba que ese estado
+     "intermedio" se veia feo. Cuando el frame esta listo, fade-in suave.
+     Reseteo al cambiar de item (videoSrc cambia) -> cada Golden Goose
+     entra con su propio fade.                                              */
+  const [sceneReady, setSceneReady] = useState(false);
+  useEffect(() => {
+    setSceneReady(false);
+  }, [videoSrc]);
+  const handleSceneReady = useCallback(() => setSceneReady(true), []);
   /* Frameloop "demand"/never cuando el porthole esta fuera de viewport.
      Pausa: video texture, sphere rotation, parallax, postproc.
      En mobile el ahorro es critico — sin esto el Canvas seguia tirando
@@ -473,6 +515,12 @@ function SneakerPlanetImpl({
         background: "#0a0b0f",
         boxShadow:
           "inset 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(20,18,15,0.35)",
+        /* Fade-in del orbe ENTERO cuando la escena 3D esta lista. Antes
+           el porthole oscuro se veia desde el frame 0 sin zapatilla
+           dentro — feo. Ahora opacity 0 hasta sceneReady, luego transicion
+           de 380ms al estado final.                                       */
+        opacity: sceneReady ? 1 : 0,
+        transition: "opacity 380ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     >
       {/* Overlay radial pearl-edge: cubre el dark crescent al borde del
@@ -528,6 +576,7 @@ function SneakerPlanetImpl({
             accent={accent}
             isMobile={isMobile}
             perfDegraded={perfDegraded}
+            onReady={handleSceneReady}
           />
         </Suspense>
       </Canvas>
