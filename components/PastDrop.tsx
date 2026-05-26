@@ -762,10 +762,11 @@ export default function PastDrop() {
             zIndex: 5,
             /* Bajamos las capsulas para que NO queden tapadas por las pills
                del filtro BRAND/MODEL que viven en el title block (top ~9%).
-               Mobile necesita mas offset porque el viewport es mas corto y
-               las pills son mas grandes proporcionalmente -> 2.4cm. Desktop
-               mantiene el 1cm original (mas espacio vertical).                */
-            transform: isMobile ? "translateY(2.4cm)" : "translateY(1cm)",
+               El usuario reporto overlap incluso en desktop con el offset
+               anterior (1cm) -> subimos a 2.8cm desktop / 3.4cm mobile.
+               Mobile necesita mas porque el viewport es mas corto y las
+               pills son proporcionalmente mas grandes.                       */
+            transform: isMobile ? "translateY(3.4cm)" : "translateY(2.8cm)",
           }}
         >
           {SPECS.map((spec, i) => (
