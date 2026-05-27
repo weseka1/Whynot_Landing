@@ -89,7 +89,7 @@ export const site = {
       {
         id:    ".001 COMPRA",
         label: "¿Cómo comprar?",
-        copy:  "Asesoramiento online personalizado. Te respondemos en el momento por el canal que prefieras.",
+        copy:  "Cada compra se gestiona con atención personalizada. Elegí Instagram o WhatsApp y nuestro equipo te guía para avanzar con tu drop.",
         channels: [
           { type: "instagram", display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
           { type: "whatsapp",  display: "+54 9 11 7629-5915", url: "https://wa.me/5491176295915" },
