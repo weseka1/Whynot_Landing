@@ -595,7 +595,10 @@ model-viewer {
     text-align: left;
   }
   #section-mission > div:nth-of-type(2) > div:first-child h2 {
-    font-size: clamp(2.5rem, 11vw, 4.5rem) !important;
+    /* font-size bajado (11vw -> 9vw, max 4.5rem -> 3.6rem) y min reducido
+       para que "SOMOS WHY NOT" entre en una sola linea con whiteSpace
+       nowrap (pedido del usuario, mobile y desktop). */
+    font-size: clamp(1.9rem, 9vw, 3.6rem) !important;
   }
   /* MOBILE MONKEYS RE-HABILITADOS (intencional, post optimizacion 71a1e9e).
      Antes los 5 Mission monkeys + header estaban escondidos en mobile via
@@ -887,9 +890,10 @@ model-viewer {
     height: 45vh;
     min-height: 280px;
   }
-  /* Mission header titulo. */
+  /* Mission header titulo. Reducido para que "SOMOS WHY NOT" no
+     desborde con whiteSpace nowrap en viewports angostos.                  */
   #section-mission > div:nth-of-type(2) > div:first-child h2 {
-    font-size: clamp(2.25rem, 12vw, 3.5rem) !important;
+    font-size: clamp(1.6rem, 9.5vw, 2.8rem) !important;
   }
 
   /* Collections capsula. */

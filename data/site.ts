@@ -84,7 +84,7 @@ export const site = {
   mission: {
     eyebrow:  "// OUR MISSION",
     title:    "Somos Why Not",
-    subtitle: "Conocenos. Una forma distinta de comprar.",
+    subtitle: "Una forma distinta de pisar la street....",
     pillars: [
       {
         id:    ".001 COMPRA",
@@ -123,7 +123,7 @@ export const site = {
       {
         id:    ".005 DUDAS",
         label: "¿Tenés dudas?",
-        copy:  "Contactate con un asesor de ventas. Podés pedir un video umboxing del producto antes de la compra.",
+        copy:  "Te asesoramos de forma personalizada para ayudarte a elegir el drop que necesitás. También podés solicitar un video unboxing y conocer el producto en detalle antes de recibirlo.",
         channels: [
           { type: "whatsapp",  display: "Chat WhatsApp",     url: "https://wa.me/5491176295915" },
           { type: "instagram", display: "@whynot_exclusive", url: "https://www.instagram.com/whynot_exclusive/" },

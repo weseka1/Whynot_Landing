@@ -8,13 +8,15 @@
    - Cerrar con tecla ESC o botón X.
    ============================================================================ */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { site } from "@/data/site";
+import ProtocolModal from "./ProtocolModal";
 
 type Props = { open: boolean; onClose: () => void };
 
 export default function MenuOverlay({ open, onClose }: Props) {
+  const [protocolOpen, setProtocolOpen] = useState(false);
   // ESC cierra el menú
   useEffect(() => {
     if (!open) return;
@@ -89,6 +91,48 @@ export default function MenuOverlay({ open, onClose }: Props) {
                   </a>
                 </motion.li>
               ))}
+
+              {/* Item 05 — D://DATA_CORE / PROTOCOL. No es link sino boton:
+                  abre el ProtocolModal con las 4 politicas en acordeon. No
+                  figura en el inicio — el unico acceso es desde aca.
+                  fontSize bajado para que entre en una sola linea (vs los
+                  items 01-04 que son palabras cortas). whiteSpace nowrap
+                  garantiza que no rompa a 2 lineas en mobile.                */}
+              <motion.li
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{
+                  delay: 0.1 + site.nav.length * 0.06,
+                  duration: 0.5,
+                }}
+              >
+                <button
+                  onClick={() => setProtocolOpen(true)}
+                  className="display"
+                  style={{
+                    fontSize: "clamp(1.05rem, 3.2vw, 2rem)",
+                    display: "inline-flex",
+                    alignItems: "baseline",
+                    background: "transparent",
+                    border: 0,
+                    padding: 0,
+                    cursor: "pointer",
+                    color: "var(--color-fg)",
+                    whiteSpace: "nowrap",
+                    fontFamily: "var(--font-marquee)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  <span
+                    className="system-text"
+                    style={{ marginRight: 16, flexShrink: 0 }}
+                  >
+                    05
+                  </span>
+                  D://DATA_CORE / PROTOCOL
+                </button>
+              </motion.li>
             </ul>
           </nav>
 
@@ -109,6 +153,14 @@ export default function MenuOverlay({ open, onClose }: Props) {
           </div>
         </motion.div>
       )}
+      {/* ProtocolModal vive afuera del menu pero dentro del AnimatePresence
+          padre asi puede abrirse encima del menu (zIndex 80 vs 60 del menu).
+          Cuando el usuario cierra el modal, vuelve a ver el menu — y desde
+          alli puede seguir navegando o cerrarlo.                            */}
+      <ProtocolModal
+        open={protocolOpen}
+        onClose={() => setProtocolOpen(false)}
+      />
     </AnimatePresence>
   );
 }

@@ -224,17 +224,22 @@ export default function Mission() {
             }}
           >
             <span className="system-text">{site.mission.eyebrow}</span>
-            {/* Título "SOMOS WHYNOT" en T-12 negro plano sobre lavanda. */}
+            {/* Título "SOMOS WHY NOT" en T-12 negro plano sobre lavanda.
+                whiteSpace nowrap garantiza que quede en una sola linea
+                (pedido del usuario, mobile y desktop). FontSize clamp con
+                min 2rem para que en viewports angostos no desborde con
+                nowrap activo.                                                */}
             <h2
               style={{
                 fontFamily: "var(--font-marquee)",
                 fontWeight: 900,
-                fontSize: "clamp(3rem, 9vw, 8rem)",
+                fontSize: "clamp(2rem, 9.5vw, 8rem)",
                 lineHeight: 0.9,
                 letterSpacing: "-0.04em",
                 textTransform: "uppercase",
                 marginTop: "var(--space-sm)",
                 color: "#000",
+                whiteSpace: "nowrap",
               }}
             >
               {site.mission.title}
