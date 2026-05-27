@@ -102,13 +102,12 @@ export const site = {
         channels: [
           { type: "instagram",        display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/",
             note: "collabs · re-stock · sale · new drops · compras" },
-          /* TODO: reemplazar el "#" cuando me pases la URL del Canal de WhatsApp. */
-          { type: "whatsapp-channel", display: "Canal WhatsApp",      url: "#",
+          { type: "whatsapp-channel", display: "Canal WhatsApp",      url: "https://wa.me/5491176295915",
             note: "promociones · detrás de cámara · unboxings · avisos de stock y re-stock" },
           { type: "web",              display: "Web oficial",         url: "/",
             note: "catálogo completo · drops activos · pre-venta" },
         ],
-        closing: "¿Querés ser exclusivo como nosotros? No te pierdas las novedades y enterate con prioridad de cada lanzamiento en nuestros canales. Ubicalo y colocalo.",
+        closing: "¿Querés ser exclusivo como nosotros? No te pierdas las novedades y enterate con prioridad de cada lanzamiento en nuestros canales.",
       },
       {
         id:    ".003 CABA",
