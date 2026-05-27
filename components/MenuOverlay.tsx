@@ -26,6 +26,7 @@ export default function MenuOverlay({ open, onClose }: Props) {
   }, [open, onClose]);
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <motion.div
@@ -107,12 +108,14 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 }}
               >
                 <button
+                  type="button"
                   onClick={() => setProtocolOpen(true)}
                   className="display"
                   style={{
                     fontSize: "clamp(1.05rem, 3.2vw, 2rem)",
                     display: "inline-flex",
                     alignItems: "baseline",
+                    gap: "0.5rem",
                     background: "transparent",
                     border: 0,
                     padding: 0,
@@ -131,6 +134,9 @@ export default function MenuOverlay({ open, onClose }: Props) {
                     05
                   </span>
                   D://DATA_CORE / PROTOCOL
+                  {/* Arrow chiquito para indicar "abre ventana" — los items
+                      01-04 son links de navegacion, este es modal. */}
+                  <span style={{ fontSize: "0.7em", opacity: 0.7 }}>↗</span>
                 </button>
               </motion.li>
             </ul>
@@ -153,14 +159,15 @@ export default function MenuOverlay({ open, onClose }: Props) {
           </div>
         </motion.div>
       )}
-      {/* ProtocolModal vive afuera del menu pero dentro del AnimatePresence
-          padre asi puede abrirse encima del menu (zIndex 80 vs 60 del menu).
-          Cuando el usuario cierra el modal, vuelve a ver el menu — y desde
-          alli puede seguir navegando o cerrarlo.                            */}
-      <ProtocolModal
-        open={protocolOpen}
-        onClose={() => setProtocolOpen(false)}
-      />
     </AnimatePresence>
+    {/* ProtocolModal vive como hermano del AnimatePresence del menu (no
+        adentro) — meterlo como child de AnimatePresence rompia su propio
+        mount/unmount. Z-index 80 vs 60 del menu garantiza que el modal
+        quede encima cuando ambos estan abiertos. */}
+    <ProtocolModal
+      open={protocolOpen}
+      onClose={() => setProtocolOpen(false)}
+    />
+    </>
   );
 }
