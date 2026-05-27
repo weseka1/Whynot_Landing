@@ -311,6 +311,15 @@ export default function WhyNotEnd() {
         <span className="system-text" style={{ color: "var(--color-accent)" }}>
           WHY NOT // BOTTOM
         </span>
+        {/* Link discreto a politicas — system-text estilo igual a los otros
+            items del top strip. */}
+        <a
+          href="/politicas"
+          className="system-text"
+          style={{ color: "var(--color-accent)", textDecoration: "none" }}
+        >
+          POLÍTICAS
+        </a>
         <a
           href="#hero"
           className="system-text"
