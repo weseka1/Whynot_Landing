@@ -213,38 +213,30 @@ export default function PastDrop() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  /* ---------- Scroll → posición continua ----------
-     Solo en MOBILE el scroll vertical del browser drivea el carrusel
-     (porque en mobile no hay flechas y el touch=swipe horizontal solo
-     mueve uno por vez). En DESKTOP el carrusel se mueve UNICAMENTE con
-     las flechas (← →) o arrastrando con el mouse — la rueda del mouse
-     scrollea la pagina normal hacia GALLERY. Por eso en desktop
-     dejamos la seccion en 100vh y no conectamos scrollYProgress.       */
-  const { scrollYProgress } = useScroll({
+  /* ---------- Posición continua ----------
+     Antes en MOBILE el scroll vertical del browser driveaba el carrusel
+     (seccion 180vh con 80vh de "track"). El usuario reporto que mientras
+     bajaba normalmente las capsulas "giraban como locas". Ahora el
+     scroll no participa en NINGUN modo — solo gestos horizontales
+     (swipe en mobile, drag/flechas en desktop) mueven el carrusel.
+
+     Mantengo `useScroll` declarado (no se llama en effects ni en JSX)
+     por si en el futuro queremos progress de scroll para otras cosas
+     (ej: HUD fading). El listener `scrollPosition.change` esta sacado.   */
+  const { scrollYProgress: _scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
   });
-  const scrollPosition = useTransform(scrollYProgress, [0, 1], [0, N]);
 
   /* ---------- Drag offset ---------- */
   const dragOffset = useMotionValue(0);
 
-  /* ---------- Posición combinada ---------- */
+  /* ---------- Posición combinada ----------
+     targetPosition = dragOffset directo en AMBOS modos (mobile y desktop).
+     El spring se encarga del easing.                                     */
   const targetPosition = useMotionValue(0);
-  useMotionValueEvent(scrollPosition, "change", (v) => {
-    /* En desktop ignoramos el scroll: la rueda del mouse NO debe mover
-       las capsulas. Solo flechas + drag.                                 */
-    if (!isMobile) return;
-    targetPosition.set(v + dragOffset.get());
-  });
   useMotionValueEvent(dragOffset, "change", (v) => {
-    /* En desktop el scrollPosition no participa: targetPosition = dragOffset
-       puro (mas lo que sume advance() via dragOffset.set(...)).            */
-    if (!isMobile) {
-      targetPosition.set(v);
-      return;
-    }
-    targetPosition.set(scrollPosition.get() + v);
+    targetPosition.set(v);
   });
   /* Spring: en mobile bajamos stiffness y subimos damping. Resultado:
      menos bounce al scrollear hacia atras rapido (el sintoma que reportaba
@@ -445,13 +437,9 @@ export default function PastDrop() {
     (delta: 1 | -1) => {
       const currentTarget = targetPosition.get();
       const newTarget = Math.round(currentTarget) + delta;
-      if (isMobile) {
-        dragOffset.set(newTarget - scrollPosition.get());
-      } else {
-        dragOffset.set(newTarget);
-      }
+      dragOffset.set(newTarget);
     },
-    [targetPosition, dragOffset, scrollPosition, isMobile]
+    [targetPosition, dragOffset]
   );
 
   /* ---------- Salto absoluto a un indice (no relativo) ----------
@@ -469,13 +457,9 @@ export default function PastDrop() {
          minimiza la distancia con currentTarget.                          */
       const k = Math.round((currentTarget - idx) / N);
       const newTarget = idx + k * N;
-      if (isMobile) {
-        dragOffset.set(newTarget - scrollPosition.get());
-      } else {
-        dragOffset.set(newTarget);
-      }
+      dragOffset.set(newTarget);
     },
-    [targetPosition, dragOffset, scrollPosition, isMobile]
+    [targetPosition, dragOffset]
   );
 
   /* ---------- Brand -> indice de la primera capsula con esa marca ----
@@ -582,11 +566,13 @@ export default function PastDrop() {
       data-text-color="#0a0a14"
       style={{
         position: "relative",
-        /* Mobile: 180vh sticky = 100vh visible + 80vh de "track" para que
-           el scroll vertical drivee el carrusel (no hay flechas en mobile).
-           Desktop: 100vh — el carrusel se mueve solo con flechas/drag, la
-           rueda del mouse pasa de largo a la seccion siguiente.            */
-        minHeight: isMobile ? "180vh" : "100vh",
+        /* Ambos modos: 100vh. Antes mobile era 180vh (con 80vh de "track"
+           para que el scroll vertical drivee el carrusel) — el usuario
+           reporto que mientras scrolleaba normal las capsulas "giraban
+           como locas". Ahora el carrusel SOLO se mueve con swipe horizontal
+           en mobile (drag + flechas en desktop). El scroll vertical pasa
+           limpio.                                                          */
+        minHeight: "100vh",
         /* background driven por useSectionColor (--page-bg) en lugar de
            hardcoded "#e0b3f5". El data-bg-color de esta seccion es ese
            mismo lila, asi el look no cambia EN la seccion — pero ahora
@@ -597,13 +583,11 @@ export default function PastDrop() {
       }}
     >
       {/* ============ STAGE ============
-          Mobile: sticky para que se quede pegado mientras el track de 80vh
-                  drivea el scrollPosition del carrusel.
-          Desktop: simple 100vh — sin sticky, scroll natural de la pagina.   */}
+          Ambos modos: relative 100vh. Sin sticky porque ya no hay scroll
+          track que driveear el carrusel — solo swipe/drag.                  */}
       <div
         style={{
-          position: isMobile ? "sticky" : "relative",
-          top: 0,
+          position: "relative",
           height: "100vh",
           overflow: "hidden",
         }}

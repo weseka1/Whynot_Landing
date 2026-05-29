@@ -53,15 +53,32 @@ export default function Hero() {
     let visible = true; // hero en viewport
     let hidden  = false; // tab oculta
 
-    const onMove = (e: MouseEvent) => {
+    const updateFromX = (clientX: number) => {
       if (!visible || hidden) return;
       // Normalizamos clientX a [-1, 1] sobre el ancho del viewport.
-      // Signo NEGADO: mouse a la izq → mono mira a la izq (sigue al cursor).
-      const normalized = (e.clientX / window.innerWidth) * 2 - 1;
+      // Signo NEGADO: mouse/dedo a la izq → mono mira a la izq (sigue al cursor).
+      const normalized = (clientX / window.innerWidth) * 2 - 1;
       targetAngle = -normalized * MAX_ANGLE;
     };
 
-    // Si el mouse sale de la ventana, vuelve al centro
+    const onMove = (e: MouseEvent) => updateFromX(e.clientX);
+
+    /* Mobile: touch-driven. El usuario pidio que el mono responda al dedo
+       de la misma forma que al mouse en desktop. Usamos el primer touch
+       activo en touchmove (drag). En touchstart tambien actualizamos para
+       que apenas tocas la pantalla el mono mire ahi, sin tener que mover
+       el dedo primero. passive:true porque solo leemos clientX — no
+       prevenimos el scroll vertical de la pagina.                          */
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      updateFromX(e.touches[0].clientX);
+    };
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      updateFromX(e.touches[0].clientX);
+    };
+
+    // Si el mouse sale de la ventana / dedo se levanta, vuelve al centro
     const onLeave = () => { targetAngle = 0; };
 
     const loop = () => {
@@ -104,13 +121,21 @@ export default function Hero() {
     };
     document.addEventListener("visibilitychange", onVis);
 
-    window.addEventListener("mousemove",  onMove, { passive: true });
-    window.addEventListener("mouseleave", onLeave, { passive: true });
+    window.addEventListener("mousemove",  onMove,      { passive: true });
+    window.addEventListener("mouseleave", onLeave,     { passive: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove",  onTouchMove, { passive: true });
+    window.addEventListener("touchend",   onLeave,     { passive: true });
+    window.addEventListener("touchcancel",onLeave,     { passive: true });
     start();
 
     return () => {
-      window.removeEventListener("mousemove",  onMove);
-      window.removeEventListener("mouseleave", onLeave);
+      window.removeEventListener("mousemove",   onMove);
+      window.removeEventListener("mouseleave",  onLeave);
+      window.removeEventListener("touchstart",  onTouchStart);
+      window.removeEventListener("touchmove",   onTouchMove);
+      window.removeEventListener("touchend",    onLeave);
+      window.removeEventListener("touchcancel", onLeave);
       document.removeEventListener("visibilitychange", onVis);
       io?.disconnect();
       stop();
