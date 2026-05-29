@@ -1530,6 +1530,25 @@ function Capsule({
                 const v = e.currentTarget;
                 if (v.paused) v.play().catch(() => {});
               }}
+              onError={(e) => {
+                /* Diagnostico de carga del video: log con el src y el codigo
+                   de error del MediaError. Asi cuando un cliente reporta
+                   "no se ve la zapatilla" podemos ver en console exactamente
+                   que .mp4 fallo y por que (red / codec no soportado /
+                   bloqueado por cors).                                       */
+                const ve = e.currentTarget;
+                const err = ve.error;
+                console.warn(
+                  `[PastDrop] video error en ${spec.src} (idx ${index}): code=${err?.code} msg=${err?.message}`
+                );
+              }}
+              onStalled={() => {
+                /* iOS Safari especialmente: a veces el video stallea sin
+                   error pero sin avanzar. Log para detectar el patron.     */
+                console.warn(
+                  `[PastDrop] video stalled en ${spec.src} (idx ${index})`
+                );
+              }}
               style={{
                 width: "100%",
                 height: "100%",

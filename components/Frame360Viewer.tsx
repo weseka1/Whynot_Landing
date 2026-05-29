@@ -46,7 +46,15 @@ export default function Frame360Viewer({
   aspectRatio = 1,
   className,
 }: Props) {
-  const frames = entry.type === "360" ? entry.frames : 1;
+  const declaredFrames = entry.type === "360" ? entry.frames : 1;
+  /* effectiveFrames = cuantos frames realmente CARGARON desde el primero
+     contiguamente. Si Supabase tiene menos frames de los que dice el JSON
+     (o si el JSON exagera), clampeamos al maximo contiguo cargado desde
+     frame 1 — asi el usuario nunca rota a un frame en blanco (que era el
+     sintoma reportado: "no se ven los pares"). Empieza igual al declarado
+     y solo se reduce post-preload si detectamos huecos.                    */
+  const [effectiveFrames, setEffectiveFrames] = useState(declaredFrames);
+  const frames = effectiveFrames;
   const is360 = entry.type === "360" && frames > 1;
 
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -55,20 +63,60 @@ export default function Frame360Viewer({
 
   /* ---------- Preload de todos los frames ---------- */
   useEffect(() => {
-    if (!is360) {
+    if (entry.type !== "360" || declaredFrames <= 1) {
       setLoadedCount(1);
       return;
     }
     let cancelled = false;
     const imgs: HTMLImageElement[] = [];
-    for (let i = 1; i <= frames; i++) {
+    /* Track de exitos/fallos por indice de frame para poder clampear el
+       effectiveFrames al maximo contiguo cargado.                          */
+    const loadedOk = new Set<number>();
+    const failedFrameUrls: string[] = [];
+    let attemptedCount = 0;
+
+    const onAttemptDone = () => {
+      attemptedCount++;
+      if (attemptedCount < declaredFrames) return;
+      /* Todos los frames probaron. Recalcular effectiveFrames como el
+         maximo i contiguo desde 1 que cargo OK.                            */
+      let maxContiguous = 0;
+      for (let i = 1; i <= declaredFrames; i++) {
+        if (loadedOk.has(i)) maxContiguous = i;
+        else break;
+      }
+      if (maxContiguous > 0 && maxContiguous < declaredFrames) {
+        console.warn(
+          `[Frame360Viewer] ${entry.path}: declarado ${declaredFrames} frames pero solo cargaron ${maxContiguous} de forma contigua. Clampeando. Frames que fallaron:`,
+          failedFrameUrls
+        );
+        if (!cancelled) setEffectiveFrames(maxContiguous);
+      } else if (maxContiguous === 0) {
+        console.error(
+          `[Frame360Viewer] ${entry.path}: NINGUN frame cargo. Verificar Supabase / URLs.`,
+          failedFrameUrls
+        );
+      }
+    };
+
+    for (let i = 1; i <= declaredFrames; i++) {
       const img = new Image();
-      img.src = buildFrameUrl(entry, i);
+      const url = buildFrameUrl(entry, i);
+      img.src = url;
       img.onload = () => {
-        if (!cancelled) setLoadedCount((c) => c + 1);
+        if (cancelled) return;
+        loadedOk.add(i);
+        setLoadedCount((c) => c + 1);
+        onAttemptDone();
       };
       img.onerror = () => {
-        if (!cancelled) setLoadedCount((c) => c + 1); // contar como "no-bloquea"
+        if (cancelled) return;
+        failedFrameUrls.push(`frame_${i}: ${url}`);
+        console.warn(
+          `[Frame360Viewer] frame ${i} fallo para ${entry.path}: ${url}`
+        );
+        setLoadedCount((c) => c + 1); // no-bloquea el progreso del HUD
+        onAttemptDone();
       };
       imgs.push(img);
     }
@@ -79,7 +127,14 @@ export default function Frame360Viewer({
         img.onerror = null;
       });
     };
-  }, [entry.path, frames, is360]);
+  }, [entry.path, declaredFrames, entry.type]);
+
+  /* Si effectiveFrames se redujo despues de un preload y el currentFrame
+     quedo fuera del rango nuevo, lo regresamos a 0 para evitar mostrar un
+     frame inexistente.                                                     */
+  useEffect(() => {
+    if (currentFrame >= effectiveFrames) setCurrentFrame(0);
+  }, [effectiveFrames, currentFrame]);
 
   /* ---------- Drag rotate ---------- */
   const accumRef = useRef(0);

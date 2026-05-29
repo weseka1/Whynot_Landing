@@ -21,10 +21,14 @@ import CornerFrame from "./CornerFrame";
 import { mobileGLB, detectMobileTier } from "@/lib/mobileGLB";
 
 const MIN_TIME = 600;
-/* MAX_TIME subido a 20s: ahora precargamos los 15 videos 360 de PastDrop
-   (~6.7MB extra). En 4G urbana 2-4s, en 3G hasta 15s — el cap de 20s
-   garantiza que nadie se quede mirando el preloader infinito.            */
-const MAX_TIME = 20000;
+/* MAX_TIME subido a 30s: clientes en 3G urbano reportaban que algunos
+   videos del PastDrop no terminaban de bajar antes del cap de 20s ->
+   el preloader cerraba a la fuerza y al llegar a PastDrop los videos
+   no estaban en cache -> ven la zapa cargando lenta o en blanco.
+   30s da margen suficiente para 3G razonable; el MIN_TIME y la
+   resolucion via Promise.all mantienen el cierre rapido cuando todo
+   esta en cache.                                                        */
+const MAX_TIME = 30000;
 
 /* ----------------------------- ASSETS / WEIGHTS -------------------------- */
 type Asset = { url: string; kind: "image" | "fetch"; weight: number };
@@ -108,16 +112,29 @@ function loadImage(src: string): Promise<void> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve();
-    img.onerror = () => resolve();
+    img.onerror = () => {
+      console.warn(`[Preloader] image failed: ${src}`);
+      resolve();
+    };
     img.src = src;
   });
 }
 function fetchAsset(src: string): Promise<void> {
   return new Promise((resolve) => {
     fetch(src, { cache: "force-cache" })
-      .then((r) => r.blob())
+      .then((r) => {
+        if (!r.ok) {
+          console.warn(
+            `[Preloader] fetch ${r.status} for ${src}`
+          );
+        }
+        return r.blob();
+      })
       .then(() => resolve())
-      .catch(() => resolve());
+      .catch((err) => {
+        console.warn(`[Preloader] fetch failed: ${src}`, err);
+        resolve();
+      });
   });
 }
 function fontsReady(): Promise<void> {
