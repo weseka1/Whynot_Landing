@@ -18,6 +18,11 @@ const DARK = "#0a0a14";
 const DARK_DIM = "rgba(10,10,20,0.65)";
 const YELLOW = "#f4dc3f";
 
+/* Maximo de reintentos antes de mostrar SPECIMEN OFFLINE. Especialmente
+   util en iOS Safari donde un load puede fallar puntualmente por timing
+   o por pool de conexiones saturado al cargar muchas cards en paralelo. */
+const MAX_IMG_RETRIES = 2;
+
 type Props = {
   entry: CatalogEntry;
   href: string;
@@ -26,8 +31,12 @@ type Props = {
 export default function ColorwayCard({ entry, href }: Props) {
   const is360 = entry.type === "360";
   const [imgFailed, setImgFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [hover, setHover] = useState(false);
-  const previewUrl = is360 ? frameUrl(entry, 1) : mainUrl(entry);
+  const baseUrl = is360 ? frameUrl(entry, 1) : mainUrl(entry);
+  /* Si reintentamos, agregamos cache-buster al src — fuerza al browser a
+     re-pedir la imagen en lugar de leer un error cached. */
+  const previewUrl = retryCount > 0 ? `${baseUrl}?r=${retryCount}` : baseUrl;
 
   return (
     <Link
@@ -98,9 +107,30 @@ export default function ColorwayCard({ entry, href }: Props) {
             <img
               src={previewUrl}
               alt={`${entry.brand} ${entry.model} ${entry.colorway}`}
-              loading="lazy"
+              /* loading="lazy" removido: en iOS Safari falla intermitentemente
+                 con cards que tienen transforms en parents (motion.article).
+                 decoding="async" da el beneficio principal (no bloquea main
+                 thread) sin el bug del IntersectionObserver de lazy.         */
+              decoding="async"
+              /* referrerPolicy="no-referrer": dominios nuevos (whynotamk.com.ar)
+                 pueden ser rechazados por hotlink protection en CDNs como
+                 Supabase si el referrer no esta en la lista blanca. Sin
+                 referrer el CDN ve la request como "directa" y la permite. */
+              referrerPolicy="no-referrer"
               draggable={false}
-              onError={() => setImgFailed(true)}
+              onError={() => {
+                if (retryCount < MAX_IMG_RETRIES) {
+                  /* Reintento con backoff exponencial (300, 900ms). El
+                     cache-buster en previewUrl fuerza re-fetch real. */
+                  const delay = 300 * Math.pow(3, retryCount);
+                  setTimeout(() => setRetryCount((c) => c + 1), delay);
+                } else {
+                  console.warn(
+                    `[ColorwayCard] imagen fallo tras ${MAX_IMG_RETRIES + 1} intentos: ${baseUrl}`
+                  );
+                  setImgFailed(true);
+                }
+              }}
               style={{
                 width: "100%",
                 height: "100%",
