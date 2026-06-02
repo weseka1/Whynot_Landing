@@ -12,7 +12,7 @@
      · Stock indicator
      · Categoría
      · Size selector grid
-     · CTA WhatsApp + CTA Instagram + Share (Web Share API)
+     · CTA WhatsApp + Share (Web Share API)
      · Related products strip (otros colorways del mismo modelo)
    ============================================================================ */
 
@@ -23,12 +23,11 @@ import Frame360Viewer from "@/components/Frame360Viewer";
 import {
   buildWhatsAppUrl,
   buildProductMessage,
-  handleInstagramClick,
 } from "@/lib/contact";
 import type { CatalogEntry } from "@/data/catalog";
 import { posterUrl } from "@/data/catalog";
 import type { ProductMeta, Badge } from "@/lib/productMeta";
-import { WhatsAppIcon, InstagramIcon } from "@/components/icons/SocialIcons";
+import { WhatsAppIcon } from "@/components/icons/SocialIcons";
 
 const LILAC = "#cdb5f0";
 const DARK = "#0a0a14";
@@ -58,7 +57,6 @@ type Props = {
 export default function ProductDetailView({ entry, related, meta }: Props) {
   const router = useRouter();
   const [selectedSize, setSelectedSize] = useState<string>("");
-  const [igFeedback, setIgFeedback] = useState<string>("");
   const [canShare, setCanShare] = useState(false);
 
   const outOfStock = meta.stock === 0;
@@ -75,13 +73,6 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
       }
     }
   }, [entry, selectedSize]);
-
-  function onIgClick() {
-    void handleInstagramClick(entry, selectedSize || undefined, (msg) => {
-      setIgFeedback(msg);
-      setTimeout(() => setIgFeedback(""), 5000);
-    });
-  }
 
   async function onShare() {
     try {
@@ -219,23 +210,6 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
           <WhatsAppIcon size={20} />
           {outOfStock ? "Consultar reposición" : "Pedir por WhatsApp"}
         </a>
-
-        {/* CTA Instagram */}
-        <button
-          type="button"
-          onClick={onIgClick}
-          className="pd-ig-btn"
-          aria-label={`Pedir ${entry.brand} ${entry.model} por Instagram`}
-        >
-          <InstagramIcon size={18} />
-          Pedir por Instagram
-        </button>
-
-        {igFeedback && (
-          <p className="pd-ig-feedback" role="status" aria-live="polite">
-            {igFeedback}
-          </p>
-        )}
 
         {/* Share (mobile) */}
         {canShare && (
@@ -621,48 +595,6 @@ const LOCAL_CSS = `
   .pd-wa-btn.is-secondary:hover {
     background: ${PEARL_HI};
     box-shadow: 0 6px 18px rgba(10,10,20,0.12);
-  }
-
-  .pd-ig-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 13px 16px;
-    border-radius: 14px;
-    background: transparent;
-    border: 1px solid rgba(193, 53, 132, .45);
-    color: rgba(193, 53, 132, .92);
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: all .2s ease;
-    margin-top: 8px;
-    font-family: inherit;
-  }
-  .pd-ig-btn:hover {
-    background: linear-gradient(135deg, rgba(193, 53, 132, .12), rgba(131, 58, 180, .08));
-    border-color: rgba(193, 53, 132, .85);
-    color: #c13584;
-    transform: translateY(-1px);
-  }
-  .pd-ig-btn:focus-visible {
-    outline: 2px solid rgba(193, 53, 132, .7);
-    outline-offset: 2px;
-  }
-
-  .pd-ig-feedback {
-    font-size: 13px;
-    color: rgba(193, 53, 132, .95);
-    background: rgba(193, 53, 132, .08);
-    border: 1px solid rgba(193, 53, 132, .25);
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-top: 8px;
-    text-align: center;
-    animation: pd-fade-in .2s ease;
   }
 
   .pd-share-btn {

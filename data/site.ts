@@ -89,9 +89,8 @@ export const site = {
       {
         id:    ".001 COMPRA",
         label: "¿Cómo comprar?",
-        copy:  "Cada compra se gestiona con atención personalizada. Elegí Instagram o WhatsApp y nuestro equipo te guía para avanzar con tu drop.",
+        copy:  "Cada compra se gestiona con atención personalizada. Escribinos por WhatsApp y nuestro equipo te guía para avanzar con tu drop.",
         channels: [
-          { type: "instagram", display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/" },
           { type: "whatsapp",  display: "+54 9 11 7629-5915", url: "https://wa.me/5491176295915" },
         ],
       },
@@ -100,8 +99,6 @@ export const site = {
         label: "¿Cuáles son nuestros canales oficiales?",
         copy:  "Viví la experiencia Why Not: drops semanales, lanzamientos exclusivos, promociones y STOCK LIMITADO.",
         channels: [
-          { type: "instagram",        display: "@whynot_exclusive",  url: "https://www.instagram.com/whynot_exclusive/",
-            note: "collabs · re-stock · sale · new drops · compras" },
           { type: "whatsapp-channel", display: "Canal WhatsApp",      url: "https://wa.me/5491176295915",
             note: "promociones · detrás de cámara · unboxings · avisos de stock y re-stock" },
           { type: "web",              display: "Web oficial",         url: "/",
@@ -125,7 +122,6 @@ export const site = {
         copy:  "Te asesoramos de forma personalizada para ayudarte a elegir el drop que necesitás. También podés solicitar un video unboxing y conocer el producto en detalle antes de recibirlo.",
         channels: [
           { type: "whatsapp",  display: "Chat WhatsApp",     url: "https://wa.me/5491176295915" },
-          { type: "instagram", display: "@whynot_exclusive", url: "https://www.instagram.com/whynot_exclusive/" },
         ],
       },
     ] as Pillar[],
