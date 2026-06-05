@@ -190,38 +190,18 @@ export type HeroSpec = {
   displayBrand?: string;
 };
 
+/* Carrusel del PastDrop reducido a SOLO colorways NEGROS (pedido del
+   usuario: "dejame solo las negras"). Los demas videos y entries siguen
+   en el catalogo completo y en public/videos-360/, solo se sacaron del
+   hero. Si en el futuro queres re-poner mas, agrega entradas con el
+   mismo formato (src, label, catalogPath, opcional displayBrand).        */
 export const HERO_SPECS: HeroSpec[] = [
-  { src: "/videos-360/LUISVOUITTON.mp4",                       label: "LV TRAINER",
-    catalogPath: "LOUIS VUITTON/Trainer Maxi/Denim & white" },
-  { src: "/videos-360/adidasbape.mp4",                          label: "ADIDAS × BAPE",
-    catalogPath: "ADIDAS x BAPE/Superstar x Bape/Blue White Star" },
-  { src: "/videos-360/amiri.mp4",                               label: "AMIRI MA-1",
-    catalogPath: "AMIRI/MA-1/White" },
-  { src: "/videos-360/asicsgel-kayano.mp4",                     label: "GEL-KAYANO",
-    catalogPath: "ASICS/Gel-Kayano/Grey" },
-  { src: "/videos-360/balenciaga.mp4",                          label: "TRACK",
+  { src: "/videos-360/balenciaga.mp4",                          label: "TRIPLE S BLACK",
     catalogPath: "BALENCIAGA/Triple S/Black Leather" },
-  { src: "/videos-360/bape.mp4",                                label: "BAPE STA",
-    catalogPath: "BAPE/STA Low/Royal Blue" },
   { src: "/videos-360/jordan3blackcat.mp4",                     label: "JORDAN III BLACK CAT",
     catalogPath: "JORDAN/3 Retro/Black Cat" },
-  { src: "/videos-360/jordanpatentgold.mp4",                    label: "JORDAN 1 PATENT GOLD",
-    catalogPath: "JORDAN/1 Retro High/Patent Gold" },
-  { src: "/videos-360/lanvin.mp4",                              label: "LANVIN CURB",
+  { src: "/videos-360/lanvin.mp4",                              label: "LANVIN CURB WHITE BLACK",
     catalogPath: "LANVIN/Curb Sneakers/White Black" },
-  { src: "/videos-360/nikeairforce1triplewhite.mp4",            label: "AF1 JEWELS WHITE",
-    catalogPath: "NIKE/Air Force 1/Jewels White" },
-  { src: "/videos-360/nikejordantatum.mp4",                     label: "JORDAN TATUM",
-    catalogPath: "NIKE/Jordan Tatum 1/Red Cement",
-    displayBrand: "JORDAN" /* override: catalogado bajo NIKE pero es Jordan */ },
-  { src: "/videos-360/offwhitebe-right-4x-RIFE-RIFE3.1-16fps.mp4", label: "OFF-WHITE BE RIGHT",
-    catalogPath: "OFF WHITE/Be-Right/White" },
-  { src: "/videos-360/pumared.mp4",                             label: "PUMA LA FRANCÉ",
-    catalogPath: "PUMA LE FRANCE/LaFrancé/Red" },
-  { src: "/videos-360/sbdunkverdy.mp4",                         label: "SB DUNK VERDY",
-    catalogPath: "SB DUNK/SB Dunk Low/Verdy" },
-  { src: "/videos-360/timberland6-InchBoot.mp4",                label: "TIMBERLAND BOOTS",
-    catalogPath: "TIMBERLAND/Boots/Wheat" },
 ];
 
 /** Devuelve la HeroSpec enriquecida con su CatalogEntry (puede ser null si el path no existe). */

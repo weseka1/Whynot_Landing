@@ -44,19 +44,22 @@ const PAST_DROP_VIDEO_WEIGHTS: Record<string, number> = {
   "/videos-360/balenciaga.mp4": 397,
   "/videos-360/bape.mp4": 464,
   "/videos-360/jordan3blackcat.mp4": 409,
-  "/videos-360/jordanpatentgold.mp4": 687,
+  /* jordanpatentgold y nikejordantatum sacados de HERO_SPECS (a pedido del
+     usuario, en PastDrop dejamos solo la Jordan negra). Los .mp4 siguen en
+     public/ pero no se precargan. */
   "/videos-360/lanvin.mp4": 373,
   "/videos-360/nikeairforce1triplewhite.mp4": 343,
-  "/videos-360/nikejordantatum.mp4": 419,
   "/videos-360/offwhitebe-right-4x-RIFE-RIFE3.1-16fps.mp4": 590,
   "/videos-360/pumared.mp4": 546,
   "/videos-360/sbdunkverdy.mp4": 391,
   "/videos-360/timberland6-InchBoot.mp4": 449,
 };
 
-/* Genera asset entries para los 15 videos 360 a partir de HERO_SPECS.
-   Asi si se agrega/quita un video del catalog, el preloader se ajusta
-   automaticamente (siempre y cuando este el peso en el map de arriba). */
+/* Genera asset entries para los videos 360 del PastDrop a partir de
+   HERO_SPECS (cuya largo varia segun cuantas zapas se muestran en el
+   carrusel). Si se agrega/quita un video del catalog, el preloader se
+   ajusta automaticamente (siempre y cuando este el peso en el map de
+   arriba — sino usa fallback ~450KB).                                    */
 const PAST_DROP_VIDEO_ASSETS: Asset[] = HERO_SPECS.map((hs) => ({
   url: hs.src,
   kind: "fetch" as const,
