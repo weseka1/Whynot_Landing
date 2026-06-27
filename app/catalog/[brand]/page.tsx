@@ -17,6 +17,7 @@ import {
 } from "@/data/catalog";
 import BrandHero from "@/components/BrandHero";
 import PaginatedColorways from "@/components/PaginatedColorways";
+import PanelDrops from "@/components/PanelDrops";
 import BackButton from "@/components/BackButton";
 import {
   BgLayers,
@@ -172,6 +173,8 @@ export default async function BrandPage({ params }: Params) {
           padding: "1rem 2.5rem 4rem",
         }}
       >
+        {/* Productos cargados desde el panel para esta marca (en vivo). */}
+        <PanelDrops brandSlug={brandSlug} />
         <PaginatedColorways entries={sorted} brandSlug={brandSlug} />
       </div>
 
