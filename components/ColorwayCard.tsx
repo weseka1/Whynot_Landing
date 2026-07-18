@@ -25,10 +25,17 @@ const MAX_IMG_RETRIES = 2;
 
 type Props = {
   entry: CatalogEntry;
-  href: string;
+  /** Destino del click. Ignorado si se pasa onClick. */
+  href?: string;
+  /**
+   * Si se pasa, la card no navega: ejecuta esto. Lo usan los productos
+   * cargados desde el panel, que no tienen página estática propia y abren
+   * el visor 360 en un modal.
+   */
+  onClick?: () => void;
 };
 
-export default function ColorwayCard({ entry, href }: Props) {
+export default function ColorwayCard({ entry, href, onClick }: Props) {
   const is360 = entry.type === "360";
   const [imgFailed, setImgFailed] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -38,16 +45,14 @@ export default function ColorwayCard({ entry, href }: Props) {
      re-pedir la imagen en lugar de leer un error cached. */
   const previewUrl = retryCount > 0 ? `${baseUrl}?r=${retryCount}` : baseUrl;
 
-  return (
-    <Link
-      href={href}
-      style={{
-        textDecoration: "none",
-        color: "inherit",
-        display: "block",
-        position: "relative",
-      }}
-    >
+  const wrapperStyle = {
+    textDecoration: "none",
+    color: "inherit",
+    display: "block",
+    position: "relative" as const,
+  };
+
+  const card = (
       <motion.article
         whileHover={{ y: -8 }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
@@ -259,6 +264,33 @@ export default function ColorwayCard({ entry, href }: Props) {
           </div>
         </div>
       </motion.article>
+  );
+
+  // Productos del panel: abren el visor 360 en un modal en vez de navegar
+  // (no tienen ruta estática generada en el export).
+  if (onClick) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        style={{ ...wrapperStyle, cursor: "pointer" }}
+        aria-label={`Ver ${entry.brand} ${entry.model} ${entry.colorway}`}
+      >
+        {card}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={href ?? "#"} style={wrapperStyle}>
+      {card}
     </Link>
   );
 }
