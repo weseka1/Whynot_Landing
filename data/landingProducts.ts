@@ -13,7 +13,7 @@
    así que reutilizamos el tipo CatalogEntry + los helpers mainUrl/frameUrl.
    ============================================================================ */
 
-import { SUPABASE_CATALOG_BASE, type CatalogEntry } from "./catalog";
+import { SUPABASE_CATALOG_BASE, getEntryByPath, type CatalogEntry } from "./catalog";
 
 const SUPABASE_URL = "https://jkkytzgmhzzngnntkfbr.supabase.co";
 // Clave pública (anon). Diseñada para exponerse en el frontend; el acceso real
@@ -98,6 +98,11 @@ export async function fetchPanelProducts(brandSlug?: string): Promise<PanelProdu
     const rows = (await res.json()) as Row[];
     if (!Array.isArray(rows)) return [];
     let entries = rows.map(buildEntry).filter((e): e is PanelProduct => e !== null);
+    // Dedupe contra el archivo estático: si el producto YA está en
+    // catalog-index.json no lo repetimos en "Nuevos ingresos" (pasaría con
+    // todo el catálogo una vez migrado al panel). Solo mostramos lo genuinamente
+    // nuevo, que es lo que el archivo estático todavía no tiene.
+    entries = entries.filter((e) => getEntryByPath(e.path) === null);
     if (brandSlug) entries = entries.filter((e) => e.slug.brand === brandSlug);
     return entries;
   } catch {
