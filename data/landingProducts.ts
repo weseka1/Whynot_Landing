@@ -24,6 +24,8 @@ const ANON_KEY =
 export type PanelProduct = CatalogEntry & {
   /** URL pública directa del main.jpg (lo que cargó el panel). */
   imageUrl: string;
+  /** Talles disponibles cargados en el panel. Vacío = sin info. */
+  sizes: string[];
 };
 
 function slugify(s: string): string {
@@ -47,6 +49,7 @@ type Row = {
   variant: string;
   image_path: string;
   image_url: string;
+  sizes: string[] | null;
 };
 
 function buildEntry(row: Row): PanelProduct | null {
@@ -73,6 +76,7 @@ function buildEntry(row: Row): PanelProduct | null {
     encodedPath: encodePath(path),
     slug,
     imageUrl: row.image_url || `${SUPABASE_CATALOG_BASE}/${encodePath(path)}/main.jpg`,
+    sizes: Array.isArray(row.sizes) ? row.sizes.map(String) : [],
   };
 }
 
@@ -85,7 +89,7 @@ export async function fetchPanelProducts(brandSlug?: string): Promise<PanelProdu
   try {
     const url =
       `${SUPABASE_URL}/rest/v1/landing_products` +
-      `?select=id,brand,model,variant,image_path,image_url` +
+      `?select=id,brand,model,variant,image_path,image_url,sizes` +
       `&active=eq.true&show_whynot=eq.true&order=created_at.desc`;
     const res = await fetch(url, {
       headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },

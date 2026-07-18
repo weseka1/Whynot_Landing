@@ -65,11 +65,59 @@ export default function PanelDrops({ brandSlug }: { brandSlug?: string }) {
         }}
       >
         {items.map((p) => (
-          // El detalle 360 no existe para productos del panel (foto única):
-          // la card abre la imagen en grande.
-          <ColorwayCard key={p.path} entry={p} href={p.imageUrl} />
+          <div key={p.path}>
+            {/* El detalle 360 no existe para productos del panel (foto única):
+                la card abre la imagen en grande. */}
+            <ColorwayCard entry={p} href={p.imageUrl} />
+            {p.sizes.length > 0 && <SizeStrip sizes={p.sizes} />}
+          </div>
         ))}
       </div>
     </section>
+  );
+}
+
+/** Talles disponibles debajo de la card. */
+function SizeStrip({ sizes }: { sizes: string[] }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 4,
+        marginTop: 8,
+        alignItems: "center",
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: "0.5rem",
+          letterSpacing: "0.24em",
+          textTransform: "uppercase",
+          color: "rgba(10,10,20,0.55)",
+          marginRight: 2,
+        }}
+      >
+        Talles
+      </span>
+      {sizes.map((s) => (
+        <span
+          key={s}
+          style={{
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: "0.6rem",
+            fontWeight: 700,
+            color: DARK,
+            border: `1px solid rgba(10,10,20,0.28)`,
+            borderRadius: 4,
+            padding: "2px 6px",
+            background: "rgba(255,255,255,0.55)",
+          }}
+        >
+          {s}
+        </span>
+      ))}
+    </div>
   );
 }
