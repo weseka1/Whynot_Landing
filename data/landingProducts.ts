@@ -22,10 +22,14 @@ const ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impra3l0emdtaHp6bmdubnRrZmJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzODA0OTQsImV4cCI6MjA4NDk1NjQ5NH0.ztBsYgEa4OIEUGHZOtRE-8glkYH2-rg8RHHQADblQUQ";
 
 export type PanelProduct = CatalogEntry & {
-  /** URL pública directa del main.jpg (lo que cargó el panel). */
+  /** URL pública directa de la foto de portada (main.jpg o 360_01.jpg). */
   imageUrl: string;
   /** Talles disponibles cargados en el panel. Vacío = sin info. */
   sizes: string[];
+  /** Etiqueta promocional (nuevo, drop, ultimos-pares...). '' = ninguna. */
+  badge: string;
+  /** Pares disponibles. null = sin info (se trata como disponible). */
+  stock: number | null;
 };
 
 function slugify(s: string): string {
@@ -50,6 +54,10 @@ type Row = {
   image_path: string;
   image_url: string;
   sizes: string[] | null;
+  type: "360" | "image" | null;
+  frames: number | null;
+  badge: string | null;
+  stock: number | null;
 };
 
 function buildEntry(row: Row): PanelProduct | null {
@@ -66,17 +74,25 @@ function buildEntry(row: Row): PanelProduct | null {
   };
   slug.full = `${slug.brand}/${slug.model}/${slug.colorway}`;
 
+  // 360°: viene de la tabla. Antes estaba fijo en "image", lo que dejaba sin
+  // visor 360 a los productos que sí lo tienen.
+  const is360 = row.type === "360" && Number(row.frames) > 0;
+
   return {
     brand,
     model,
     colorway,
-    type: "image",
-    frames: 0,
+    type: is360 ? "360" : "image",
+    frames: is360 ? Number(row.frames) : 0,
     path,
     encodedPath: encodePath(path),
     slug,
-    imageUrl: row.image_url || `${SUPABASE_CATALOG_BASE}/${encodePath(path)}/main.jpg`,
+    imageUrl:
+      row.image_url ||
+      `${SUPABASE_CATALOG_BASE}/${encodePath(path)}/${is360 ? "360_01.jpg" : "main.jpg"}`,
     sizes: Array.isArray(row.sizes) ? row.sizes.map(String) : [],
+    badge: String(row.badge ?? ""),
+    stock: row.stock ?? null,
   };
 }
 
@@ -89,7 +105,7 @@ export async function fetchPanelProducts(brandSlug?: string): Promise<PanelProdu
   try {
     const url =
       `${SUPABASE_URL}/rest/v1/landing_products` +
-      `?select=id,brand,model,variant,image_path,image_url,sizes` +
+      `?select=id,brand,model,variant,image_path,image_url,sizes,type,frames,badge,stock` +
       `&active=eq.true&show_whynot=eq.true&order=created_at.desc`;
     const res = await fetch(url, {
       headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },

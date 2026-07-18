@@ -65,15 +65,85 @@ export default function PanelDrops({ brandSlug }: { brandSlug?: string }) {
         }}
       >
         {items.map((p) => (
-          <div key={p.path}>
+          <div key={p.path} style={{ position: "relative" }}>
             {/* El detalle 360 no existe para productos del panel (foto única):
                 la card abre la imagen en grande. */}
             <ColorwayCard entry={p} href={p.imageUrl} />
-            {p.sizes.length > 0 && <SizeStrip sizes={p.sizes} />}
+            {p.badge && <BadgeTag badge={p.badge} />}
+            {(p.sizes.length > 0 || p.stock !== null) && (
+              <MetaStrip sizes={p.sizes} stock={p.stock} />
+            )}
           </div>
         ))}
       </div>
     </section>
+  );
+}
+
+/** Etiquetas promocionales — mismas que en el panel y en Ba1res. */
+const BADGES: Record<string, { label: string; bg: string; fg: string }> = {
+  hot:             { label: "🔥 MÁS VENDIDO",      bg: "#E53935", fg: "#fff" },
+  new:             { label: "✨ NEW",               bg: "#f4dc3f", fg: "#0a0a14" },
+  nuevo:           { label: "✨ NUEVO LANZAMIENTO", bg: "#f4dc3f", fg: "#0a0a14" },
+  drop:            { label: "🚀 ÚLTIMOS DROPS",     bg: "#6200EA", fg: "#fff" },
+  "ultimos-pares": { label: "⚡ ÚLTIMOS PARES",     bg: "#FF6D00", fg: "#fff" },
+  exclusivo:       { label: "👑 EXCLUSIVO",         bg: "#0a0a14", fg: "#f4dc3f" },
+  oferta:          { label: "💰 OFERTA",            bg: "#00C853", fg: "#fff" },
+  preventa:        { label: "📦 PREVENTA",          bg: "#0091EA", fg: "#fff" },
+  restock:         { label: "🔄 VUELVE EL CLÁSICO", bg: "#00838F", fg: "#fff" },
+};
+
+function BadgeTag({ badge }: { badge: string }) {
+  const b = BADGES[badge];
+  if (!b) return null;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 10,
+        left: 10,
+        zIndex: 3,
+        background: b.bg,
+        color: b.fg,
+        fontFamily: "var(--font-mono, monospace)",
+        fontSize: "0.5rem",
+        fontWeight: 800,
+        letterSpacing: "0.14em",
+        padding: "4px 8px",
+        borderRadius: 4,
+        pointerEvents: "none",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+      }}
+    >
+      {b.label}
+    </div>
+  );
+}
+
+/** Talles y stock debajo de la card. */
+function MetaStrip({ sizes, stock }: { sizes: string[]; stock: number | null }) {
+  const agotado = stock === 0;
+  const pocos = stock !== null && stock > 0 && stock < 5;
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      {(agotado || pocos) && (
+        <div
+          style={{
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: "0.55rem",
+            fontWeight: 700,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: agotado ? "rgba(10,10,20,0.45)" : "#FF6D00",
+            marginBottom: 5,
+          }}
+        >
+          {agotado ? "◦ Agotado" : `⚡ Últimas ${stock} unidades`}
+        </div>
+      )}
+      {sizes.length > 0 && <SizeStrip sizes={sizes} />}
+    </div>
   );
 }
 
@@ -85,7 +155,6 @@ function SizeStrip({ sizes }: { sizes: string[] }) {
         display: "flex",
         flexWrap: "wrap",
         gap: 4,
-        marginTop: 8,
         alignItems: "center",
       }}
     >
