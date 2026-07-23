@@ -201,7 +201,7 @@ export default async function BrandPage({ params }: Params) {
           </span>
         </div>
         <div style={{ display: "flex", gap: "1rem" }}>
-          <span>BA1RES_FOOTWEAR / ARCHIVE_v01</span>
+          <span>WHYNOT / ARCHIVE_v01</span>
           <span style={{ opacity: 0.4 }}>//</span>
           <span style={{ color: DARK, fontWeight: 600 }}>
             {total} SPECIMENS · {total360} × 360°
