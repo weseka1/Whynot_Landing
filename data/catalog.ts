@@ -201,21 +201,17 @@ export const HERO_SPECS: HeroSpec[] = [
     catalogPath: "ADIDAS x BAPE/Superstar x Bape/Blue White Star" },
   { src: "/videos-360/amiri.mp4",                               label: "AMIRI MA-1",
     catalogPath: "AMIRI/MA-1/White" },
-  { src: "/videos-360/asicsgel-kayano.mp4",                     label: "GEL-KAYANO",
-    catalogPath: "ASICS/Gel-Kayano/Grey" },
   { src: "/videos-360/balenciaga.mp4",                          label: "TRIPLE S",
     catalogPath: "BALENCIAGA/Triple S/Black Leather" },
   { src: "/videos-360/bape.mp4",                                label: "BAPE STA",
     catalogPath: "BAPE/STA Low/Royal Blue" },
   { src: "/videos-360/jordan3blackcat.mp4",                     label: "JORDAN III BLACK CAT",
     catalogPath: "JORDAN/3 Retro/Black Cat" },
+  /* ASICS Gel-Kayano Grey, LANVIN Curb White Black y AF1 Jewels White
+     sacados: se dieron de baja desde el panel y salieron del catalogo.     */
   /* Jordan 1 Patent Gold + Jordan Tatum (Red Cement) sacados — de las 3
      Jordans dejamos solo la negra (Black Cat). Los .mp4 siguen en
      public/videos-360/ y los entries en el catalogo completo.            */
-  { src: "/videos-360/lanvin.mp4",                              label: "LANVIN CURB",
-    catalogPath: "LANVIN/Curb Sneakers/White Black" },
-  { src: "/videos-360/nikeairforce1triplewhite.mp4",            label: "AF1 JEWELS WHITE",
-    catalogPath: "NIKE/Air Force 1/Jewels White" },
   { src: "/videos-360/offwhitebe-right-4x-RIFE-RIFE3.1-16fps.mp4", label: "OFF-WHITE BE RIGHT",
     catalogPath: "OFF WHITE/Be-Right/White" },
   { src: "/videos-360/pumared.mp4",                             label: "PUMA LA FRANCÉ",

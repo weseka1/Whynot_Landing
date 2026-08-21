@@ -11,18 +11,6 @@
     "type": "image",
     "frames": 0
   },
-  "AMIRI/MA-1 Crystal/Black": {
-    "type": "image",
-    "frames": 0
-  },
-  "AMIRI/MA-1/Crystal": {
-    "type": "image",
-    "frames": 0
-  },
-  "AMIRI/MA-1/Light Blue": {
-    "type": "image",
-    "frames": 0
-  },
   "AMIRI/MA-1/Pink": {
     "type": "image",
     "frames": 0
@@ -52,22 +40,6 @@
     "frames": 36
   },
   "ASICS/Gel-1130/Black": {
-    "type": "360",
-    "frames": 36
-  },
-  "ASICS/Gel-1130/White Silver": {
-    "type": "360",
-    "frames": 36
-  },
-  "ASICS/Gel-Kayano/Grey": {
-    "type": "image",
-    "frames": 0
-  },
-  "ASICS/Gel-Kayano/White Silver": {
-    "type": "360",
-    "frames": 36
-  },
-  "ASICS/Gel-NY/Grey": {
     "type": "360",
     "frames": 36
   },
@@ -122,10 +94,6 @@
   "BALENCIAGA/Track/Cream": {
     "type": "360",
     "frames": 36
-  },
-  "BALENCIAGA/Track/Cream and Black": {
-    "type": "image",
-    "frames": 0
   },
   "BALENCIAGA/Track/Silver Grey": {
     "type": "image",
@@ -183,15 +151,7 @@
     "type": "image",
     "frames": 0
   },
-  "DIOR/B35 NXXT/White Teal": {
-    "type": "image",
-    "frames": 0
-  },
   "DIOR/B44/White & Black": {
-    "type": "image",
-    "frames": 0
-  },
-  "DIOR/B44/White & Grey": {
     "type": "image",
     "frames": 0
   },
@@ -292,10 +252,6 @@
     "frames": 36
   },
   "JORDAN/1 Retro High/Patent White": {
-    "type": "360",
-    "frames": 36
-  },
-  "JORDAN/1 Retro High/Patent White (Low)": {
     "type": "360",
     "frames": 36
   },
@@ -475,10 +431,6 @@
     "type": "360",
     "frames": 36
   },
-  "JORDAN/3 Retro/Nike x A Ma Manière": {
-    "type": "image",
-    "frames": 0
-  },
   "JORDAN/3 Retro/Noir": {
     "type": "360",
     "frames": 36
@@ -503,19 +455,11 @@
     "type": "360",
     "frames": 36
   },
-  "JORDAN/4 RM/Legend Light Brown": {
-    "type": "360",
-    "frames": 36
-  },
   "JORDAN/4 RM/White": {
     "type": "360",
     "frames": 36
   },
   "JORDAN/4 RM/White & Black": {
-    "type": "360",
-    "frames": 36
-  },
-  "JORDAN/4 RM/White Black": {
     "type": "360",
     "frames": 36
   },
@@ -623,10 +567,6 @@
     "type": "360",
     "frames": 36
   },
-  "JORDAN/5 Retro Low/Rare Air Cream": {
-    "type": "360",
-    "frames": 36
-  },
   "JORDAN/6 Retro/Cargo Metallic Silver": {
     "type": "360",
     "frames": 36
@@ -636,10 +576,6 @@
     "frames": 36
   },
   "JORDAN/6 Retro/x AMMA Manière": {
-    "type": "360",
-    "frames": 36
-  },
-  "JORDAN/6 Rings/Black Gold Metallic": {
     "type": "360",
     "frames": 36
   },
@@ -727,10 +663,6 @@
     "type": "image",
     "frames": 0
   },
-  "LANVIN/Curb Sneakers/White Black": {
-    "type": "360",
-    "frames": 36
-  },
   "LANVIN/Curb Sneakers/White Blue": {
     "type": "image",
     "frames": 0
@@ -751,19 +683,11 @@
     "type": "image",
     "frames": 0
   },
-  "LOUIS VUITTON/Ollie/Monogram": {
-    "type": "image",
-    "frames": 0
-  },
   "LOUIS VUITTON/Pool Pillow/Monogram": {
     "type": "image",
     "frames": 0
   },
   "LOUIS VUITTON/Skate/Black": {
-    "type": "360",
-    "frames": 36
-  },
-  "LOUIS VUITTON/Skate/Black and White": {
     "type": "360",
     "frames": 36
   },
@@ -795,17 +719,9 @@
     "type": "360",
     "frames": 36
   },
-  "LOUIS VUITTON/Skate/White Grey": {
-    "type": "360",
-    "frames": 36
-  },
   "LOUIS VUITTON/Trainer Maxi x Swarovski/Crystal Black": {
     "type": "image",
     "frames": 0
-  },
-  "LOUIS VUITTON/Trainer Maxi/Black": {
-    "type": "360",
-    "frames": 36
   },
   "LOUIS VUITTON/Trainer Maxi/Black & Grey": {
     "type": "image",
@@ -839,14 +755,6 @@
     "type": "360",
     "frames": 36
   },
-  "LOUIS VUITTON/Trainer/Blue": {
-    "type": "image",
-    "frames": 0
-  },
-  "LOUIS VUITTON/Trainer/Bordeaux": {
-    "type": "image",
-    "frames": 0
-  },
   "LOUIS VUITTON/Trainer/Brown": {
     "type": "image",
     "frames": 0
@@ -867,17 +775,9 @@
     "type": "360",
     "frames": 36
   },
-  "LOUIS VUITTON/Trainer/IABODJ": {
-    "type": "360",
-    "frames": 36
-  },
   "LOUIS VUITTON/Trainer/Monochrome White": {
     "type": "360",
     "frames": 36
-  },
-  "LOUIS VUITTON/Trainer/Red": {
-    "type": "image",
-    "frames": 0
   },
   "LOUIS VUITTON/Trainer/Waterproof": {
     "type": "360",
@@ -915,10 +815,6 @@
     "type": "360",
     "frames": 36
   },
-  "NIKE/Air Force 1/Jewels White": {
-    "type": "360",
-    "frames": 36
-  },
   "NIKE/Air Force One x Kobe Bryant/White Gold": {
     "type": "360",
     "frames": 36
@@ -926,10 +822,6 @@
   "NIKE/Air Force Supreme/White Red": {
     "type": "360",
     "frames": 31
-  },
-  "NIKE/AirMax 87/Oregon Ducks": {
-    "type": "360",
-    "frames": 36
   },
   "NIKE/AirMax 97 Futura/Brown": {
     "type": "image",
@@ -959,10 +851,6 @@
     "type": "image",
     "frames": 0
   },
-  "NIKE/AirMax DN 8/Black Bright Crimson": {
-    "type": "360",
-    "frames": 36
-  },
   "NIKE/AirMax DN 8/Rose Gold": {
     "type": "360",
     "frames": 36
@@ -979,23 +867,7 @@
     "type": "360",
     "frames": 36
   },
-  "NIKE/AirMax Muse/White": {
-    "type": "360",
-    "frames": 36
-  },
   "NIKE/AirMax Plus/Drift White Grey": {
-    "type": "360",
-    "frames": 36
-  },
-  "NIKE/AirMax Plus/Red Silver": {
-    "type": "360",
-    "frames": 36
-  },
-  "NIKE/AirMax Plus/White and Red": {
-    "type": "360",
-    "frames": 36
-  },
-  "NIKE/AirMax Portal/Red and Black": {
     "type": "360",
     "frames": 36
   },
@@ -1003,19 +875,7 @@
     "type": "360",
     "frames": 36
   },
-  "NIKE/GS11 Platinum/Silver": {
-    "type": "360",
-    "frames": 36
-  },
   "NIKE/Jordan Hayward/White": {
-    "type": "image",
-    "frames": 0
-  },
-  "NIKE/Jordan Tatum 1/Red Cement": {
-    "type": "360",
-    "frames": 36
-  },
-  "NIKE/Jordan Tatum 1/White and Black": {
     "type": "image",
     "frames": 0
   },
@@ -1028,10 +888,6 @@
     "frames": 0
   },
   "NIKE/LeBron James Rio/White Green": {
-    "type": "360",
-    "frames": 36
-  },
-  "NIKE/Nocta Glide/White": {
     "type": "360",
     "frames": 36
   },
@@ -1135,10 +991,6 @@
     "type": "360",
     "frames": 36
   },
-  "OFF WHITE/Out Of Office/White & Coffee": {
-    "type": "image",
-    "frames": 0
-  },
   "OFF WHITE/Out Of Office/White And Black": {
     "type": "360",
     "frames": 36
@@ -1163,23 +1015,7 @@
     "type": "360",
     "frames": 36
   },
-  "SB DUNK/SB Dunk Low/City of Cinema": {
-    "type": "360",
-    "frames": 36
-  },
-  "SB DUNK/SB Dunk Low/Pink": {
-    "type": "360",
-    "frames": 36
-  },
-  "SB DUNK/SB Dunk Low/Remastered Jumbo White": {
-    "type": "360",
-    "frames": 36
-  },
   "SB DUNK/SB Dunk Low/Total Black": {
-    "type": "360",
-    "frames": 36
-  },
-  "SB DUNK/SB Dunk Low/Travis Scott": {
     "type": "360",
     "frames": 36
   },
@@ -1190,10 +1026,6 @@
   "SB DUNK/SB Dunk Low/Verdy": {
     "type": "360",
     "frames": 36
-  },
-  "SB DUNK/SB Dunk Low/Wu-Tang Clan": {
-    "type": "image",
-    "frames": 0
   },
   "SB DUNK/SB Dunk Low/Zebra Cakes": {
     "type": "360",
@@ -1206,14 +1038,6 @@
   "SLIDES NIKE/Nike Calm Slide/White": {
     "type": "360",
     "frames": 36
-  },
-  "SLIDES NIKE/Nike Off Court Slide/Light Blue": {
-    "type": "image",
-    "frames": 0
-  },
-  "SLIDES NIKE/Nike Off Court Slide/Pink": {
-    "type": "image",
-    "frames": 0
   },
   "SLIDES P.MARCA/Jordan Slide Superplay/Black & Red": {
     "type": "360",
@@ -1255,10 +1079,6 @@
     "type": "360",
     "frames": 36
   },
-  "LOUIS VUITTON/LV Trainer/Denim Blue": {
-    "type": "360",
-    "frames": 36
-  },
   "LOUIS VUITTON/LV Trainer/White Black": {
     "type": "360",
     "frames": 36
@@ -1267,19 +1087,7 @@
     "type": "360",
     "frames": 36
   },
-  "LOUIS VUITTON/LV Trainer/Grey White": {
-    "type": "image",
-    "frames": 0
-  },
-  "LOUIS VUITTON/LV Trainer 54/Black White": {
-    "type": "360",
-    "frames": 36
-  },
   "BAPE/Sta Low Shark/Black White": {
-    "type": "360",
-    "frames": 36
-  },
-  "BAPE/Sta/JJJJound": {
     "type": "360",
     "frames": 36
   },
@@ -1300,10 +1108,6 @@
     "frames": 36
   },
   "BALENCIAGA/Track LED/Black": {
-    "type": "360",
-    "frames": 36
-  },
-  "GOLDEN GOOSE/Super-Star/Gold Star": {
     "type": "360",
     "frames": 36
   },
