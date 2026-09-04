@@ -718,6 +718,15 @@ export default function Mission() {
             scrollbar-width: none;
             pointer-events: auto;
             -webkit-overflow-scrolling: touch;
+            /* La tercera burbuja queda cortada contra el borde y un elemento
+               cortado se lee como un error de maquetado, no como "hay mas"
+               (Juani ya lo marco una vez: "medio que se corta"). El degrade
+               convierte el corte en la señal de que se desliza — el gesto de
+               iOS. Y el snap hace que se frene en burbuja, no a la mitad. */
+            mask-image: linear-gradient(to right, #000 82%, transparent 99%);
+            -webkit-mask-image: linear-gradient(to right, #000 82%, transparent 99%);
+            scroll-snap-type: x proximity;
+            scroll-padding-left: var(--container-pad);
           }
           .burbujas::-webkit-scrollbar {
             display: none;
@@ -725,6 +734,7 @@ export default function Mission() {
           .burbujas :global(.burbuja) {
             position: static;
             flex: 0 0 auto;
+            scroll-snap-align: start;
             font-size: 0.8rem;
             padding: 9px 13px 9px 11px;
             /* Sin backdrop-filter en el celu: tres blurs vivos dentro de una
