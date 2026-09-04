@@ -39,6 +39,27 @@ export default function Hero() {
      respecto al primer paint del Hero — el resto del Hero (sky bg, marquee,
      UI) ya esta visible para entonces, asi que se nota poco.            */
   const [glbSrc, setGlbSrc] = useState<string | null>(null);
+  /* ── El mono del hero no puede renderizar cuando nadie lo mira ────────
+     Medido el 4-sep-2026 con la pagina QUIETA y el hero fuera de pantalla:
+     model-viewer.min.js pedia 296 requestAnimationFrame en 5 segundos —
+     60 fps constantes renderizando un modelo 3D invisible. Ese era el peso
+     de fondo que se arrastraba en TODO el scroll de la pagina y se sentia
+     como "el scrolling se tilda" en el iPhone.
+
+     model-viewer no expone un pause, asi que lo desmontamos: al volver, el
+     GLB ya esta en cache del browser y vuelve al instante. El margen de
+     400px evita que se monte y desmonte al borde. */
+  const [enPantalla, setEnPantalla] = useState(true);
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([e]) => setEnPantalla(e.isIntersecting),
+      { rootMargin: "400px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   useEffect(() => {
     /* ── El mono entra DESPUES del primer pintado (4-sep-2026) ───────────
        Antes se montaba apenas hidrataba, y con el <model-viewer> venian
@@ -140,6 +161,8 @@ export default function Hero() {
        (el usuario ya esta scrolleando otras secciones). Reanuda al volver. */
     let io: IntersectionObserver | null = null;
     if (sectionRef.current && typeof IntersectionObserver !== "undefined") {
+      /* Ademas de pausar el rAF del mouse, este observer decide si el
+         <model-viewer> sigue montado: ver `enPantalla` mas abajo. */
       io = new IntersectionObserver(
         ([entry]) => {
           visible = entry.isIntersecting;
@@ -260,7 +283,7 @@ export default function Hero() {
           zIndex: 3,
         }}
       >
-        {glbSrc !== null && (
+        {glbSrc !== null && enPantalla && (
         /* @ts-ignore — web component */
         <model-viewer
           ref={modelRef}

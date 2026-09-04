@@ -29,6 +29,7 @@ import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { site } from "@/data/site";
 import ChannelButtons from "./ChannelButtons";
+import { useIsMobile } from "./useIsMobile";
 
 const MissionPillarMonkey = dynamic(() => import("./MissionPillarMonkey"), {
   ssr: false,
@@ -165,15 +166,23 @@ export default function Mission() {
   const sectionRef = useRef<HTMLElement>(null);
   const activoRef = useRef(0);
   const [activo, setActivo] = useState(0);
-  /* El mono cambia de modelo recién cuando el scroll se aquieta (260 ms sin
-     cambio de paso). Remontar el mono (clon de skeleton + bbox + mixer) en
-     pleno scroll rápido era una long task por paso — en un celu con CPU
-     floja, eso es la web "tildándose". El texto sí cambia al instante. */
+  /* ── El mono y el celu (4-sep-2026) ──────────────────────────────────
+     Cambiar de mono remonta la escena entera: SkeletonUtils.clone + bbox +
+     AnimationMixer nuevos. En desktop no se siente; en un iPhone es una
+     long task por paso, justo mientras el dedo scrollea — "el scrolling de
+     los monos, se tildan bastantes" (Juani, probándolo en su celular).
+
+     En MOBILE el mono es uno solo para toda la sección: cae una vez y se
+     queda. Se pierde el cambio por paso, se gana un scroll que no trabaja.
+     En desktop sigue cambiando, con 260 ms de espera a que el scroll se
+     aquiete para no remontar en pleno movimiento. */
+  const isMobile = useIsMobile();
   const [modelo, setModelo] = useState(0);
   useEffect(() => {
+    if (isMobile) return;
     const t = window.setTimeout(() => setModelo(activo), 260);
     return () => window.clearTimeout(t);
-  }, [activo]);
+  }, [activo, isMobile]);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -228,7 +237,10 @@ export default function Mission() {
         {/* ------------------------------------------------------------ mono */}
         <div className="mono" aria-hidden="true">
           <div className="piso" />
-          <MissionPillarMonkey modelSrc={MONOS[modelo] ?? MONOS[0]} replayKey={modelo} />
+          <MissionPillarMonkey
+            modelSrc={MONOS[isMobile ? 0 : modelo] ?? MONOS[0]}
+            replayKey={isMobile ? 0 : modelo}
+          />
         </div>
 
         {/* ---------------------------------------------------------- burbujas
@@ -641,15 +653,29 @@ export default function Mission() {
         }
 
         /* --- mobile: mono arriba, texto abajo -------------------------- */
+        /* ── Mobile: tres filas, nada encima de nada ──────────────────
+           Antes las burbujas eran absolutas al pie y el texto tenia un
+           padding-bottom fijo para esquivarlas. En el paso "Canales" —el
+           unico con copy + dos botones + cierre— el contenido crecia y las
+           burbujas quedaban ENCIMA de los botones, con el texto cortandose
+           abajo (visto en el iPhone de Juani).
+
+           Ahora cada cosa tiene su fila propia: el mono arriba, el texto en
+           el medio (con scroll interno si no entra, como un panel de iOS) y
+           las burbujas abajo. Imposible que se pisen. */
         @media (max-width: 768px) {
           .riel {
             --paso: 88svh;
           }
           .pantalla {
             grid-template-columns: 1fr;
-            grid-template-rows: minmax(0, 40svh) minmax(0, 1fr);
+            /* El mono cede alto: el paso 'Canales' tiene copy + dos botones
+               + cierre y no entraba, el segundo boton quedaba cortado. */
+            grid-template-rows: minmax(0, 26svh) minmax(0, 1fr) auto;
             align-items: stretch;
             padding-top: 64px;
+            padding-bottom: calc(max(22px, env(safe-area-inset-bottom)) + 26px);
+            row-gap: 10px;
           }
           .mono {
             grid-area: 1 / 1;
@@ -659,19 +685,38 @@ export default function Mission() {
             grid-area: 2 / 1;
             align-self: stretch;
             min-height: 0;
-            /* lugar para la fila de burbujas + el progreso */
-            padding-bottom: 118px;
+            padding-bottom: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
           }
           .paso {
             align-self: start;
           }
-          /* En el celu no hay aire alrededor del mono: las burbujas pasan a
-             una fila deslizable justo encima del progreso. */
+          .titulo {
+            font-size: clamp(1.75rem, 8.4vw, 2.5rem);
+            line-height: 0.98;
+          }
+          .copy {
+            font-size: 0.94rem;
+            line-height: 1.45;
+          }
+          /* El parrafo de cierre sale en el celu: es lo secundario del paso
+             y es lo que hacia que el contenido no entrara. En desktop queda. */
+          .closing {
+            display: none;
+          }
+          .halo {
+            width: 120vmax;
+            height: 120vmax;
+          }
+          /* Fila propia: fila deslizable, ya no flotando sobre el texto. */
           .burbujas {
-            inset: auto 0 calc(max(22px, env(safe-area-inset-bottom)) + 30px) 0;
+            position: static;
+            grid-area: 3 / 1;
             display: flex;
             gap: 8px;
-            padding: 0 var(--container-pad);
+            padding: 2px var(--container-pad) 2px;
             overflow-x: auto;
             scrollbar-width: none;
             pointer-events: auto;
@@ -685,18 +730,30 @@ export default function Mission() {
             flex: 0 0 auto;
             font-size: 0.8rem;
             padding: 9px 13px 9px 11px;
+            /* Sin backdrop-filter en el celu: tres blurs vivos dentro de una
+               seccion pinneada se recomponen en cada frame de scroll, y es
+               parte de "el scrolling de los monos se tilda". El fondo solido
+               semitransparente se ve casi igual y no cuesta nada. */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            background: rgba(255, 255, 255, 0.62);
+            animation: none;
+          }
+          /* El brillo que cruza tambien se apaga: es una animacion continua
+             por burbuja. */
+          .brillo {
+            display: none;
           }
           .burbujas :global(.burbuja):nth-child(n) {
             left: auto;
             right: auto;
             top: auto;
           }
-          .titulo {
-            font-size: clamp(1.9rem, 9.4vw, 2.8rem);
-          }
-          .halo {
-            width: 120vmax;
-            height: 120vmax;
+          /* El progreso y el hint pasan al borde de la pantalla, no sobre
+             el contenido. */
+          .pasos,
+          .hint {
+            bottom: max(6px, env(safe-area-inset-bottom));
           }
         }
 

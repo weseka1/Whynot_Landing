@@ -366,7 +366,10 @@ export default function MissionPillarMonkey({
              610-tier no llega — se cae a 20-30fps. dpr=1 baja el costo
              al 11%-25% y el mono se ve igual a esa distancia/tamano.
              AdaptiveDpr baja todavia mas si la GPU se queja.            */
-          dpr={isMobile ? 1 : [1, 2]}
+          /* 0.75 en mobile: el mono ocupa un tercio de la pantalla y a esa
+             escala la diferencia no se ve, pero son ~44% menos pixeles por
+             frame — que es lo que se siente al scrollear en un celu. */
+          dpr={isMobile ? 0.75 : [1, 2]}
           style={{
             width: "100%",
             height: "100%",

@@ -514,20 +514,56 @@ export default function PastDrop() {
   const activeIndexRef = useRef(activeIndex);
   activeIndexRef.current = activeIndex;
 
+  /* ── Nada se reproduce fuera de pantalla (4-sep-2026) ─────────────────
+     Medido con la pagina quieta y el PastDrop fuera del viewport: seguia
+     habiendo un <video> reproduciendose. Decodificar video es trabajo de
+     CPU/GPU constante para algo que nadie ve, y se suma al costo de todo
+     el scroll. Al volver a entrar, retoma. */
+  const enPantallaRef = useRef(true);
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        enPantallaRef.current = e.isIntersecting;
+        const vids = el.querySelectorAll("video");
+        if (e.isIntersecting) {
+          const v = vids[activeIndexRef.current];
+          if (v) v.play().catch(() => {});
+        } else {
+          vids.forEach((v) => v.pause());
+        }
+      },
+      /* Margen 0: con 200px la seccion seguia contando como visible desde
+         "Como comprar" (la de al lado) y el video nunca se pausaba. */
+      { rootMargin: "0px", threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  /* Hay CUATRO lugares que llaman play(): el efecto de activeIndex, el
+     registro del ref, onLoadedMetadata y el onCanPlay del <video>. Cualquiera
+     de ellos revivia el video despues de que el observer lo pausaba (medido:
+     LUISVOUITTON.mp4 seguia reproduciendose con la seccion fuera de vista).
+     Todos pasan por aca. */
+  const reproducir = useCallback((v: HTMLVideoElement | null) => {
+    if (!v || !enPantallaRef.current) return;
+    v.play().catch(() => {});
+  }, []);
+
   useEffect(() => {
     videoRefs.current.forEach((v, i) => {
       if (!v) return;
-      if (i === activeIndex) v.play().catch(() => {});
+      if (i === activeIndex) reproducir(v);
       else v.pause();
     });
-  }, [activeIndex]);
+  }, [activeIndex, reproducir]);
 
   const registerVideoRef = useCallback(
     (i: number, el: HTMLVideoElement | null) => {
       videoRefs.current[i] = el;
-      if (el && i === activeIndexRef.current) {
-        el.play().catch(() => {});
-      }
+      if (el && i === activeIndexRef.current) reproducir(el);
     },
     []
   );
@@ -536,9 +572,7 @@ export default function PastDrop() {
     (i: number, el: HTMLVideoElement | null) => {
       if (!el) return;
       if (el.currentTime === 0) el.currentTime = 0.05;
-      if (i === activeIndexRef.current) {
-        el.play().catch(() => {});
-      }
+      if (i === activeIndexRef.current) reproducir(el);
     },
     []
   );
@@ -763,6 +797,7 @@ export default function PastDrop() {
               tiltY={tiltY}
               registerRef={(el) => registerVideoRef(i, el)}
               onLoadedMetadata={(el) => onLoadedMetadata(i, el)}
+              reproducir={reproducir}
               activeIndex={activeIndex}
               layout={L}
               isMobile={isMobile}
@@ -1282,6 +1317,8 @@ type CapsuleProps = {
   tiltY: MotionValue<number>;
   registerRef: (el: HTMLVideoElement | null) => void;
   onLoadedMetadata: (el: HTMLVideoElement | null) => void;
+  /** play() que respeta el viewport — ver `reproducir` en el padre. */
+  reproducir: (el: HTMLVideoElement | null) => void;
   activeIndex: number;
   layout: Layout;
   isMobile: boolean;
@@ -1297,6 +1334,7 @@ function Capsule({
   tiltY,
   registerRef,
   onLoadedMetadata,
+  reproducir,
   activeIndex,
   layout,
   isMobile,
@@ -1524,7 +1562,9 @@ function Capsule({
                    No es-activo: deja pausado (eso lo maneja el useEffect). */
                 if (index !== activeIndex) return;
                 const v = e.currentTarget;
-                if (v.paused) v.play().catch(() => {});
+                /* reproducir() respeta el viewport: este era el cuarto punto
+                   que revivia el video con la seccion fuera de pantalla. */
+                if (v.paused) reproducir(v);
               }}
               onError={(e) => {
                 /* Diagnostico de carga del video: log con el src y el codigo

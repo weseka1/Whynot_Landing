@@ -35,6 +35,14 @@ export function useScrollVelocity() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    /* Solo desktop (4-sep-2026). En el celu ya hay dos rAF atados al scroll
+       (el riel del Mission y el color por seccion) y este era un tercero
+       compitiendo por el mismo frame. La deformacion es un lujo: se paga
+       donde sobra CPU, no donde el scroll ya se siente pesado. */
+    const mobile =
+      window.matchMedia?.("(max-width: 768px)").matches ||
+      window.matchMedia?.("(hover: none) and (pointer: coarse)").matches;
+    if (mobile) return;
 
     const raiz = document.documentElement;
     let anterior = window.scrollY;
