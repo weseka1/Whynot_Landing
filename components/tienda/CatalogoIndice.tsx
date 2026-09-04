@@ -206,9 +206,15 @@ export default function CatalogoIndice({ marcas, totalPares }: { marcas: MarcaRe
         }
 
         /* --- buscador: la única pregunta ------------------------------- */
+        /* Sin sticky (4-sep-2026). En iOS Safari, con la barra de direcciones
+           que se esconde al bajar, el viewport cambia de alto en pleno scroll
+           y el elemento sticky salta: quedaba flotando encima de las cards,
+           tapandolas — "cuando estoy viendo las marcas al momento de bajar se
+           descentra o no sigue el flow de la pagina" (Juani, probado en su
+           iPhone). Con 19 marcas el buscador se alcanza subiendo un toque; no
+           vale romper el scroll por tenerlo siempre a mano. */
         .buscador {
-          position: sticky;
-          top: calc(12px + env(safe-area-inset-top));
+          position: relative;
           z-index: 5;
           display: flex;
           align-items: center;
