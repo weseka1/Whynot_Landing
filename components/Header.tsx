@@ -114,49 +114,59 @@ export default function Header() {
             )}
           </button>
 
-          {/* Menu toggle — label "MENU" + switch visual a la derecha. El
-              switch sigue mostrando el state (animacion del dot) pero ya
-              no hay texto OFF/ON laterales: el label MENU dice qué hace
-              el boton.                                                     */}
+          {/* Boton de menu. Antes era un switch tipo interruptor (pastilla
+              con un dot que se movia de lado): parecia un apagado/prendido y
+              no un menu — "tiene una tecla como de apagado y prendido que no
+              tiene sentido" (Juani, 4-sep-2026). Ahora es lo que la gente ya
+              sabe leer: tres lineas que se cruzan al abrir. */}
           <button
-            onClick={() => setOpen(true)}
+            onClick={() => setOpen((v) => !v)}
             data-sound-hover
-            aria-label="Open menu"
+            aria-label={open ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={open}
             className="system-text"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "var(--space-xs)",
-              padding: "6px 12px",
+              gap: "10px",
+              padding: "8px 14px",
               border: "1px solid currentColor",
               borderRadius: "var(--radius-pill)",
+              background: "transparent",
+              color: "inherit",
+              cursor: "pointer",
             }}
           >
-          <span>MENU</span>
-          <span
-            style={{
-              width: 24,
-              height: 12,
-              borderRadius: "var(--radius-pill)",
-              background: "currentColor",
-              position: "relative",
-            }}
-          >
-            <span
-              style={{
-                position: "absolute",
-                top: 1,
-                left: open ? 13 : 1,
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                background: "var(--color-bg)",
-                transition: "left var(--speed-fast)",
-              }}
-            />
-          </span>
-        </button>
+            <span>{open ? "CERRAR" : "MENU"}</span>
+            <span aria-hidden style={{ position: "relative", width: 18, height: 12, flexShrink: 0 }}>
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    width: 18,
+                    height: 1.5,
+                    borderRadius: 2,
+                    background: "currentColor",
+                    /* abierto: arriba y abajo se cruzan en el centro, la del
+                       medio se apaga */
+                    top: open ? 5 : i * 5,
+                    opacity: open && i === 1 ? 0 : 1,
+                    transform: open
+                      ? i === 0
+                        ? "rotate(45deg)"
+                        : i === 2
+                          ? "rotate(-45deg)"
+                          : "none"
+                      : "none",
+                    transition:
+                      "top .28s cubic-bezier(.16,1,.3,1), transform .28s cubic-bezier(.16,1,.3,1), opacity .18s ease",
+                  }}
+                />
+              ))}
+            </span>
+          </button>
         </div>
       </header>
 
