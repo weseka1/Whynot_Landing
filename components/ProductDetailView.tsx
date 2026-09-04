@@ -28,6 +28,8 @@ import type { CatalogEntry } from "@/data/catalog";
 import { posterUrl } from "@/data/catalog";
 import type { ProductMeta, Badge } from "@/lib/productMeta";
 import { WhatsAppIcon } from "@/components/icons/SocialIcons";
+import { agregar, useTotales } from "@/lib/carrito";
+import { mainUrl } from "@/data/catalog";
 
 const LILAC = "#cdb5f0";
 const DARK = "#0a0a14";
@@ -58,6 +60,15 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
   const router = useRouter();
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [canShare, setCanShare] = useState(false);
+  /* Feedback del carrito: el boton confirma en el lugar, sin modal. */
+  const [agregado, setAgregado] = useState(false);
+  /* Colorways cuya foto no carga: en vez del alt text roto (se veia
+     "OFF-WHITE Out Of Office Black &..." dentro de la card) mostramos un
+     placeholder con la inicial. Un asset faltante no puede ensuciar la
+     grilla — y el bucket es del Supabase de Yamil, no lo arreglamos de acá. */
+  const [fotosRotas, setFotosRotas] = useState<Record<string, boolean>>({});
+  const [pideTalle, setPideTalle] = useState(false);
+  const { unidades } = useTotales();
 
   const outOfStock = meta.stock === 0;
   const sizeAvailable = (s: string) => meta.sizes.includes(s);
@@ -82,6 +93,36 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
     } catch {
       /* user cancelled */
     }
+  }
+
+  /* ── Agregar al carrito desde la ficha (4-sep-2026) ──────────────────
+     Antes esto solo existia en la home: el que llegaba a la ficha —el que
+     mas cerca esta de comprar— solo podia pedir de a UN par por WhatsApp.
+     "Aca en los modelos no tiene para anadir al carrito" (Juani).
+
+     El precio NO vive en el catalogo estatico (esta en landing_products),
+     asi que el item entra sin precio: el carrito lo muestra como "A
+     consultar" y lo aclara en el mensaje de WhatsApp. Mejor eso que
+     inventar un numero. */
+  function onAgregar() {
+    if (outOfStock) return;
+    if (!selectedSize) {
+      setPideTalle(true);
+      return;
+    }
+    agregar({
+      id: entry.path,
+      brand: entry.brand,
+      model: entry.model,
+      colorway: entry.colorway,
+      imageUrl: mainUrl(entry),
+      size: selectedSize,
+      price: null,
+      transferencia: null,
+    });
+    setAgregado(true);
+    setPideTalle(false);
+    window.setTimeout(() => setAgregado(false), 1800);
   }
 
   function onBack() {
@@ -166,7 +207,9 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
         {/* Talles */}
         <div style={sizeBlockStyle}>
           <div style={sizeHeaderStyle}>
-            <span style={metaLabelStyle}>Talle</span>
+            <span style={{ ...metaLabelStyle, color: pideTalle ? "#c9772b" : undefined }}>
+              {pideTalle ? "Elegí un talle" : "Talle"}
+            </span>
             {selectedSize && (
               <button
                 type="button"
@@ -186,7 +229,10 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
                   key={s}
                   type="button"
                   disabled={!available}
-                  onClick={() => setSelectedSize(active ? "" : s)}
+                  onClick={() => {
+                    setSelectedSize(active ? "" : s);
+                    setPideTalle(false);
+                  }}
                   aria-pressed={active}
                   className={`pd-size-chip${active ? " is-active" : ""}${
                     available ? "" : " is-disabled"
@@ -199,16 +245,38 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
           </div>
         </div>
 
-        {/* CTA WhatsApp */}
+        {/* CTA principal: sumar al pedido y seguir mirando. */}
+        {!outOfStock && (
+          <button
+            type="button"
+            onClick={onAgregar}
+            className={`pd-cart-btn${agregado ? " is-done" : ""}`}
+            aria-label={`Agregar ${entry.brand} ${entry.model} al pedido`}
+          >
+            {agregado ? (
+              <>✓ Agregado{unidades > 1 ? ` · ${unidades} pares` : ""}</>
+            ) : (
+              <>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M6 7h12l-1 12H7L6 7Z" />
+                  <path d="M9 7a3 3 0 0 1 6 0" />
+                </svg>
+                Agregar al pedido
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Secundario: para el que quiere ese par y nada mas. */}
         <a
           href={waUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`pd-wa-btn${outOfStock ? " is-secondary" : ""}`}
+          className={`pd-wa-btn${outOfStock ? "" : " is-secondary"}`}
           aria-label={`Pedir ${entry.brand} ${entry.model} por WhatsApp`}
         >
           <WhatsAppIcon size={20} />
-          {outOfStock ? "Consultar reposición" : "Pedir por WhatsApp"}
+          {outOfStock ? "Consultar reposición" : "Pedir solo este par"}
         </a>
 
         {/* Share (mobile) */}
@@ -248,11 +316,20 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
                 aria-label={`Ver ${p.brand} ${p.model} ${p.colorway}`}
               >
                 <div className="pd-related-thumb">
-                  <img
-                    src={posterUrl(p)}
-                    alt={`${p.brand} ${p.model} ${p.colorway}`}
-                    loading="lazy"
-                  />
+                  {fotosRotas[p.slug.full] ? (
+                    <span className="pd-related-sinfoto" aria-hidden>
+                      {p.colorway.trim().charAt(0).toUpperCase() || "?"}
+                    </span>
+                  ) : (
+                    <img
+                      src={posterUrl(p)}
+                      alt={`${p.brand} ${p.model} ${p.colorway}`}
+                      loading="lazy"
+                      onError={() =>
+                        setFotosRotas((prev) => ({ ...prev, [p.slug.full]: true }))
+                      }
+                    />
+                  )}
                   {p.type === "360" && <span className="pd-related-360">360°</span>}
                 </div>
                 <span className="pd-related-color">{p.colorway}</span>
@@ -565,6 +642,48 @@ const LOCAL_CSS = `
     background: transparent;
   }
 
+  /* Agregar al pedido: el CTA principal de la ficha. Vidrio oscuro sobre el
+     lila de la pagina, con el reflejo del borde superior — el mismo material
+     del carrito y del menu, para que se lea como la misma familia. */
+  .pd-cart-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 17px;
+    margin-top: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.5);
+    background: rgba(10,10,20,0.9);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    box-shadow: 0 14px 34px -16px rgba(10,10,20,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.22);
+    transition: transform .24s cubic-bezier(.16,1,.3,1), box-shadow .24s ease, background .24s ease;
+  }
+  .pd-cart-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -18px rgba(10,10,20,0.7),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+  .pd-cart-btn:active { transform: translateY(0); }
+  .pd-cart-btn:focus-visible {
+    outline: 3px solid rgba(255,255,255,0.85);
+    outline-offset: 3px;
+  }
+  .pd-cart-btn.is-done {
+    background: #1d7a4a;
+    border-color: rgba(255,255,255,0.6);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pd-cart-btn { transition: none; }
+    .pd-cart-btn:hover { transform: none; }
+  }
+
   .pd-wa-btn {
     display: flex;
     align-items: center;
@@ -627,26 +746,28 @@ const LOCAL_CSS = `
   }
 
   /* ── Related strip ── */
+  /* Grilla, no tira que scrollea (4-sep-2026).
+     Con overflow-x la ultima card quedaba cortada por la mitad y el nombre
+     con ellipsis ("White And Bl..."): "en esos modelos de abajo medio que se
+     corta, que quede bien centrado" (Juani). Son 5-8 colorways, entran de
+     sobra envolviendo; asi ninguna se corta, la fila queda centrada y los
+     nombres se leen enteros. */
   .pd-related-strip {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
     gap: 12px;
-    overflow-x: auto;
-    padding-bottom: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: ${DARK} rgba(10,10,20,0.08);
+    justify-content: center;
+    padding-bottom: 4px;
   }
-  .pd-related-strip::-webkit-scrollbar { height: 5px; }
-  .pd-related-strip::-webkit-scrollbar-track {
-    background: rgba(10,10,20,0.08);
-    border-radius: 4px;
-  }
-  .pd-related-strip::-webkit-scrollbar-thumb {
-    background: ${DARK};
-    border-radius: 4px;
+  /* Con pocos colorways no estiramos las cards a todo el ancho: quedan del
+     tamano natural y centradas. */
+  @media (min-width: 560px) {
+    .pd-related-strip {
+      grid-template-columns: repeat(auto-fit, 116px);
+    }
   }
 
   .pd-related-item {
-    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -656,8 +777,9 @@ const LOCAL_CSS = `
     border-radius: 14px;
     cursor: pointer;
     padding: 10px 8px 8px;
-    width: 100px;
-    transition: all .2s ease;
+    width: 100%;
+    min-width: 0;
+    transition: transform .24s cubic-bezier(.16,1,.3,1), box-shadow .24s ease, border-color .2s ease, background .2s ease;
     text-decoration: none;
     color: ${DARK};
   }
@@ -667,10 +789,16 @@ const LOCAL_CSS = `
     background: ${PEARL_HI};
     box-shadow: 0 8px 20px rgba(10,10,20,0.12);
   }
+  .pd-related-item:focus-visible {
+    outline: 2px solid ${DARK};
+    outline-offset: 2px;
+  }
 
+  /* aspect-ratio en vez de alto fijo: la foto queda siempre centrada y
+     cuadrada sin depender del tamano del archivo. */
   .pd-related-thumb {
-    width: 80px;
-    height: 80px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
     border-radius: 10px;
     overflow: hidden;
     background: rgba(255,255,255,0.55);
@@ -683,8 +811,23 @@ const LOCAL_CSS = `
     width: 100%;
     height: 100%;
     object-fit: contain;
-    padding: 4px;
+    object-position: center;
+    padding: 8%;
   }
+  /* Placeholder cuando la foto del colorway no existe. */
+  .pd-related-sinfoto {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: rgba(10,10,20,0.22);
+    background: linear-gradient(160deg, rgba(255,255,255,0.7), rgba(230,226,240,0.7));
+    letter-spacing: -0.02em;
+  }
+
   .pd-related-360 {
     position: absolute;
     top: 4px;
@@ -697,16 +840,26 @@ const LOCAL_CSS = `
     border-radius: 6px;
     letter-spacing: 0.5px;
   }
+  /* Hasta dos lineas en vez de ellipsis: "White And Black" se leia
+     "White And Bl...". Con line-clamp entra entero y las cards quedan
+     igual de altas porque min-height reserva las dos lineas. */
   .pd-related-color {
     font-size: 0.7rem;
     color: ${DARK};
     text-align: center;
     line-height: 1.3;
     width: 100%;
+    min-height: 1.82rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     padding: 0 2px;
     font-weight: 600;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pd-related-item { transition: none; }
+    .pd-related-item:hover { transform: none; }
   }
 `;

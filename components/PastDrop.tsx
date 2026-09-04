@@ -1053,10 +1053,10 @@ function HudTop({
         </motion.span>
         {/* En mobile "D://DATA_CORE / ARCHIVE • SPEC_NNN" se chocaba con el
             boton de search a la derecha. Mostramos solo el SPEC_NNN. */}
-        {!isMobile && <span>D://DATA_CORE / ARCHIVE</span>}
+        {!isMobile && <span>WHYNOT / CATALOGO</span>}
         {!isMobile && <span style={{ opacity: 0.4 }}>•</span>}
         <span style={{ color: "#0a0a14", fontWeight: 600 }}>
-          SPEC_{String(activeIndex + 1).padStart(3, "0")}
+          MODELO {String(activeIndex + 1).padStart(3, "0")}
         </span>
       </div>
       <div
@@ -1076,7 +1076,7 @@ function HudTop({
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            aria-label="Open archive search"
+            aria-label="Abrir buscador del catálogo"
             style={{
               display: "flex",
               alignItems: "center",
@@ -1102,7 +1102,7 @@ function HudTop({
             }}
           >
             <span style={{ fontSize: "0.95rem", lineHeight: 1 }}>⌖</span>
-            {!isMobile && <span>SEARCH</span>}
+            {!isMobile && <span>BUSCAR</span>}
             {!isMobile && (
               <span
                 style={{
@@ -1119,7 +1119,7 @@ function HudTop({
             )}
           </motion.button>
         )}
-        {!isMobile && <span style={{ opacity: 0.55 }}>{active.spec}</span>}
+        {!isMobile && <span style={{ opacity: 0.55 }}>{active.colorway}</span>}
         <span style={{ color: "#0a0a14", fontWeight: 600 }}>
           [{String(activeIndex + 1).padStart(2, "0")}/{String(N).padStart(2, "0")}]
         </span>
@@ -1172,9 +1172,9 @@ function HudBottom({
         </AnimatePresence>
       </div>
       <div style={{ display: "flex", gap: "1rem", color: "rgba(10,10,20,0.65)" }}>
-        <motion.span>{coordX}</motion.span>
+        <motion.span>ENVIOS</motion.span>
         <span>//</span>
-        <motion.span>{coordY}</motion.span>
+        <motion.span>CONTRA ENTREGA</motion.span>
       </div>
     </div>
   );
@@ -1193,11 +1193,11 @@ function MetadataPanel({
   luminosity: MotionValue<string>;
 }) {
   const rows = [
-    { label: "BRAND", value: active.brand },
-    { label: "YEAR", value: active.year },
-    { label: "MATERIAL", value: active.material },
-    { label: "DROP CODE", value: active.code },
-    { label: "STATUS", value: "ARCHIVED" },
+    { label: "MARCA", value: active.brand },
+    { label: "MODELO", value: active.model },
+    { label: "COLOR", value: active.colorway },
+    { label: "PAGO", value: "CONTRA ENTREGA" },
+    { label: "STOCK", value: "CONSULTAR" },
   ];
   return (
     <div
@@ -1262,8 +1262,8 @@ function MetadataPanel({
               borderTop: "1px solid rgba(10,10,20,0.18)",
             }}
           >
-            <span style={{ width: 92, color: "rgba(10,10,20,0.55)" }}>LUM</span>
-            <motion.span style={{ color: "#0a0a14", fontWeight: 600 }}>{luminosity}</motion.span>
+            <span style={{ width: 92, color: "rgba(10,10,20,0.55)" }}>CONSULTAS</span>
+            <motion.span style={{ color: "#0a0a14", fontWeight: 600 }}>POR WHATSAPP</motion.span>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -1487,7 +1487,9 @@ function Capsule({
                 <video> + decoraciones de la zapa en las capsulas cercanas
                 al activo (renderHeavy). Las lejanas son disco blanco vacio
                 — ya casi no se ven por opacity, asi que el usuario no
-                nota, pero saltamos N-5 elementos <video> simultaneos. */}
+                nota, pero saltamos N-5 elementos <video> simultaneos.
+                Ademas el preload es por distancia (ver abajo): montar el
+                <video> no es lo mismo que descargarlo entero. */}
         <div
           style={{
             position: "absolute",
@@ -1504,7 +1506,17 @@ function Capsule({
               muted
               loop
               playsInline
-              preload="auto"
+              /* Solo el activo se baja entero. Los vecinos piden metadata
+                 (arrancan al toque cuando les toca) y el resto nada: con
+                 preload="auto" en todos se bajaban 7,5 MB de videos antes
+                 de que el visitante viera la tienda. */
+              preload={
+                distFromActive === 0
+                  ? "auto"
+                  : distFromActive <= 1
+                    ? "metadata"
+                    : "none"
+              }
               onLoadedMetadata={(e) => onLoadedMetadata(e.currentTarget)}
               onCanPlay={(e) => {
                 /* Safety net: si es el activo y esta pausado, dar play.
@@ -1598,16 +1610,16 @@ function Capsule({
                 ●
               </motion.span>
             </span>{" "}
-            REC
+            360°
           </FloatingLabel>
           <FloatingLabel pos="tr" opacity={isActive}>
-            {spec.year}
+            IMPORTADO
           </FloatingLabel>
           <FloatingLabel pos="bl" opacity={isActive}>
-            {spec.spec}
+            ENVIOS AL PAIS
           </FloatingLabel>
           <FloatingLabel pos="br" opacity={isActive}>
-            <span style={{ color: "#0a0a14", fontWeight: 600 }}>{spec.code}</span>
+            <span style={{ color: "#0a0a14", fontWeight: 600 }}>WHATSAPP</span>
           </FloatingLabel>
         </>
       )}
@@ -1650,7 +1662,7 @@ function Capsule({
           >
             ▸
           </motion.span>
-          OPEN ARCHIVE
+          VER TODA LA MARCA
         </motion.div>
       )}
     </motion.div>
@@ -1916,7 +1928,7 @@ function NavArrow({
       whileHover={{ scale: 1.06 }}
       whileTap={{ scale: 0.92 }}
       transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-      aria-label={isLeft ? "Previous specimen" : "Next specimen"}
+      aria-label={isLeft ? "Anterior" : "Siguiente"}
       style={{
         position: "absolute",
         top: "50%",
@@ -1973,7 +1985,7 @@ function NavArrow({
           fontWeight: 600,
         }}
       >
-        {isLeft ? "PREV" : "NEXT"}
+        {isLeft ? "ANTERIOR" : "SIGUIENTE"}
       </span>
     </motion.button>
   );
