@@ -29,13 +29,27 @@ import {
   withTimeout,
 } from "@/lib/preloadAssets";
 
-/** Piso: evita el flash cuando todo viene de cache. */
-const MIN_TIME = 450;
-/** Techo duro. Bajo a 2,5 s el 4-sep-2026: sin el GLB de 1 MB en la lista
-    critica, lo unico que queda son dos webp de ~40 KB y las fuentes (que ya
-    tienen su propio techo de 800 ms). Un techo de 4,5 s era espacio para que
-    algo saliera mal, no una espera necesaria. */
-const MAX_TIME = 2500;
+/** ── Cuánto dura la entrada (4-sep-2026) ─────────────────────────────────
+    450 ms era un piso "por si acaso": lo justo para que no parpadeara cuando
+    todo venía de cache. El problema es que ES lo que pasa siempre — los dos
+    únicos assets críticos son webp de ~40 KB. Medido en el celu: el intro se
+    veía a los 300 ms, ya no estaba a los 1200, y el contador nunca salía de
+    "000" porque saltaba de 0 a 100 de una. Juani: "el inicio no figura en
+    celu". La animación estaba; no le daban los tiempos para existir.
+
+    Ahora la entrada dura lo que tiene que durar para verse. No es espera
+    muerta: es la primera impresión de la marca, y pasa UNA vez por visita
+    (volver de una ficha no la repite). */
+const MIN_TIME = 1500;
+/** Piso de visibilidad DESPUÉS de hidratar: aunque el reloj de la navegación
+    ya haya pasado los 1500 ms (celu lento, red mala), la lámina se queda esto
+    para que la animación se vea correr en vez de desaparecer al despertar. */
+const PISO_VISIBLE = 700;
+/** Con prefers-reduced-motion no hay show que valga: se entra y listo. */
+const MIN_TIME_REDUCIDO = 450;
+/** Techo duro por si algo se cuelga. Tiene que quedar arriba del piso más el
+    fundido de salida (260 + 620 ms), si no el techo cortaría la animación. */
+const MAX_TIME = 3400;
 
 /* Los chunks de las secciones de abajo NO se piden aca. Importar
    Collections/PastDrop ejecuta su `useGLTF.preload(...)` a module-load, lo que
@@ -97,12 +111,50 @@ export default function Preloader() {
     let raf = 0;
     let hard = 0 as unknown as ReturnType<typeof setTimeout>;
 
+    const minTime = reducedRef.current ? MIN_TIME_REDUCIDO : MIN_TIME;
+    /* ── Dos relojes, no uno ─────────────────────────────────────────────
+       `start` se toma cuando React hidrata, y en un celu eso puede ser 1,5 s
+       después de que el visitante ya está mirando la lámina. Medido: el
+       contador quedaba clavado en 000 todo ese rato y recién ahí empezaba a
+       correr, con la entrada estirándose a 3 s.
+
+       Así que la rampa del número va contra el reloj de la NAVEGACIÓN (el
+       contador ya llega donde tenía que estar y camina lo que falta), y el
+       cierre respeta además un piso desde la hidratación: sin eso, en un
+       aparato lento la lámina se cerraría en el mismo frame en que despierta
+       y no se vería nada — que es el bug original con otro disfraz. */
+    const cuandoCerrar = () =>
+      Math.max(
+        minTime - performance.now(),
+        start + PISO_VISIBLE - performance.now(),
+        0,
+      );
+
     /* El % se acerca al objetivo con lerp para que no salte. Solo se pide
-       re-render cuando cambia el entero: ~100 renders en toda la corrida. */
+       re-render cuando cambia el entero: ~100 renders en toda la corrida.
+
+       El objetivo es el MENOR entre lo descargado y lo transcurrido, y esa
+       es toda la corrección: antes miraba sólo la descarga, que termina en
+       el primer pestañeo, así que el número se quedaba en 000 y de golpe
+       desaparecía. Tomando el mínimo, el contador siempre se ve contar —
+       y sigue sin poder mentir: no llega a 100 hasta que los assets están
+       de verdad, porque entonces manda el otro término. */
+    /* El suavizado se mide en TIEMPO, no en frames. `display += d * 0.16` por
+       frame parece igual en cualquier lado, pero su velocidad real depende de
+       los FPS: a 60 el número llega en medio segundo, a 8 (celu peleando, o
+       este mismo verificador con GPU por software) tarda casi cuatro y se ve
+       arrastrarse. Medido antes de esto: 038 a los 2,7 s. Con el paso
+       normalizado a 16,7 ms la animación dura lo mismo en todos lados. */
+    let ultimoFrame = performance.now();
     const tick = () => {
       if (cancelled) return;
-      const target = Math.min(100, (doneWeight / totalWeight) * 100);
-      display += (target - display) * 0.16;
+      const ahora = performance.now();
+      const dt = Math.min(100, ahora - ultimoFrame);
+      ultimoFrame = ahora;
+      const porAssets = Math.min(100, (doneWeight / totalWeight) * 100);
+      const porTiempo = Math.min(100, (ahora / minTime) * 100);
+      const target = Math.min(porAssets, porTiempo);
+      display += (target - display) * (1 - Math.pow(1 - 0.16, dt / 16.7));
       const int = Math.round(display);
       if (int !== lastInt) {
         lastInt = int;
@@ -149,7 +201,7 @@ export default function Preloader() {
 
     Promise.all(jobs).then(() => {
       if (cancelled) return;
-      setTimeout(close, Math.max(0, MIN_TIME - (performance.now() - start)));
+      setTimeout(close, cuandoCerrar());
     });
 
     hard = setTimeout(close, MAX_TIME);
