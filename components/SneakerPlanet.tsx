@@ -188,127 +188,6 @@ function Sneaker({
 }
 
 /* ============================================================================
-   GLASS SPHERE — cristal premium SIN distortion/chromatic (eso lo hacia
-   verse "amateur"). Solo highlights y attenuation tinted.
-   ============================================================================ */
-function GlassSphere({ isMobile }: { isMobile: boolean }) {
-  const ref = useRef<THREE.Mesh>(null);
-
-  useFrame((_, dt) => {
-    if (ref.current) ref.current.rotation.y += dt * 0.04;
-  });
-
-  if (isMobile) {
-    return (
-      /* Mobile: MeshTransmissionMaterial es carisimo, asi que el vidrio se
-         finge con clearcoat + opacity baja. Mismo radio que desktop para que
-         la composicion no cambie entre dispositivos. */
-      <mesh ref={ref} renderOrder={5}>
-        <sphereGeometry args={[1.42, 48, 48]} />
-        <meshPhysicalMaterial
-          color="#ffffff"
-          transmission={0}
-          roughness={0.06}
-          metalness={0}
-          clearcoat={1}
-          clearcoatRoughness={0.06}
-          envMapIntensity={1.25}
-          transparent
-          opacity={0.13}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    );
-  }
-
-  /* ── Cristal (reescrito 4-sep-2026) ──────────────────────────────────────
-     Antes: transmission 0.55, ior 1.20, radio 1.85. El radio 1.85 contra un
-     viewport de half-height 1.53 hacia que la esfera DESBORDARA el canvas:
-     no se veia una esfera, se veia una pared. Y con el fondo opaco detras,
-     la poca transmision que habia refractaba gris. De ahi el "parece de
-     plastilina".
-
-     Ahora: radio 1.42 (entra entera, con borde visible), transmission 0.94 e
-     ior 1.45 (vidrio de verdad), y el canvas transparente le da algo real
-     que refractar. La aberracion cromatica minima es lo que separa "vidrio"
-     de "plastico transparente"; pasada de 0.02 empieza a verse a fuego.
-
-     El "fantasma de la zapa refractada" que motivo bajar la transmision se
-     controla con samples bajos + thickness chico, no apagando el vidrio. */
-  return (
-    <mesh ref={ref} renderOrder={5}>
-      <sphereGeometry args={[1.42, 96, 96]} />
-      <MeshTransmissionMaterial
-        backside={false}
-        samples={4}
-        thickness={0.22}
-        chromaticAberration={0.02}
-        anisotropy={0.1}
-        distortion={0}
-        distortionScale={0}
-        temporalDistortion={0}
-        roughness={0.05}
-        ior={1.45}
-        attenuationColor="#ffffff"
-        attenuationDistance={8.0}
-        color="#ffffff"
-        transmission={0.94}
-        clearcoat={1}
-        clearcoatRoughness={0.04}
-      />
-    </mesh>
-  );
-}
-
-/* ============================================================================
-   ORBIT RINGS — 3 toruses delgados rotando en ejes desincronizados. EXACTO
-   recipe que MeteoriteSection (orange / blue / white, meshBasicMaterial,
-   tilts fijos en el group + rotation animada en el mesh propio).
-   Misma estetica HUD 3D sutil que la seccion del 3xl al final de la pagina.
-   ============================================================================ */
-function OrbitRings({ isMobile }: { isMobile: boolean }) {
-  const a = useRef<THREE.Mesh>(null);
-  const b = useRef<THREE.Mesh>(null);
-  const c = useRef<THREE.Mesh>(null);
-
-  useFrame((_, dt) => {
-    if (a.current) a.current.rotation.z += dt * 0.18;
-    if (b.current) b.current.rotation.x += dt * 0.22;
-    if (c.current) c.current.rotation.y += dt * 0.10;
-  });
-
-  return (
-    <group>
-      <mesh ref={a} rotation={[Math.PI / 2.3, 0, 0]}>
-        <torusGeometry args={[2.2, 0.005, 8, 96]} />
-        <meshBasicMaterial color="#f4a982" transparent opacity={0.55} />
-      </mesh>
-      {/* Anillo AZUL en FRENTE de la zapa: renderOrder 200 (despues de la
-         zapa que va en 100) + depthTest:false -> el arco azul cruza por
-         delante de la silueta del producto, dando el look "ring orbiting
-         around it" del que pidio el usuario.                              */}
-      {!isMobile && (
-        <mesh ref={b} rotation={[Math.PI / 3, Math.PI / 6, 0]} renderOrder={200}>
-          <torusGeometry args={[2.6, 0.004, 8, 96]} />
-          <meshBasicMaterial
-            color="#5da3ff"
-            transparent
-            opacity={0.55}
-            depthTest={false}
-            depthWrite={false}
-          />
-        </mesh>
-      )}
-      <mesh ref={c} rotation={[0, 0, Math.PI / 4]}>
-        <torusGeometry args={[3.0, 0.003, 8, 96]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.18} />
-      </mesh>
-    </group>
-  );
-}
-
-/* ============================================================================
    PARALLAX RIG — camera lerp suave con mouse.
    ============================================================================ */
 function ParallaxRig({ isMobile }: { isMobile: boolean }) {
@@ -342,24 +221,21 @@ function ParallaxRig({ isMobile }: { isMobile: boolean }) {
    refracta el fondo REAL de la pagina, que es lo que hace que se lea como
    cristal y no como una bola de plastilina.
    ============================================================================ */
-/* El color de la seccion Collections (su data-bg-color). El canvas lo pinta
-   de fondo: como el porthole es circular y la seccion es de ese color
-   uniforme, se ve identico a transparente — PERO le da a la transmision
-   algo CLARO que refractar. MeshTransmissionMaterial refracta el framebuffer
-   de three, no el HTML de atras: con fondo vacio refractaba negro y la
-   esfera se veia como una bola de cristal oscuro aunque fuera vidrio. */
-const COLLECTIONS_BG = "#f4f1ec";
-
+/* Sin fondo de escena: el canvas es transparente y la zapatilla se apoya
+   sobre el fondo real de la seccion. El color pearl que se pintaba aca
+   existia para que la esfera tuviera algo claro que refractar; sin esfera,
+   solo tapaba. */
 function Backdrop() {
   const { scene } = useThree();
   useMemo(() => {
-    scene.background = new THREE.Color(COLLECTIONS_BG);
+    scene.background = null;
     return () => {
       scene.background = null;
     };
   }, [scene]);
   return null;
 }
+
 
 /* ============================================================================
    SCENE
@@ -434,11 +310,16 @@ function Scene({
         />
       )}
 
-      {/* === ANILLOS — 3 toruses orange/blue/white EXACTOS al 3xl === */}
-      <OrbitRings isMobile={lowQuality} />
+      {/* Los anillos tipo Saturno tambien salen: sin la esfera quedaban como
+          aros flotando alrededor de una zapatilla, puro adorno sci-fi de la
+          plantilla. */}
 
-      {/* === GLASS SPHERE — envuelve al producto en el porthole === */}
-      <GlassSphere isMobile={lowQuality} />
+      {/* La esfera se saco el 4-sep-2026. Envolver la zapatilla en una
+          burbuja de cristal la tapaba, le bajaba la nitidez (todo el producto
+          pasaba por la refraccion) y se leia como efecto por el efecto mismo:
+          "el efecto ese es extremadamente IA y horrible, ademas baja mucho la
+          calidad" (Juani, viendolo en su iPhone). El producto se muestra, no
+          se decora. */}
 
       {/* Removed: ReflectiveFloor + ContactShadows. Generaban el "puddle"
          oscuro en la mitad inferior del orbe (el sphere via transmission
@@ -513,28 +394,12 @@ function SneakerPlanetImpl({
       style={{
         position: "absolute",
         inset: 0,
-        /* PORTHOLE: clipado circular del canvas oscuro sobre el pearl bg de
-           la seccion. Sin este clip el cuadrado oscuro del scene cortaba el
-           layout. Borde sutil para definir el orbe.
-
-           IMPORTANTE: NO usar posterSrc como background del porthole. Antes
-           lo hacia para "tener algo" mientras el WebGL booteaba, pero el
-           usuario reportaba que el flash de la imagen estatica plana (zapa
-           con label "GGDB/SSTAR" sobre fondo oscuro, sin sphere/lens flares/
-           anillos) se veia horrible antes de que se acomode la escena. Mejor
-           porthole oscuro solido hasta que el Canvas dibuje el frame 1.    */
-        borderRadius: "50%",
-        overflow: "hidden",
-        /* Sin fondo: el canvas es transparente y la esfera se apoya sobre la
-           seccion. El anillo hairline queda como unico borde, que es lo que
-           define el vidrio sin encerrarlo en un disco. */
+        /* Sin porthole (4-sep-2026): era un disco oscuro recortado en circulo
+           para contener la escena. Con la esfera afuera quedaba un circulo
+           negro con la zapatilla adentro — que es justo lo que se veia en el
+           iPhone de Juani. Ahora el canvas es transparente y la zapatilla
+           flota sobre el fondo claro de la seccion, sin marco. */
         background: "transparent",
-        boxShadow:
-          "inset 0 0 0 1px rgba(255,255,255,0.14), 0 40px 80px -30px rgba(20,18,15,0.30)",
-        /* Fade-in del orbe ENTERO cuando la escena 3D esta lista. Antes
-           el porthole oscuro se veia desde el frame 0 sin zapatilla
-           dentro — feo. Ahora opacity 0 hasta sceneReady, luego transicion
-           de 380ms al estado final.                                       */
         opacity: sceneReady ? 1 : 0,
         transition: "opacity 380ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
