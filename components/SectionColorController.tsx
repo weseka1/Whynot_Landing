@@ -12,8 +12,12 @@
    ============================================================================ */
 
 import { useSectionColor } from "@/hooks/useSectionColor";
+import { useScrollVelocity } from "@/hooks/useScrollVelocity";
 
+/* Monta los dos hooks globales de scroll: el color por seccion y la
+   velocidad (--v / --v-abs) que usan las deformaciones. Ninguno renderiza. */
 export default function SectionColorController() {
   useSectionColor();
+  useScrollVelocity();
   return null;
 }

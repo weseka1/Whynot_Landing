@@ -1,67 +1,99 @@
 "use client";
 
 /* ============================================================================
-   useSectionColor — DICH-style section-driven color sweep.
+   useSectionColor — el color del fondo lo manda la sección que estás mirando.
 
-   Cada <section> que tenga `data-bg-color` (y opcionalmente `data-text-color`)
-   es observada por un IntersectionObserver con threshold 0.5. Cuando una
-   seccion cruza el 50% del viewport, sus colores se aplican como CSS vars
-   en :root (`--page-bg` y `--page-fg`). El body usa esas vars con
-   `transition: 700ms` asi el cambio se ve como un sweep gradual mientras
-   scrolleas — no es un blend interpolado entre dos colores, es snap +
-   CSS transition del browser.
+   Cada <section data-bg-color="..."> (y opcional data-text-color) define el
+   color del body mientras es la sección "activa". Activa = la que cruza el
+   CENTRO del viewport. El body interpola con `transition: 700ms`, así el
+   cambio se ve como un sweep y no como un salto.
 
-   Importante: el hook NO causa re-renders de React. Solo muta CSS vars
-   directamente via `style.setProperty`. Cero cost de reconciliacion.
+   ── Por qué no IntersectionObserver con threshold 0.5 (4-sep-2026) ────────
+   Era la implementación anterior y tenía un agujero: una sección MÁS ALTA que
+   el viewport nunca alcanza intersectionRatio 0.5, así que nunca disparaba.
+   Con la home nueva, "Nuevos ingresos" y "Cómo comprar" son de ese tipo: al
+   subir desde el lila del PastDrop el fondo se quedaba lila — "cuando bajo y
+   vuelvo a subir no vuelven los colores" (Juani). Además el observer se
+   montaba con un setTimeout de 500 ms para alcanzar las secciones dynamic():
+   si tardaban más, quedaban sin observar para siempre.
+
+   El criterio "cruza el centro" no depende del alto de la sección ni de
+   cuándo se montó: la lista se recalcula en cada scroll (querySelectorAll es
+   barato) y se resuelve con getBoundingClientRect.
+
+   No causa re-renders de React: sólo escribe CSS vars, con el trabajo
+   limitado por rAF, y sólo cuando el color CAMBIA.
    ============================================================================ */
 
 import { useEffect } from "react";
 
 export function useSectionColor(rootRef?: React.RefObject<HTMLElement>) {
   useEffect(() => {
-    /* Pequeno delay para que el hook se monte despues de que los
-       componentes lazy-loaded de page.tsx hayan renderizado sus
-       secciones. Sin esto, IntersectionObserver solo captura las
-       secciones above-the-fold y las dynamic() quedan sin observar. */
-    const setup = () => {
-      const root = (rootRef?.current ?? document) as Document | HTMLElement;
-      const sections = root.querySelectorAll<HTMLElement>("[data-bg-color]");
-      if (sections.length === 0) return null;
+    const root = (rootRef?.current ?? document) as Document | HTMLElement;
+    let raf = 0;
+    let ultimoBg = "";
+    let ultimoFg = "";
 
-      const observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-              const el = entry.target as HTMLElement;
-              const bg = el.dataset.bgColor;
-              const fg = el.dataset.textColor;
-              if (bg) document.documentElement.style.setProperty("--page-bg", bg);
-              if (fg) document.documentElement.style.setProperty("--page-fg", fg);
-            }
+    const aplicar = () => {
+      raf = 0;
+      const secciones = root.querySelectorAll<HTMLElement>("[data-bg-color]");
+      if (secciones.length === 0) return;
+
+      const centro = window.innerHeight / 2;
+      let elegida: HTMLElement | null = null;
+      /* Si dos se solapan gana la última en el documento, que es la que está
+         pintada encima. */
+      secciones.forEach((s) => {
+        const r = s.getBoundingClientRect();
+        if (r.top <= centro && r.bottom >= centro) elegida = s;
+      });
+
+      /* Ninguna cruza el centro (huecos entre secciones, o arriba de todo):
+         nos quedamos con la más cercana por arriba, así el fondo nunca queda
+         colgado del color de una sección que ya pasó. */
+      if (!elegida) {
+        let mejor = -Infinity;
+        secciones.forEach((s) => {
+          const r = s.getBoundingClientRect();
+          if (r.top <= centro && r.top > mejor) {
+            mejor = r.top;
+            elegida = s;
           }
-        },
-        { threshold: 0.5 }
-      );
+        });
+      }
+      if (!elegida) return;
 
-      sections.forEach((s) => observer.observe(s));
-      return observer;
+      const el = elegida as HTMLElement;
+      const bg = el.dataset.bgColor;
+      const fg = el.dataset.textColor;
+      if (bg && bg !== ultimoBg) {
+        ultimoBg = bg;
+        document.documentElement.style.setProperty("--page-bg", bg);
+      }
+      if (fg && fg !== ultimoFg) {
+        ultimoFg = fg;
+        document.documentElement.style.setProperty("--page-fg", fg);
+      }
     };
 
-    /* Intentamos un setup inmediato y otro despues de 500ms para cubrir
-       las secciones que se montan via dynamic() (Collections, PastDrop,
-       FuturisticGallery, IdeaForm, WhyNotEnd). El observer inicial
-       captura las above-the-fold; el segundo captura el resto cuando
-       ya cargaron sus chunks. */
-    const obs1 = setup();
-    let obs2: IntersectionObserver | null = null;
-    const timer = window.setTimeout(() => {
-      obs2 = setup();
-    }, 500);
+    const pedir = () => {
+      if (!raf) raf = requestAnimationFrame(aplicar);
+    };
+
+    window.addEventListener("scroll", pedir, { passive: true });
+    window.addEventListener("resize", pedir);
+    /* Las secciones dynamic() aparecen después: en vez de adivinar con un
+       setTimeout, escuchamos el DOM hasta que la home terminó de montar. */
+    const mo = new MutationObserver(pedir);
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    pedir();
 
     return () => {
-      window.clearTimeout(timer);
-      obs1?.disconnect();
-      obs2?.disconnect();
+      window.removeEventListener("scroll", pedir);
+      window.removeEventListener("resize", pedir);
+      mo.disconnect();
+      if (raf) cancelAnimationFrame(raf);
     };
   }, [rootRef]);
 }

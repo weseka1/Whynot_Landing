@@ -71,17 +71,17 @@ function accentFor(id: string): "white" | "silver" | "gold" {
 
 /* Stats tecnicos que rodean el circulo (HUD AR scanner). Cambiar libremente. */
 const TECH_STATS_LEFT = [
-  { k: "AR SCAN MODE",      v: "ACTIVE" },
-  { k: "PRECISION VIEW",    v: "1:1 SCALE" },
-  { k: "RES.",              v: "4K" },
-  { k: "MATERIAL ANALYSIS", v: "RUNNING" },
+  { k: "PAGO",              v: "CONTRA ENTREGA" },
+  { k: "ENVÍOS",            v: "A TODO EL PAÍS" },
+  { k: "CABA Y GBA",        v: "EN EL DÍA" },
+  { k: "DESPACHO",          v: "OCA · CORREO ARG." },
 ];
 
 const TECH_STATS_RIGHT = [
-  { k: "DROP ID",           v: "COLLECTION 01" },
-  { k: "CHANNEL",           v: "ORANITHS" },
-  { k: "STATUS",            v: "ACTIVE" },
-  { k: "SIGNAL",            v: "STABLE" },
+  { k: "DROP",              v: "COLECCIÓN 01" },
+  { k: "TIENDA",            v: "WHYNOT EXCLUSIVE" },
+  { k: "ORIGEN",            v: "IMPORTADO" },
+  { k: "CONSULTAS",         v: "POR WHATSAPP" },
 ];
 
 export default function Collections() {
@@ -135,7 +135,7 @@ export default function Collections() {
             letterSpacing: "0.32em",
           }}
         >
-          +++ WHY NOT // COLLECTIONS
+          +++ WHY NOT // COLECCIONES
         </span>
         <span
           style={{
@@ -146,7 +146,7 @@ export default function Collections() {
             textTransform: "uppercase",
           }}
         >
-          AR Product Scan · Luxury Sneaker Gallery
+          Sneakers de lujo importados · Selección Why Not
         </span>
         {/* Linea fina cromada que subraya el header */}
         <span
@@ -360,8 +360,7 @@ export default function Collections() {
               marginTop: 10,
             }}
           >
-            X {(150 + active * 24.37).toFixed(2)} //{" "}
-            Y {(238 + active * 17.93).toFixed(2)}
+            {current.name} · {current.id} / {String(items.length).padStart(2, "0")}
           </div>
         </div>
 
@@ -392,7 +391,7 @@ export default function Collections() {
               >
                 <button
                   onClick={() => setActive(i)}
-                  aria-label={`Show ${it.name}`}
+                  aria-label={`Ver ${it.name}`}
                   className="ar-thumb"
                   data-active={i === active ? "true" : "false"}
                   style={{
@@ -494,7 +493,7 @@ export default function Collections() {
               width: "fit-content",
             }}
           >
-            <span>Discover</span>
+            <span>Ver modelo</span>
             <svg
               width="20"
               height="10"
@@ -525,8 +524,9 @@ export default function Collections() {
               marginTop: "var(--space-xs)",
             }}
           >
-            {current.caption}. Limited capsule release — engineered silhouettes
-            from recycled tech-fibers, documented and versioned for the wearer.
+            {current.caption}. Sneakers importados, con envíos a todo el país por
+            OCA y Correo Argentino; en CABA y GBA llega en el día y podés pagar al
+            recibir. Escribinos por WhatsApp y coordinamos tu pedido.
           </p>
         </div>
       </div>
@@ -553,7 +553,7 @@ export default function Collections() {
             textTransform: "uppercase",
           }}
         >
-          GALLERY · ZONE 01 · {String(items.length).padStart(2, "0")} CAPSULES
+          SELECCIÓN WHY NOT · {String(items.length).padStart(2, "0")} MODELOS
         </span>
 
         <h2

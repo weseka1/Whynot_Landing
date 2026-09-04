@@ -63,7 +63,6 @@ type Accent = "white" | "silver" | "gold";
    Antes silver=#0a0b0f, gold=#0e0c08 -> variaciones sutiles pero visibles
    al lado del orbe iluminado. Todos a #0c0e12 (matchea con white que era
    el que el usuario decia que se veia perfecto).                           */
-const SCENE_BG = "#0c0e12";
 
 const ACCENT: Record<
   Accent,
@@ -201,18 +200,21 @@ function GlassSphere({ isMobile }: { isMobile: boolean }) {
 
   if (isMobile) {
     return (
+      /* Mobile: MeshTransmissionMaterial es carisimo, asi que el vidrio se
+         finge con clearcoat + opacity baja. Mismo radio que desktop para que
+         la composicion no cambie entre dispositivos. */
       <mesh ref={ref} renderOrder={5}>
-        <sphereGeometry args={[1.85, 32, 32]} />
+        <sphereGeometry args={[1.42, 48, 48]} />
         <meshPhysicalMaterial
           color="#ffffff"
           transmission={0}
-          roughness={0.10}
+          roughness={0.06}
           metalness={0}
           clearcoat={1}
-          clearcoatRoughness={0.10}
-          envMapIntensity={1.0}
+          clearcoatRoughness={0.06}
+          envMapIntensity={1.25}
           transparent
-          opacity={0.16}
+          opacity={0.13}
           depthWrite={false}
           side={THREE.DoubleSide}
         />
@@ -220,45 +222,40 @@ function GlassSphere({ isMobile }: { isMobile: boolean }) {
     );
   }
 
-  /* Cristal MAS SUTIL para matar el fantasma de la zapa refractada:
-     - transmission 1 -> 0.55  (menos refraccion = menos ghost visible)
-     - samples 6 -> 3          (menos bounces de refraccion interna)
-     - thickness 0.20 -> 0.08  (cristal mas fino, casi una piel de orbe)
-     - roughness 0.04 -> 0.10  (levemente frosted, suaviza cualquier residuo)
-     El attenuationColor tinted + clearcoat 1 conservan el "look luxury"
-     premium, pero el sphere es ahora mas highlight/halo y menos lente.   */
-  /* attenuationColor FIJO neutro-blanco para los 3 accents. Antes usaba
-     c.ring (silver=gris frio, gold=dorado calido) -> el lado no iluminado
-     de la sphere quedaba oscuro/saturado, que era la "parte negra" que el
-     usuario notaba en 02/03 vs 01. Ahora las 3 spheres son iguales
-     opticamente; el accent solo cambia luces, particulas y anillos.       */
-  /* Sphere radius 1.55 -> 1.85: ahora SOBREPASA el viewport del canvas
-     (camera z=4.7, fov=36 -> visible half-height = 4.7*tan(18deg) = 1.53).
-     Sphere diametro 3.7 vs viewport 3.06 -> el sphere overshoots el canvas
-     en todos los costados, garantizando que NUNCA se vea el bg dark
-     crescent al lado del orbe (que era la "parte negra" que el usuario
-     veia en 02/03 cuando el parallax o la rotacion del sphere exponian
-     el bg).                                                                */
+  /* ── Cristal (reescrito 4-sep-2026) ──────────────────────────────────────
+     Antes: transmission 0.55, ior 1.20, radio 1.85. El radio 1.85 contra un
+     viewport de half-height 1.53 hacia que la esfera DESBORDARA el canvas:
+     no se veia una esfera, se veia una pared. Y con el fondo opaco detras,
+     la poca transmision que habia refractaba gris. De ahi el "parece de
+     plastilina".
+
+     Ahora: radio 1.42 (entra entera, con borde visible), transmission 0.94 e
+     ior 1.45 (vidrio de verdad), y el canvas transparente le da algo real
+     que refractar. La aberracion cromatica minima es lo que separa "vidrio"
+     de "plastico transparente"; pasada de 0.02 empieza a verse a fuego.
+
+     El "fantasma de la zapa refractada" que motivo bajar la transmision se
+     controla con samples bajos + thickness chico, no apagando el vidrio. */
   return (
     <mesh ref={ref} renderOrder={5}>
-      <sphereGeometry args={[1.85, 80, 80]} />
+      <sphereGeometry args={[1.42, 96, 96]} />
       <MeshTransmissionMaterial
         backside={false}
-        samples={3}
-        thickness={0.08}
-        chromaticAberration={0}
-        anisotropy={0.08}
+        samples={4}
+        thickness={0.22}
+        chromaticAberration={0.02}
+        anisotropy={0.1}
         distortion={0}
         distortionScale={0}
         temporalDistortion={0}
-        roughness={0.10}
-        ior={1.20}
-        attenuationColor="#f0f3f8"
-        attenuationDistance={6.0}
+        roughness={0.05}
+        ior={1.45}
+        attenuationColor="#ffffff"
+        attenuationDistance={8.0}
         color="#ffffff"
-        transmission={0.55}
+        transmission={0.94}
         clearcoat={1}
-        clearcoatRoughness={0.06}
+        clearcoatRoughness={0.04}
       />
     </mesh>
   );
@@ -334,13 +331,29 @@ function ParallaxRig({ isMobile }: { isMobile: boolean }) {
 }
 
 /* ============================================================================
-   BACKDROP — fondo oscuro UNIFORME para los 3 accents (matchea el wrapper
-   porthole, evita el crescent dark visible cuando el sphere no llena 100%).
+   BACKDROP — el canvas es TRANSPARENTE (4-sep-2026).
+   ----------------------------------------------------------------------------
+   Antes esto pintaba un fondo oscuro solido, y para taparlo hacia falta una
+   esfera mas grande que el viewport MAS un gradiente pearl encima del borde.
+   Tres capas peleandose: el resultado se veia como un disco gris opaco, no
+   como vidrio.
+
+   Ahora la escena no tiene fondo propio: se ve la seccion detras. La esfera
+   refracta el fondo REAL de la pagina, que es lo que hace que se lea como
+   cristal y no como una bola de plastilina.
    ============================================================================ */
+/* El color de la seccion Collections (su data-bg-color). El canvas lo pinta
+   de fondo: como el porthole es circular y la seccion es de ese color
+   uniforme, se ve identico a transparente — PERO le da a la transmision
+   algo CLARO que refractar. MeshTransmissionMaterial refracta el framebuffer
+   de three, no el HTML de atras: con fondo vacio refractaba negro y la
+   esfera se veia como una bola de cristal oscuro aunque fuera vidrio. */
+const COLLECTIONS_BG = "#f4f1ec";
+
 function Backdrop() {
   const { scene } = useThree();
   useMemo(() => {
-    scene.background = new THREE.Color(SCENE_BG);
+    scene.background = new THREE.Color(COLLECTIONS_BG);
     return () => {
       scene.background = null;
     };
@@ -512,9 +525,12 @@ function SneakerPlanetImpl({
            porthole oscuro solido hasta que el Canvas dibuje el frame 1.    */
         borderRadius: "50%",
         overflow: "hidden",
-        background: "#0a0b0f",
+        /* Sin fondo: el canvas es transparente y la esfera se apoya sobre la
+           seccion. El anillo hairline queda como unico borde, que es lo que
+           define el vidrio sin encerrarlo en un disco. */
+        background: "transparent",
         boxShadow:
-          "inset 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(20,18,15,0.35)",
+          "inset 0 0 0 1px rgba(255,255,255,0.14), 0 40px 80px -30px rgba(20,18,15,0.30)",
         /* Fade-in del orbe ENTERO cuando la escena 3D esta lista. Antes
            el porthole oscuro se veia desde el frame 0 sin zapatilla
            dentro — feo. Ahora opacity 0 hasta sceneReady, luego transicion
@@ -523,27 +539,10 @@ function SneakerPlanetImpl({
         transition: "opacity 380ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     >
-      {/* Overlay radial pearl-edge: cubre el dark crescent al borde del
-         porthole, sin tocar la sphere ni el render 3D.
-         CLAVE: "circle 50% at center" → el 100% del gradient queda atado
-         al borde INSCRITO del circulo (porthole edge), no a la esquina
-         del cuadrado. Sin esto, el pearl quedaba en las esquinas
-         clipeadas por el borderRadius:50% y casi nada llegaba al edge
-         visible del porthole.
-         Stops: transparente al 65% (sphere vive ahi sin tocar), fade
-         denso hasta pearl al 92% -> cubre la franja oscura entre sphere
-         y borde con un transition suave que se siente como vineta.       */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          pointerEvents: "none",
-          background:
-            "radial-gradient(circle 50% at center, transparent 65%, var(--color-pearl) 92%)",
-          zIndex: 2,
-        }}
-      />
+      {/* El overlay radial pearl que iba aca se saco el 4-sep-2026: existia
+          para tapar el "dark crescent" entre la esfera y el borde del
+          porthole. Con el canvas transparente ese crescent no existe, y el
+          gradiente solo servia para ensuciar el borde del vidrio. */}
       <Canvas
         /* dpr: en mobile el cap de 1.5x daba canvas de hasta 720k pixels
            por porthole de 480x480. Bajamos a 1 fijo (240k pixels) —
@@ -551,7 +550,10 @@ function SneakerPlanetImpl({
         dpr={isMobile ? 1 : [1, 2]}
         gl={{
           antialias: !isMobile,
-          alpha: false,
+          /* true: sin esto el canvas pinta negro donde no hay geometria y
+             vuelve el "disco opaco". Con alpha, la esfera flota sobre la
+             seccion. */
+          alpha: true,
           powerPreference: "high-performance",
           stencil: false,
           depth: true,

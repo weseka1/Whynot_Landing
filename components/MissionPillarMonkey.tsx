@@ -19,14 +19,15 @@
      - Mono inicial en pose FINAL del clip (no T-pose). Root motion stripped.
 
    Optimizacion:
-     - frameloop="always" — necesario para el AnimationMixer.
+     - frameloop="demand" (4-sep-2026): el mixer pide frames solo mientras
+       el clip corre; quieto no renderiza. Antes "always".
      - 4 canvases R3F en una pagina son manejables (<16 WebGL contexts).
      - Lazy mount via IntersectionObserver con margin grande (300px) — el
        canvas solo se crea cuando el pilar esta cerca del viewport.
    ============================================================================ */
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useAnimations, useGLTF, AdaptiveDpr } from "@react-three/drei";
 import { clone as cloneSkeletal } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
@@ -75,9 +76,22 @@ function easeOutCubic(t: number): number {
 interface MonkeyProps {
   triggerSignalRef: React.MutableRefObject<boolean>;
   modelSrc: string;
+  /** El wrapper (fuera del Canvas) lo usa para pedir un frame cuando dispara
+      la senal: con frameloop="demand" nadie mira triggerSignalRef si no hay
+      frames. */
+  invalidateRef: React.MutableRefObject<(() => void) | null>;
 }
 
-function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
+function Monkey({ triggerSignalRef, modelSrc, invalidateRef }: MonkeyProps) {
+  const invalidate = useThree((st) => st.invalidate);
+  useEffect(() => {
+    invalidateRef.current = invalidate;
+    /* primer frame con el modelo nuevo */
+    invalidate();
+    return () => {
+      invalidateRef.current = null;
+    };
+  }, [invalidate, invalidateRef]);
   /* mobileGLB() decide entre el GLB original (desktop) y la variant mobile
      en runtime. Es sync + idempotente: si el cliente ya recibio el preload
      de la variant correcta, useGLTF hit cache.                            */
@@ -164,6 +178,15 @@ function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
     const obj = ref.current;
     if (!obj) return;
 
+    /* frameloop="demand": solo pedimos el frame siguiente mientras hay algo
+       que mover (clip corriendo o tween de caida). Mono quieto = 0 frames =
+       0 CPU/GPU. Antes era "always": renderizaba 60 veces por segundo un
+       modelo inmovil, el costo base que se veia como web "tildada" en celus. */
+    const action = actionRef.current;
+    if (triggerSignalRef.current || tweenStartMsRef.current !== null || (action && action.isRunning() && !action.paused)) {
+      invalidate();
+    }
+
     /* Trigger: cuando el wrapper exterior pone triggerSignalRef en true,
        arrancamos animacion + tween Y. El mono SALTA a Y_DROP_FROM (arriba)
        instantaneamente y empieza a caer mientras se reproduce el clip. */
@@ -223,14 +246,26 @@ function Monkey({ triggerSignalRef, modelSrc }: MonkeyProps) {
 interface MissionPillarMonkeyProps {
   /** Override del modelo a renderizar. Default = mono-rigged. */
   modelSrc?: string;
+  /** Cambialo para volver a disparar la caida + animacion sin remontar el
+      Canvas. Lo usa el Mission pinneado: el wrapper queda siempre en
+      viewport, asi que el IntersectionObserver de abajo dispara una sola
+      vez y nunca se resetea — este es el camino para re-animar por pilar. */
+  replayKey?: number | string;
 }
 
 export default function MissionPillarMonkey({
   modelSrc = MONO_SRC_DEFAULT,
+  replayKey,
 }: MissionPillarMonkeyProps = {}) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerSignalRef = useRef<boolean>(false);
   const hasTriggeredRef = useRef<boolean>(false);
+  const invalidateRef = useRef<(() => void) | null>(null);
+  /* Disparar = poner la senal Y pedir un frame para que useFrame la vea. */
+  const disparar = () => {
+    triggerSignalRef.current = true;
+    invalidateRef.current?.();
+  };
   const isMobile = useIsMobile();
   const [shouldMount, setShouldMount] = useState(false);
 
@@ -273,6 +308,21 @@ export default function MissionPillarMonkey({
     return () => io.disconnect();
   }, [shouldMount, isMobile]);
 
+  /* Replay por pilar (Mission pinneado). El delay corto deja que <Monkey>
+     remonte con el modelo nuevo y tenga sus `actions` listas antes de que
+     useFrame consuma la senal: si la senal llega en el primer frame, el
+     mono cae pero sin clip. Se ignora el primer render (lo cubre el IO). */
+  const primerReplayRef = useRef(true);
+  useEffect(() => {
+    if (replayKey === undefined) return;
+    if (primerReplayRef.current) {
+      primerReplayRef.current = false;
+      return;
+    }
+    const t = window.setTimeout(disparar, 80);
+    return () => window.clearTimeout(t);
+  }, [replayKey]);
+
   /* Trigger por viewport entry: cuando >=30% visible, dispara animacion. */
   useEffect(() => {
     const el = wrapperRef.current;
@@ -281,7 +331,7 @@ export default function MissionPillarMonkey({
       ([entry]) => {
         if (entry.intersectionRatio >= 0.3 && !hasTriggeredRef.current) {
           hasTriggeredRef.current = true;
-          triggerSignalRef.current = true;
+          disparar();
         } else if (entry.intersectionRatio === 0) {
           /* Reset al salir completamente → puede re-disparar al volver. */
           hasTriggeredRef.current = false;
@@ -307,7 +357,8 @@ export default function MissionPillarMonkey({
       {!shouldMount ? null : (
        <R3FErrorBoundary>
         <Canvas
-          frameloop="always"
+          /* demand: ver el comentario en useFrame de Monkey. */
+          frameloop="demand"
           camera={{ position: [0, 0.4, 6.5], fov: 36 }}
           /* dpr: en mobile lo bajamos a 1 fijo (sin techo de 2x). En un
              Android moderno DPR 2.5-3.5x estamos renderizando ~625k-1.2M
@@ -350,7 +401,10 @@ export default function MissionPillarMonkey({
             </>
           )}
           <Suspense fallback={null}>
-            <Monkey triggerSignalRef={triggerSignalRef} modelSrc={modelSrc} />
+            {/* key=modelSrc: al cambiar de mono se remonta SOLO este nodo
+                (clon de skeleton + mixer nuevos); el Canvas y su contexto
+                WebGL quedan. Un Canvas por seccion, no uno por pilar. */}
+            <Monkey key={modelSrc} triggerSignalRef={triggerSignalRef} modelSrc={modelSrc} invalidateRef={invalidateRef} />
           </Suspense>
         </Canvas>
        </R3FErrorBoundary>
