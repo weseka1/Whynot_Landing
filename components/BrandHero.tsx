@@ -64,8 +64,8 @@ export default function BrandHero({
           fontWeight: 600,
         }}
       >
-        BRAND_ARCHIVE · {String(totalModels).padStart(2, "0")} MODELS ·{" "}
-        {String(totalColorways).padStart(2, "0")} COLORWAYS
+        CATÁLOGO · {String(totalModels).padStart(2, "0")} MODELOS ·{" "}
+        {String(totalColorways).padStart(2, "0")} COLORES
       </motion.div>
 
       {/* Brand title — flow normal, ocupa todo el ancho del padre.
@@ -151,10 +151,10 @@ export default function BrandHero({
           color: DARK_DIM,
         }}
       >
-        <StatBlock label="SPECIMENS" value={String(totalColorways).padStart(3, "0")} accent />
-        <StatBlock label="360° READY" value={String(total360).padStart(3, "0")} />
-        <StatBlock label="STATIC" value={String(totalColorways - total360).padStart(3, "0")} />
-        <StatBlock label="STATUS" value="ARCHIVED" />
+        <StatBlock label="PRODUCTOS" value={String(totalColorways).padStart(3, "0")} accent />
+        <StatBlock label="CON VISTA 360°" value={String(total360).padStart(3, "0")} />
+        <StatBlock label="SOLO FOTO" value={String(totalColorways - total360).padStart(3, "0")} />
+        <StatBlock label="COMPRA" value="POR WHATSAPP" />
       </motion.div>
     </div>
   );

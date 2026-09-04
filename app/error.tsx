@@ -87,7 +87,7 @@ export default function GlobalError({
             textTransform: "uppercase",
           }}
         >
-          ▸ Error 500 / SPECIMEN_FAULT
+          ▸ Error 500 / No se pudo cargar
         </div>
 
         <h1

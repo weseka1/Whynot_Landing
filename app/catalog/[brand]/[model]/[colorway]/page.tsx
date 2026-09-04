@@ -43,10 +43,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Params) {
   const { brand, model, colorway } = await params;
   const entry = getEntryBySlug(brand, model, colorway);
-  if (!entry) return { title: "Specimen not found" };
+  if (!entry) return { title: "Modelo no encontrado — WHYNOT EXCLUSIVE" };
   return {
-    title: `${entry.brand} · ${entry.model} · ${entry.colorway} — Archive`,
-    description: `${entry.brand} ${entry.model} ${entry.colorway} — interactive 360° specimen.`,
+    title: `${entry.brand} · ${entry.model} · ${entry.colorway} — WHYNOT EXCLUSIVE`,
+    description: `${entry.brand} ${entry.model} ${entry.colorway} en WHYNOT EXCLUSIVE. Sneakers importados. Envíos a todo el país por OCA y Correo Argentino; en CABA y GBA en el día con pago al recibir. Consultá stock, talles y precio por WhatsApp.`,
   };
 }
 

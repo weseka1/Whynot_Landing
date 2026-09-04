@@ -18,7 +18,7 @@ type Section = { id: string; header: string; paragraphs: string[] };
 const SECTIONS: Section[] = [
   {
     id: "shipping",
-    header: "[SHIPPING PROTOCOL]",
+    header: "[ENVÍOS]",
     paragraphs: [
       "Realizamos envíos a CABA, GBA y todo el país.",
       "Las condiciones, tiempos y modalidad de entrega se coordinan por canal oficial según zona, disponibilidad y tipo de pedido.",
@@ -29,16 +29,16 @@ const SECTIONS: Section[] = [
   },
   {
     id: "payment",
-    header: "[PAYMENT METHOD]",
+    header: "[FORMAS DE PAGO]",
     paragraphs: [
-      "La compra se coordina de forma personalizada por Instagram o WhatsApp oficial.",
+      "La compra se coordina de forma personalizada por WhatsApp oficial.",
       "Nuestro equipo informa los detalles necesarios para avanzar con el pedido según producto, disponibilidad y modalidad de entrega.",
       "Los datos para concretar la operación se brindan únicamente a través de nuestros canales oficiales.",
     ],
   },
   {
     id: "exchange",
-    header: "[EXCHANGE POLICY]",
+    header: "[CAMBIOS Y DEVOLUCIONES]",
     paragraphs: [
       "Los cambios se gestionan de forma personalizada a través de nuestros canales oficiales, siempre que el producto se encuentre sin uso, en buen estado y con su packaging correspondiente.",
       "Cada solicitud será evaluada por nuestro equipo según el caso, el estado del producto, el talle/modelo solicitado y la disponibilidad vigente al momento de iniciar el cambio.",
@@ -47,15 +47,15 @@ const SECTIONS: Section[] = [
       "No se aceptarán cambios de productos con uso, daños, alteraciones, mal uso del cliente, packaging incompleto o señales que no correspondan a su estado original de entrega.",
       "Los reintegros no se realizan de forma automática. Podrán ser evaluados únicamente cuando no exista una alternativa disponible, cuando la reposición no pueda concretarse dentro de un plazo razonable o cuando el caso lo requiera según evaluación del equipo.",
       "Cuando un reintegro sea aprobado, el plazo de gestión podrá variar según el medio utilizado y el tipo de operación, con un plazo estimado de 5 a 45 días hábiles.",
-      "Para iniciar una solicitud, contactanos por Instagram o WhatsApp oficial indicando los datos de la compra, el producto y el motivo del cambio.",
+      "Para iniciar una solicitud, contactanos por WhatsApp oficial indicando los datos de la compra, el producto y el motivo del cambio.",
       "Nuestro equipo podrá solicitar fotos, videos o información adicional para evaluar correctamente cada caso.",
     ],
   },
   {
     id: "channels",
-    header: "[OFFICIAL CHANNELS]",
+    header: "[CANAL OFICIAL]",
     paragraphs: [
-      "Nuestros únicos canales oficiales de atención son Instagram y WhatsApp.",
+      "Nuestro único canal oficial de atención es WhatsApp.",
       "Desde allí confirmamos stock, talles, valores, entregas, cambios y cualquier detalle relacionado con tu pedido.",
       "WhyNot no se responsabiliza por operaciones realizadas fuera de sus canales oficiales o mediante cuentas no autorizadas.",
       "Antes de avanzar con cualquier pedido, verificá que estés hablando con nuestro equipo oficial.",
@@ -149,11 +149,11 @@ export default function ProtocolModal({ open, onClose }: Props) {
                   letterSpacing: "0.22em",
                 }}
               >
-                D://DATA_CORE / PROTOCOL
+                POLÍTICAS / WHYNOT EXCLUSIVE
               </span>
               <button
                 onClick={onClose}
-                aria-label="Close protocol"
+                aria-label="Cerrar políticas"
                 className="system-text"
                 style={{
                   background: "transparent",
@@ -164,7 +164,7 @@ export default function ProtocolModal({ open, onClose }: Props) {
                   padding: 4,
                 }}
               >
-                CLOSE ✕
+                CERRAR ✕
               </button>
             </div>
 

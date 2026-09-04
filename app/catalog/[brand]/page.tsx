@@ -40,10 +40,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Params) {
   const { brand } = await params;
   const brandName = brandNameFromSlug(brand);
-  if (!brandName) return { title: "Brand not found" };
+  if (!brandName) return { title: "Marca no encontrada" };
   return {
-    title: `${brandName} — Archive`,
-    description: `${brandName} full archive — interactive 360° specimens.`,
+    title: `${brandName} — Catálogo`,
+    description: `Catálogo de ${brandName} en WHYNOT EXCLUSIVE con vista 360°. Sneakers importados, envíos a todo el país y pago al recibir en CABA y GBA. Consultas por WhatsApp.`,
   };
 }
 
@@ -136,7 +136,7 @@ export default async function BrandPage({ params }: Params) {
           >
             ●
           </span>
-          <span className="brand-hud-extras">D://DATA_CORE / ARCHIVE</span>
+          <span className="brand-hud-extras">CATÁLOGO</span>
           <span className="brand-hud-extras" style={{ opacity: 0.4 }}>•</span>
           <span
             style={{
@@ -197,14 +197,14 @@ export default async function BrandPage({ params }: Params) {
         <div style={{ display: "flex", gap: "0.8rem", alignItems: "center" }}>
           <span style={{ color: DARK }}>▸</span>
           <span style={{ color: DARK, fontWeight: 600 }}>
-            END OF {brandName} ARCHIVE
+            FIN DEL CATÁLOGO DE {brandName}
           </span>
         </div>
         <div style={{ display: "flex", gap: "1rem" }}>
-          <span>WHYNOT / ARCHIVE_v01</span>
+          <span>WHYNOT EXCLUSIVE / CATÁLOGO</span>
           <span style={{ opacity: 0.4 }}>//</span>
           <span style={{ color: DARK, fontWeight: 600 }}>
-            {total} SPECIMENS · {total360} × 360°
+            {total} PRODUCTOS · {total360} CON VISTA 360°
           </span>
         </div>
       </div>

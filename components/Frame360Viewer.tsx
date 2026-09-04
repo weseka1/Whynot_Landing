@@ -342,7 +342,7 @@ export default function Frame360Viewer({
         {ready && (
           <img
             src={currentUrl}
-            alt={`${entry.brand} ${entry.model} ${entry.colorway} · frame ${currentFrame + 1}/${frames}`}
+            alt={`${entry.brand} ${entry.model} ${entry.colorway} · vista ${currentFrame + 1}/${frames}`}
             draggable={false}
             style={{
               width: "100%",
@@ -423,7 +423,7 @@ export default function Frame360Viewer({
             fontWeight: isInteracting ? 700 : 500,
           }}
         >
-          {is360 ? "DRAG TO ROTATE" : "STATIC PREVIEW"}
+          {is360 ? "ARRASTRÁ PARA GIRAR" : "FOTO FIJA"}
         </span>
         {is360 && (
           <span style={{ color: DARK, fontWeight: 700 }}>
@@ -453,7 +453,7 @@ export default function Frame360Viewer({
             textTransform: "uppercase",
           }}
         >
-          <div style={{ fontWeight: 600 }}>LOADING SPECIMEN</div>
+          <div style={{ fontWeight: 600 }}>CARGANDO VISTA 360°</div>
           <div
             style={{
               width: 220,
@@ -475,7 +475,7 @@ export default function Frame360Viewer({
             />
           </div>
           <div style={{ color: DARK, fontWeight: 600 }}>
-            {loadedCount}/{frames} FRAMES
+            {loadedCount}/{frames} IMÁGENES
           </div>
         </div>
       )}

@@ -175,8 +175,8 @@ export default function BrandModelFilter({
         {/* ============ BRAND DROPDOWN ============ */}
         <Dropdown
           isMobile={isMobile}
-          label="BRAND"
-          placeholder="MARCA"
+          label="MARCA"
+          placeholder="ELEGI UNA"
           value={brand}
           open={openBrand}
           onToggle={() => {
@@ -187,7 +187,7 @@ export default function BrandModelFilter({
           onQueryChange={setBrandQuery}
           items={filteredBrands.map((b) => ({ key: b, primary: b }))}
           onSelect={(it) => handleSelectBrand(it.key)}
-          emptyHint="NO MATCH"
+          emptyHint="SIN RESULTADOS"
           flexBasis={isMobile ? "50%" : "260px"}
         />
 
@@ -198,8 +198,8 @@ export default function BrandModelFilter({
              quieren ver toda la grilla.                                    */}
         <Dropdown
           isMobile={isMobile}
-          label="MODEL / VAR"
-          placeholder={brand ? "MODELO / COLOR" : "ELEGI MARCA"}
+          label="MODELO / COLOR"
+          placeholder={brand ? "ELEGI MODELO" : "ELEGI MARCA"}
           value={null}
           disabled={!brand}
           open={openVariant}
@@ -456,7 +456,7 @@ function Dropdown({
                 ref={inputRef}
                 value={query}
                 onChange={(e) => onQueryChange(e.target.value)}
-                placeholder="SEARCH..."
+                placeholder="BUSCAR..."
                 style={{
                   flex: 1,
                   fontFamily: BRACKET_FONT,
@@ -587,8 +587,8 @@ function Dropdown({
                 textTransform: "uppercase",
               }}
             >
-              <span>▸ ENTER ARCHIVE</span>
-              <span>ESC // CLOSE</span>
+              <span>▸ ESCRIBI PARA FILTRAR</span>
+              <span>ESC // CERRAR</span>
             </div>
           </motion.div>
         )}

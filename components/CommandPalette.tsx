@@ -161,11 +161,11 @@ export default function CommandPalette({
                 }}
               >
                 <span>
-                  ⌖ SCAN ARCHIVE ·{" "}
+                  ⌖ BUSCAR EN EL CATÁLOGO ·{" "}
                   <span style={{ color: DARK, fontWeight: 700 }}>
                     {results.length}
                   </span>{" "}
-                  {results.length === 1 ? "match" : "matches"}
+                  {results.length === 1 ? "resultado" : "resultados"}
                 </span>
                 <button
                   onClick={onClose}
@@ -177,7 +177,7 @@ export default function CommandPalette({
                     font: "inherit",
                     padding: 0,
                   }}
-                  aria-label="Close search"
+                  aria-label="Cerrar buscador"
                 >
                   ESC ✕
                 </button>
@@ -208,7 +208,7 @@ export default function CommandPalette({
                   ref={inputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Type brand / model / colorway..."
+                  placeholder="Marca, modelo o color..."
                   style={{
                     flex: 1,
                     border: "none",
@@ -246,7 +246,7 @@ export default function CommandPalette({
                     textTransform: "uppercase",
                   }}
                 >
-                  No specimens found
+                  Sin resultados · probá con marca, modelo o color
                 </div>
               ) : (
                 results.map((r, i) => (
@@ -282,9 +282,9 @@ export default function CommandPalette({
                 background: "rgba(244,220,63,0.08)",
               }}
             >
-              <span>↑↓ NAVIGATE · ↵ OPEN · ESC CLOSE</span>
+              <span>↑↓ MOVERSE · ↵ ABRIR · ESC CERRAR</span>
               <span style={{ color: DARK, fontWeight: 600 }}>
-                {all.length} SPECIMENS INDEXED
+                {all.length} MODELOS EN EL CATÁLOGO
               </span>
             </div>
           </motion.div>

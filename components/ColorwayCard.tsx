@@ -232,7 +232,7 @@ export default function ColorwayCard({ entry, href, onClick }: Props) {
               marginBottom: "0.4rem",
             }}
           >
-            ▸ COLORWAY
+            ▸ COLOR
           </div>
           <div
             style={{
@@ -259,7 +259,7 @@ export default function ColorwayCard({ entry, href, onClick }: Props) {
           >
             <span>{entry.model}</span>
             <span style={{ color: YELLOW, fontWeight: 700 }}>
-              {is360 ? `${entry.frames} FR` : "STATIC"}
+              {is360 ? `${entry.frames} FOTOS 360°` : "FOTO"}
             </span>
           </div>
         </div>
@@ -346,7 +346,7 @@ function OfflinePlaceholder() {
       >
         ⊘
       </div>
-      <div style={{ fontWeight: 600 }}>SPECIMEN OFFLINE</div>
+      <div style={{ fontWeight: 600 }}>FOTO NO DISPONIBLE</div>
     </div>
   );
 }

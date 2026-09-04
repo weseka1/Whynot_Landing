@@ -28,15 +28,21 @@ type Pillar = {
 export const site = {
   brand: {
     name: "WHY NOT",
-    tagline: "Future Mode",
+    tagline: "Sneakers importados",
   },
 
   /* ---------------- NAV ---------------- */
+  /* El menu sigue el orden de la home nueva (4-sep-2026): primero lo que se
+     compra. #tienda envuelve Mas vendidos + Nuevos ingresos. */
   nav: [
-    { label: "Home",        href: "#hero" },
-    { label: "Collections", href: "#section-collections" },
-    { label: "Mission",     href: "#section-mission" },
-    { label: "Past Drop",   href: "#section-past-drop" },
+    /* Anclas con "/" adelante: funcionan tambien desde /catalog/ y /politicas/.
+       "Catálogo" es ruta propia (la pagina indice con el buscador de marcas). */
+    { label: "Inicio",       href: "/#hero" },
+    { label: "Tienda",       href: "/#tienda" },
+    { label: "Catálogo",     href: "/catalog/" },
+    { label: "Drops",        href: "/#section-past-drop" },
+    { label: "Cómo comprar", href: "/#section-como-comprar" },
+    { label: "Nosotros",     href: "/#section-mission" },
   ],
 
   /* ---------------- PRELOADER ---------------- */
@@ -49,12 +55,12 @@ export const site = {
 
   /* ---------------- HERO ---------------- */
   hero: {
-    eyebrow:   "C://SYSTEM_FILES / 01",
+    eyebrow:   "ENVÍOS / TODO EL PAÍS",
     tagline:   "Future\nMode",
-    sub:       "An operating system for fashion drops. Wear the file.",
-    discover:  "Discover",
-    metaLeft:  "VERSION 02.6",
-    metaRight: "EST. 20XX",
+    sub:       "Sneakers importados. Envíos a todo el país. En CABA y GBA, en el día y pagás al recibir.",
+    discover:  "Ver zapatillas",
+    metaLeft:  "SNEAKERS",
+    metaRight: "PEDIDOS / WHATSAPP",
     /* GLB model centerpiece (reemplazar archivo en /public/assets/3d/) */
     model:     "/assets/3d/mono.glb",
     /* Fondo del hero (WebP cielo, fallback PNG si hace falta). */
@@ -63,17 +69,17 @@ export const site = {
 
   /* ---------------- COLLECTIONS / ORANITHS ---------------- */
   collections: {
-    eyebrow: "D://DATA_CORE / COLLECTIONS",
-    title:   "Oraniths",
+    eyebrow: "COLECCIONES",
+    title:   "Golden Goose",
     ticker:  "Future Mode · Encrypted Couture",
     items: [
       /* image = preview del thumb. video (opcional) = lo que se muestra en
          el planeta cuando este item esta activo. Los .webm tienen alpha
          real (VP9 yuva420p) procesado desde 144 frames 360 grados — fondo
          negro recortado con extract-black-bg.py (luminance + flood). */
-      { id: "01", name: "Super Star · White Black",  caption: "Shift the vision",  image: "/assets/hero/golden-goose-white-black.webp",  video: "/assets/hero/golden-goose-white-black.webm" },
-      { id: "02", name: "Super Star · Silver Star",  caption: "Evolve",            image: "/assets/hero/golden-goose-silver-star.webp",  video: "/assets/hero/golden-goose-silver-star.webm" },
-      { id: "03", name: "Super Star · Gold Star",    caption: "Touch the void",    image: "/assets/hero/golden-goose-gold-star.webp",    video: "/assets/hero/golden-goose-gold-star.webm" },
+      { id: "01", name: "Super Star · White Black",  caption: "Blanco y negro",    image: "/assets/hero/golden-goose-white-black.webp",  video: "/assets/hero/golden-goose-white-black.webm" },
+      { id: "02", name: "Super Star · Silver Star",  caption: "Estrella plateada", image: "/assets/hero/golden-goose-silver-star.webp",  video: "/assets/hero/golden-goose-silver-star.webm" },
+      { id: "03", name: "Super Star · Gold Star",    caption: "Estrella dorada",   image: "/assets/hero/golden-goose-gold-star.webp",    video: "/assets/hero/golden-goose-gold-star.webm" },
     ],
   },
 
@@ -136,7 +142,7 @@ export const site = {
 
   /* ---------------- PAST DROP (Sirius) ---------------- */
   pastDrop: {
-    eyebrow: "D://DATA_CORE / ARCHIVE",
+    eyebrow: "MODELOS EN 360°",
     title:   "drops",
     drop: {
       name:        "Sirius",
