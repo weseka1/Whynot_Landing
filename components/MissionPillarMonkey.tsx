@@ -28,7 +28,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useAnimations, useGLTF, AdaptiveDpr } from "@react-three/drei";
+import { useAnimations, useGLTF } from "@react-three/drei";
 import { clone as cloneSkeletal } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { useIsMobile } from "./useIsMobile";
@@ -360,33 +360,46 @@ export default function MissionPillarMonkey({
           /* demand: ver el comentario en useFrame de Monkey. */
           frameloop="demand"
           camera={{ position: [0, 0.4, 6.5], fov: 36 }}
-          /* dpr: en mobile lo bajamos a 1 fijo (sin techo de 2x). En un
-             Android moderno DPR 2.5-3.5x estamos renderizando ~625k-1.2M
-             pixels por canvas, * 4 monos = 2.5-5M pixels/frame. Adreno
-             610-tier no llega — se cae a 20-30fps. dpr=1 baja el costo
-             al 11%-25% y el mono se ve igual a esa distancia/tamano.
-             AdaptiveDpr baja todavia mas si la GPU se queja.            */
-          /* 0.75 en mobile: el mono ocupa un tercio de la pantalla y a esa
-             escala la diferencia no se ve, pero son ~44% menos pixeles por
-             frame — que es lo que se siente al scrollear en un celu. */
-          dpr={isMobile ? 0.75 : [1, 2]}
+          /* ── dpr (4-sep-2026): el presupuesto cambió ────────────────────
+             El `dpr: 1` de antes estaba calculado para CUATRO canvas vivos a
+             la vez ("* 4 monos = 2.5-5M pixels/frame"). Esa sección ya no
+             existe: el Mission es UNA pantalla pinneada con UN canvas. Con
+             ese cálculo viejo estábamos pagando el ahorro sin tener el gasto.
+
+             Y se veía: en el iPhone de Juani el mono quedaba hecho un mosaico
+             ("rompiste el 3D... baja mucho la calidad"). El canvas mide
+             351x270 CSS — a dpr 1 son 94k pixels en una pantalla de 1170 de
+             ancho. A dpr 2 son 379k, que para un solo canvas no es nada.
+             Techo en 2 y no en el dpr del aparato: arriba de 2 la diferencia
+             ya no se ve y el costo sí. */
+          dpr={[1, 2]}
           style={{
             width: "100%",
             height: "100%",
             background: "transparent",
           }}
           gl={{
-            /* antialias OFF en mobile: el costo de MSAA en un canvas
-               1080p+ con 4 instancias es 20-30% de fillrate extra. Los
-               bordes pixeleados se camuflan con el blur de los pilares.  */
-            antialias: !isMobile,
+            /* Antialias también en mobile, por lo mismo que el dpr: el 20-30%
+               de fillrate extra se medía sobre CUATRO instancias. Con una
+               sola es barato, y sin él los bordes del mono quedan escalonados
+               — que era la otra mitad del "se ve pixelado". El blur de los
+               pilares que supuestamente lo camuflaba tampoco existe más. */
+            antialias: true,
             powerPreference: "high-performance",
             alpha: true,
           }}
         >
-          {/* AdaptiveDpr: si el frame rate cae bajo 60fps, drei baja el
-             dpr efectivo a la mitad automaticamente. Recovery al subir.  */}
-          {isMobile && <AdaptiveDpr pixelated />}
+          {/* ── Se fue AdaptiveDpr (4-sep-2026) ─────────────────────────
+             Bajaba el dpr solo cuando el frame rate caía, y `pixelated` le
+             pedía NO suavizar el reescalado. O sea: bajo carga, el mono se
+             veía literalmente pixelado — que es la queja textual de Juani
+             ("baja mucho la calidad"). Y como el frame rate cae justo
+             mientras scrolleás, se disparaba en el peor momento: el único
+             en que se lo está mirando.
+
+             Tenía sentido con cuatro canvas peleando la GPU. Con uno, la
+             calidad es fija: preferimos un frame de menos antes que el mono
+             hecho un mosaico. */}
           <ambientLight intensity={0.65} />
           <directionalLight
             position={[5, 6, 5]}

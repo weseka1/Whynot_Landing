@@ -29,7 +29,6 @@ import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { site } from "@/data/site";
 import ChannelButtons from "./ChannelButtons";
-import { useIsMobile } from "./useIsMobile";
 
 const MissionPillarMonkey = dynamic(() => import("./MissionPillarMonkey"), {
   ssr: false,
@@ -166,23 +165,20 @@ export default function Mission() {
   const sectionRef = useRef<HTMLElement>(null);
   const activoRef = useRef(0);
   const [activo, setActivo] = useState(0);
-  /* ── El mono y el celu (4-sep-2026) ──────────────────────────────────
-     Cambiar de mono remonta la escena entera: SkeletonUtils.clone + bbox +
-     AnimationMixer nuevos. En desktop no se siente; en un iPhone es una
-     long task por paso, justo mientras el dedo scrollea — "el scrolling de
-     los monos, se tildan bastantes" (Juani, probándolo en su celular).
+  /* ── El mono cambia con el paso, en todos lados (4-sep-2026) ─────────
+     Cambiar de mono remonta la escena (SkeletonUtils.clone + bbox + mixer),
+     así que probé dejarlo fijo en el celu para ganar frames. Juani: "rompiste
+     el 3D en el scrolling". Y tiene razón: el mono que cambia ES la sección
+     — sin eso queda una lista de texto con un adorno arriba.
 
-     En MOBILE el mono es uno solo para toda la sección: cae una vez y se
-     queda. Se pierde el cambio por paso, se gana un scroll que no trabaja.
-     En desktop sigue cambiando, con 260 ms de espera a que el scroll se
-     aquiete para no remontar en pleno movimiento. */
-  const isMobile = useIsMobile();
+     Lo que sí se mantiene es esperar a que el scroll se aquiete (260 ms sin
+     cambiar de paso) antes de remontar: el trabajo cae en la pausa y no en
+     pleno movimiento del dedo. El texto cambia al instante igual. */
   const [modelo, setModelo] = useState(0);
   useEffect(() => {
-    if (isMobile) return;
     const t = window.setTimeout(() => setModelo(activo), 260);
     return () => window.clearTimeout(t);
-  }, [activo, isMobile]);
+  }, [activo]);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -237,10 +233,7 @@ export default function Mission() {
         {/* ------------------------------------------------------------ mono */}
         <div className="mono" aria-hidden="true">
           <div className="piso" />
-          <MissionPillarMonkey
-            modelSrc={MONOS[isMobile ? 0 : modelo] ?? MONOS[0]}
-            replayKey={isMobile ? 0 : modelo}
-          />
+          <MissionPillarMonkey modelSrc={MONOS[modelo] ?? MONOS[0]} replayKey={modelo} />
         </div>
 
         {/* ---------------------------------------------------------- burbujas
@@ -669,13 +662,14 @@ export default function Mission() {
           }
           .pantalla {
             grid-template-columns: 1fr;
-            /* El mono cede alto: el paso 'Canales' tiene copy + dos botones
-               + cierre y no entraba, el segundo boton quedaba cortado. */
-            grid-template-rows: minmax(0, 26svh) minmax(0, 1fr) auto;
+            /* 32svh: a 26 el mono quedaba de estampilla y la seccion se
+               veia vacia — es el protagonista, tiene que pesar. El resto
+               del alto es para el texto, que scrollea solo si no entra. */
+            grid-template-rows: minmax(0, 32svh) minmax(0, 1fr) auto;
             align-items: stretch;
-            padding-top: 64px;
+            padding-top: 60px;
             padding-bottom: calc(max(22px, env(safe-area-inset-bottom)) + 26px);
-            row-gap: 10px;
+            row-gap: 8px;
           }
           .mono {
             grid-area: 1 / 1;
@@ -690,8 +684,11 @@ export default function Mission() {
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
           }
+          /* Centrado, no pegado arriba: con align-self:start el texto corto
+             (la mayoria de los pasos) dejaba media pantalla en blanco entre
+             el parrafo y las burbujas — el hueco que se ve en el iPhone. */
           .paso {
-            align-self: start;
+            align-self: center;
           }
           .titulo {
             font-size: clamp(1.75rem, 8.4vw, 2.5rem);
@@ -749,11 +746,17 @@ export default function Mission() {
             right: auto;
             top: auto;
           }
-          /* El progreso y el hint pasan al borde de la pantalla, no sobre
-             el contenido. */
-          .pasos,
-          .hint {
+          /* El progreso pasa al borde de la pantalla, no sobre el contenido. */
+          .pasos {
             bottom: max(6px, env(safe-area-inset-bottom));
+          }
+          /* El "seguí bajando" se va en el celu: está anclado al mismo borde
+             que la barra de pasos y a 390px se le encima — se leía
+             "CANALES" y "SEGUÍ BAJANDO" uno sobre el otro. En un teléfono
+             además sobra: las rayitas de progreso ya dicen que hay más, y
+             nadie necesita que le expliquen que se scrollea. */
+          .hint {
+            display: none;
           }
         }
 
