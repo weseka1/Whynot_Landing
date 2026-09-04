@@ -15,10 +15,13 @@ import "./globals.css";
 
 const SITE_URL = "https://whynot-landing.onrender.com";
 const SITE_NAME = "WHY NOT";
-const SITE_TITLE = "WHY NOT — Future Fashion System";
-const SITE_DESC = "Luxury sneaker drops. Encrypted couture. A cyber-fashion operating system.";
+const SITE_TITLE = "WHYNOT EXCLUSIVE — Sneakers de lujo importados";
+const SITE_DESC = "Sneakers de lujo importados: Jordan, Louis Vuitton, Nike, Balenciaga y más. Envíos a todo el país; en CABA y GBA en el día con pago al recibir. Consultas por WhatsApp.";
 
 export const metadata: Metadata = {
+  /* Favicon: el mono de la marca. Sin esto cada carga pedia /favicon.ico y
+     daba 404 (medido 4-sep-2026). Mismo asset que usa manifest.webmanifest. */
+  icons: { icon: "/assets/hero/character.webp" },
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE_TITLE,
@@ -59,7 +62,7 @@ export const metadata: Metadata = {
         url: "/assets/hero/character.webp",
         width: 1200,
         height: 1200,
-        alt: "WHY NOT — Future Fashion System",
+        alt: "WHYNOT EXCLUSIVE — Sneakers de lujo importados",
       },
     ],
   },
@@ -137,6 +140,15 @@ export default function RootLayout({
                  M, E, S). Bridge mientras no este la T-12 original.
               3) Orbitron — geometrica cyber, fallback ultimo.
             Preconnect + display:swap = no bloquea el primer paint.        */}
+        {/* Antes que NADA: si ya se entro en esta pestana, marcamos <html>
+            para que el preloader no llegue a pintarse al volver atras.
+            Inline y sincrono a proposito — esperar a React es esperar 2 s. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(sessionStorage.getItem('whynot.entro.v1')==='1')document.documentElement.classList.add('ya-entro')}catch(e){}",
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* Preconnect al CDN de model-viewer (Hero + MonoMascot) — abre la
@@ -153,8 +165,10 @@ export default function RootLayout({
 
         {/* Preload de assets criticos del Hero — el browser los pide en
             paralelo con el JS, no espera a que React monte el componente.
-            Estos comparten lista con CRITICAL_ASSETS en Preloader.tsx para
-            que la barra 0→100% del loader cubra exactamente lo que se ve
+            Estos comparten lista con CRITICAL_ASSETS en lib/preloadAssets.ts
+            (capa 1). El resto de los assets vive en DEFERRED_ASSETS y baja
+            despues, en tiempo ocioso, con la web ya en pantalla.
+            La barra 0→100% del loader cubra exactamente lo que se ve
             en el primer scroll. */}
         <link
           rel="preload"
@@ -208,11 +222,11 @@ export default function RootLayout({
             renderiza el <model-viewer> en el HTML; aunque el script no
             este disponible aun, el web component se hidrata al cargar
             (model-viewer es self-bootstrapping). */}
-        <Script
-          type="module"
-          src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"
-          strategy="afterInteractive"
-        />
+        {/* El <Script> de model-viewer se saco el 4-sep-2026: lo carga
+            lib/modelViewer.ts a pedido, cuando un componente va a mostrar un
+            mono. Con afterInteractive competia con el primer pintado; con
+            lazyOnload Next no lo pedia NUNCA (medido: 0 requests, el custom
+            element sin definir y el mono invisible). */}
       </body>
     </html>
   );

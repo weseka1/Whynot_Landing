@@ -12,6 +12,7 @@
    ============================================================================ */
 
 import { useEffect, useRef, useState } from "react";
+import { cargarModelViewer } from "@/lib/modelViewer";
 import { mobileGLB } from "@/lib/mobileGLB";
 
 /* GLB del MONO CUERPO COMPLETO 3D — ~377KB (optimizado: textures 192x192
@@ -139,14 +140,17 @@ export default function MonoMascot({
     if (shouldMount) return;
     if (!wrapperRef.current) return;
     if (typeof IntersectionObserver === "undefined") {
-      setShouldMount(true);
+      cargarModelViewer().then(() => setShouldMount(true));
       return;
     }
+    /* El script del custom element lo carga quien lo usa (lib/modelViewer):
+       ya no viene del layout. Sin esto, el <model-viewer> de esta pagina
+       quedaria como un tag vacio sin upgrade. */
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setShouldMount(true);
           io.disconnect();
+          cargarModelViewer().then(() => setShouldMount(true));
         }
       },
       { rootMargin: "200px" }

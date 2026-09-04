@@ -19,6 +19,8 @@
    ============================================================================ */
 
 import { useEffect, useRef, useState } from "react";
+import { EVENTO_ENTRADA, esPrimeraVisita } from "@/lib/entrada";
+import { cargarModelViewer } from "@/lib/modelViewer";
 import { site } from "@/data/site";
 import FrameBorder from "./FrameBorder";
 import DiscoverButton from "./DiscoverButton";
@@ -38,7 +40,43 @@ export default function Hero() {
      UI) ya esta visible para entonces, asi que se nota poco.            */
   const [glbSrc, setGlbSrc] = useState<string | null>(null);
   useEffect(() => {
-    setGlbSrc(mobileGLB(site.hero.model));
+    /* ── El mono entra DESPUES del primer pintado (4-sep-2026) ───────────
+       Antes se montaba apenas hidrataba, y con el <model-viewer> venian
+       248 KB de script + el GLB de 1 MB compitiendo con el primer paint.
+       Medido en desktop: FCP a los 10,1 s y 9,7 s de hilo bloqueado en 16
+       long tasks (la peor, 4,2 s). "La web me anda MUY lenta, el inicio
+       tarda un MONTON en abrir" — Juani.
+
+       El hero no necesita el mono para servir: necesita el cielo, el titulo
+       y el boton. El mono es el remate, y entra cuando el hilo esta libre. */
+    /* Primero el script del custom element, despues el tag: si montamos el
+       <model-viewer> sin el modulo cargado queda un elemento vacio. */
+    const montar = () => {
+      cargarModelViewer().then(() => setGlbSrc(mobileGLB(site.hero.model)));
+    };
+    const idle = (fn: () => void) => {
+      const w = window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void };
+      if (typeof w.requestIdleCallback === "function") w.requestIdleCallback(fn, { timeout: 2500 });
+      else window.setTimeout(fn, 400);
+    };
+    /* Si la bienvenida ya paso (volver atras), va directo a idle. */
+    if (!esPrimeraVisita()) {
+      idle(montar);
+      return;
+    }
+    let hecho = false;
+    const arrancar = () => {
+      if (hecho) return;
+      hecho = true;
+      idle(montar);
+    };
+    window.addEventListener(EVENTO_ENTRADA, arrancar);
+    /* Red de seguridad: si el evento no llegara, el mono aparece igual. */
+    const t = window.setTimeout(arrancar, 3000);
+    return () => {
+      window.removeEventListener(EVENTO_ENTRADA, arrancar);
+      window.clearTimeout(t);
+    };
   }, []);
 
   useEffect(() => {
@@ -145,6 +183,11 @@ export default function Hero() {
   return (
     <section
       id="hero"
+      /* Sin esto, al subir desde las secciones lila el body quedaba lila:
+         "no vuelven los colores" (Juani, 4-sep). Meteorito y WhyNotEnd, que
+         eran oscuros y ya no estan, hacian ese trabajo sin querer. */
+      data-bg-color="#0a0908"
+      data-text-color="#f3ece1"
       ref={sectionRef}
       style={{
         position: "relative",
@@ -294,7 +337,11 @@ export default function Hero() {
           </p>
 
           <div style={{ pointerEvents: "auto" }}>
-            <DiscoverButton label={site.hero.discover} href="#section-collections" />
+            {/* A la tienda, no a Collections: el visitante que toca el CTA del hero
+                quiere ver que hay para comprar. #tienda envuelve Mas vendidos y
+                Nuevos ingresos (Mas vendidos puede no existir si nadie marco
+                featured en el panel). */}
+            <DiscoverButton label={site.hero.discover} href="#tienda" />
           </div>
         </div>
       </div>

@@ -17,13 +17,10 @@
    -------------------------------------------------------------------------- */
 @font-face {
   font-family: "T-012";
-  src:
-    url("/fonts/T-012.woff2") format("woff2"),
-    url("/fonts/T-012.otf")   format("opentype"),
-    url("/fonts/T-012.ttf")   format("truetype"),
-    url("/fonts/T-12.woff2")  format("woff2"),
-    url("/fonts/T-12.otf")    format("opentype"),
-    url("/fonts/T-12.ttf")    format("truetype");
+  src: url("/fonts/T-012.woff2") format("woff2");
+  /* Una sola URL hasta que exista el archivo: 6 variantes x 2 @font-face eran
+     12 requests 404 por carga (medido 4-sep-2026). Cuando Juani consiga la
+     fuente, va en /public/fonts/T-012.woff2 y esto funciona solo. */
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
@@ -32,13 +29,10 @@
    como "T-12" sin el cero, otros con). Apuntan al mismo archivo. */
 @font-face {
   font-family: "T-12";
-  src:
-    url("/fonts/T-012.woff2") format("woff2"),
-    url("/fonts/T-012.otf")   format("opentype"),
-    url("/fonts/T-012.ttf")   format("truetype"),
-    url("/fonts/T-12.woff2")  format("woff2"),
-    url("/fonts/T-12.otf")    format("opentype"),
-    url("/fonts/T-12.ttf")    format("truetype");
+  src: url("/fonts/T-012.woff2") format("woff2");
+  /* Una sola URL hasta que exista el archivo: 6 variantes x 2 @font-face eran
+     12 requests 404 por carga (medido 4-sep-2026). Cuando Juani consiga la
+     fuente, va en /public/fonts/T-012.woff2 y esto funciona solo. */
   font-weight: 400 900;
   font-style: normal;
   font-display: swap;
@@ -990,3 +984,61 @@ model-viewer {
   }
 }
 
+
+
+/* ----------------------------------------------------------------------------
+   VOLVER ATRAS SIN FLASH (4-sep-2026)
+   ----------------------------------------------------------------------------
+   Al volver de una ficha, el browser sirve un documento NUEVO (medido:
+   navigation.type === "navigate", no bfcache). El HTML sale con el preloader
+   visible y recien se apaga cuando React hidrata: ~2 s de pantalla de carga
+   sobre una web que el visitante ya habia visto, y el scroll restaurado
+   compitiendo con una capa fixed encima. "No renderiza bien al ir y volver".
+
+   El script inline de <head> (app/layout.tsx) marca <html class="ya-entro">
+   ANTES del primer paint si sessionStorage dice que ya se entro. Esta regla
+   hace que el preloader ni se pinte. React lo desmonta despues, tranquilo.
+   ---------------------------------------------------------------------------- */
+html.ya-entro .wn-preloader,
+html.ya-entro .wn-pixel-reveal {
+  display: none !important;
+}
+
+
+/* ----------------------------------------------------------------------------
+   DESLIZAMIENTO (4-sep-2026)
+   ----------------------------------------------------------------------------
+   `--v` (-1..1, con signo) y `--v-abs` (0..1) las escribe hooks/useScrollVelocity
+   en cada frame de scroll. Acá se convierten en deformación: el contenido se
+   estira apenas en el sentido de la marcha y se acomoda al frenar. Juani:
+   "que no parezca que está tildado cuando vamos bajando, que se estire todo".
+
+   Regla de oro: sólo `transform` y `opacity` — las dos propiedades que el
+   compositor resuelve sin re-layout ni re-paint. Nada de filter, width o top.
+   Los valores son chicos a propósito: se siente, no se ve.
+   ---------------------------------------------------------------------------- */
+:root {
+  --v: 0;
+  --v-abs: 0;
+}
+
+/* El contenido de una sección se estira en el sentido del scroll. */
+[data-desliza] {
+  transform: scaleY(calc(1 + var(--v-abs) * 0.045))
+             translateY(calc(var(--v) * -6px));
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Las tarjetas se inclinan apenas, como si el aire las empujara. */
+[data-desliza-item] {
+  transform: translateY(calc(var(--v) * -10px)) scaleY(calc(1 + var(--v-abs) * 0.03));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-desliza],
+  [data-desliza-item] {
+    transform: none;
+    will-change: auto;
+  }
+}

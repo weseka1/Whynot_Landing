@@ -49,13 +49,18 @@ export default function SoundController() {
   const fadeIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
-    /* Creamos los 3 Audio en memoria. Preload "auto" para que el browser
-       los descargue ya — bg-music son ~3.6MB pero hover/click son ~7KB. */
+    /* Creamos los 3 Audio en memoria.
+       bg-music pesa ~3,5 MB y arranca en silencio: si se precarga, se baja
+       entera ANTES de que el visitante vea la tienda (medido: 3.517 KB a los
+       432 ms, compitiendo con el hero). Va con preload="none" — se descarga
+       recien cuando el usuario prende el sonido, que es cuando hace falta.
+       Los cortitos (click/hover, ~7 KB) si se precargan: tienen que sonar
+       instantaneo al primer click y no pesan. */
     const bg = new Audio("/assets/audio/bg-music.mp3");
     const click = new Audio("/assets/audio/click.mp3");
     const hover = new Audio("/assets/audio/hover.mp3");
     bg.loop = true;
-    bg.preload = "auto";
+    bg.preload = "none";
     click.preload = "auto";
     hover.preload = "auto";
     bg.volume = 0;

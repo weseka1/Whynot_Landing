@@ -1,930 +1,400 @@
 "use client";
 
 /* ============================================================================
-   PRELOADER — cinematic gold graffiti reveal.
-   - Loading logic intacta: assets ponderados, MIN/MAX time, evento
-     `whynot:preloader-hidden`, mobile GLB re-mapping.
-   - Visual: matte black + canvas particles + SVG "WHY NOT" tag de grafitti
-     que se dibuja letra por letra sincronizado con el % (pathLength=100 +
-     stroke-dashoffset). feTurbulence + feDisplacementMap simulan spray,
-     feGaussianBlur agrega bloom dorado detras. Particulas de overspray
-     se emiten desde la punta del trazo en vivo (getPointAtLength del path
-     activo, transformado al espacio de pantalla con getScreenCTM).
-   - HUD: barra dorada con ticks + % gigante + scanline + logs de boot.
+   PRELOADER — liquid glass.
+   ----------------------------------------------------------------------------
+   Decision de diseno: el logo no se dibuja, se compone. Una lamina de vidrio
+   real (blur + saturate + specular highlight en el borde superior) sosteniendo
+   el wordmark en tipografia fina con mucho aire. Sin spray, sin particulas de
+   canvas, sin logs de boot: eran restos de la plantilla y se veian como un
+   crayon rayando la pantalla.
+
+   Decision de carga: solo bloquea lo que se ve en la primera pantalla
+   (lib/preloadAssets · CRITICAL_ASSETS). El resto baja en tiempo ocioso una vez
+   que la web ya es visible. Antes bloqueaba ~14 MB con un techo de 30 s.
+
+   Contrato que se mantiene: emite `whynot:preloader-hidden` al terminar
+   (lo escucha PixelReveal) y aplica el remapeo mobile de los .glb.
    ============================================================================ */
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { site } from "@/data/site";
-import { HERO_SPECS } from "@/data/catalog";
-import CornerFrame from "./CornerFrame";
-import { mobileGLB, detectMobileTier } from "@/lib/mobileGLB";
+import { EVENTO_ENTRADA, esPrimeraVisita, marcarEntrada } from "@/lib/entrada";
+import {
+  CRITICAL_ASSETS,
+  fontsReady,
+  loadAsset,
+  startDeferredPreload,
+  withMobileVariants,
+  withTimeout,
+} from "@/lib/preloadAssets";
 
-const MIN_TIME = 600;
-/* MAX_TIME subido a 30s: clientes en 3G urbano reportaban que algunos
-   videos del PastDrop no terminaban de bajar antes del cap de 20s ->
-   el preloader cerraba a la fuerza y al llegar a PastDrop los videos
-   no estaban en cache -> ven la zapa cargando lenta o en blanco.
-   30s da margen suficiente para 3G razonable; el MIN_TIME y la
-   resolucion via Promise.all mantienen el cierre rapido cuando todo
-   esta en cache.                                                        */
-const MAX_TIME = 30000;
+/** Piso: evita el flash cuando todo viene de cache. */
+const MIN_TIME = 450;
+/** Techo duro. Bajo a 2,5 s el 4-sep-2026: sin el GLB de 1 MB en la lista
+    critica, lo unico que queda son dos webp de ~40 KB y las fuentes (que ya
+    tienen su propio techo de 800 ms). Un techo de 4,5 s era espacio para que
+    algo saliera mal, no una espera necesaria. */
+const MAX_TIME = 2500;
 
-/* ----------------------------- ASSETS / WEIGHTS -------------------------- */
-type Asset = { url: string; kind: "image" | "fetch"; weight: number };
+/* Los chunks de las secciones de abajo NO se piden aca. Importar
+   Collections/PastDrop ejecuta su `useGLTF.preload(...)` a module-load, lo que
+   dispara la descarga de todos los GLB pesados antes de que el visitante entre
+   (medido: 10 MB y 5,7 s). Next ya los parte solos y los carga cuando se
+   montan; el calentamiento vive en la capa 2 (startDeferredPreload). */
 
-/* Pesos reales (en KB redondeados) de los 15 videos 360 de PastDrop.
-   Map separado para keep-clean del array principal. Si cambia un video,
-   actualizar aca para que el progreso del preloader sume correcto.       */
-const PAST_DROP_VIDEO_WEIGHTS: Record<string, number> = {
-  "/videos-360/LUISVOUITTON.mp4": 549,
-  "/videos-360/adidasbape.mp4": 420,
-  "/videos-360/amiri.mp4": 453,
-  "/videos-360/asicsgel-kayano.mp4": 729,
-  "/videos-360/balenciaga.mp4": 397,
-  "/videos-360/bape.mp4": 464,
-  "/videos-360/jordan3blackcat.mp4": 409,
-  /* jordanpatentgold y nikejordantatum sacados de HERO_SPECS (a pedido del
-     usuario, en PastDrop dejamos solo la Jordan negra). Los .mp4 siguen en
-     public/ pero no se precargan. */
-  "/videos-360/lanvin.mp4": 373,
-  "/videos-360/nikeairforce1triplewhite.mp4": 343,
-  "/videos-360/offwhitebe-right-4x-RIFE-RIFE3.1-16fps.mp4": 590,
-  "/videos-360/pumared.mp4": 546,
-  "/videos-360/sbdunkverdy.mp4": 391,
-  "/videos-360/timberland6-InchBoot.mp4": 449,
-};
+/** Techo para las webfonts: `fonts.ready` espera a TODAS, incluidas las de
+    Google Fonts. Si tardan, se entra igual y el texto reflowea. */
+const FONTS_TIMEOUT = 800;
 
-/* Genera asset entries para los videos 360 del PastDrop a partir de
-   HERO_SPECS (cuya largo varia segun cuantas zapas se muestran en el
-   carrusel). Si se agrega/quita un video del catalog, el preloader se
-   ajusta automaticamente (siempre y cuando este el peso en el map de
-   arriba — sino usa fallback ~450KB).                                    */
-const PAST_DROP_VIDEO_ASSETS: Asset[] = HERO_SPECS.map((hs) => ({
-  url: hs.src,
-  kind: "fetch" as const,
-  weight: PAST_DROP_VIDEO_WEIGHTS[hs.src] ?? 450, // fallback ~450KB
-}));
+/** El mismo cielo del hero. Desenfocado, es lo que el vidrio refracta. */
+const SKY = "/assets/hero/sky-background.webp";
 
-const CRITICAL_ASSETS: Asset[] = [
-  { url: "/assets/hero/sky-background.webp",       kind: "image", weight: 40  },
-  { url: "/assets/marquee/whynot-text.webp",       kind: "image", weight: 30  },
-  { url: "/assets/3d/mono.glb",                    kind: "fetch", weight: 1060 },
-  { url: "/nuves/cloud-center.webp",               kind: "image", weight: 110 },
-  { url: "/nuves/cloud-2.webp",                    kind: "image", weight: 36  },
-  { url: "/nuves/cloud-center-bottom.webp",        kind: "image", weight: 19  },
-  { url: "/assets/hero/golden-goose-white-black.webp", kind: "image", weight: 10 },
-  { url: "/assets/hero/golden-goose-silver-star.webp", kind: "image", weight: 10 },
-  { url: "/assets/hero/golden-goose-gold-star.webp",   kind: "image", weight: 10 },
-  { url: "/assets/hero/extra.webp",                    kind: "image", weight: 180 },
-  { url: "/assets/hero/golden-goose-white-black.webm", kind: "fetch", weight: 360 },
-  { url: "/assets/hero/golden-goose-silver-star.webm", kind: "fetch", weight: 360 },
-  { url: "/assets/hero/golden-goose-gold-star.webm",   kind: "fetch", weight: 360 },
-  { url: "/assets/3d/mono-dorado.glb",             kind: "fetch", weight: 810 },
-  { url: "/assets/3d/mono-rigged.glb",             kind: "fetch", weight: 706 },
-  { url: "/assets/3d/mono-blanco-dorado.glb",      kind: "fetch", weight: 1084 },
-  { url: "/assets/3d/mono-blanco.glb",             kind: "fetch", weight: 737 },
-  { url: "/assets/3d/mono-louis.glb",              kind: "fetch", weight: 463 },
-  { url: "/assets/3d/gotila-esenssial.glb",        kind: "fetch", weight: 521 },
-  { url: "/assets/3d/balenciaga-3xl.glb",          kind: "fetch", weight: 394 },
-  { url: "/assets/past-drop/drop-title.webp",      kind: "image", weight: 62 },
-  { url: "/assets/futuristic-fashion/man-01.webp",   kind: "image", weight: 82 },
-  { url: "/assets/futuristic-fashion/man-02.webp",   kind: "image", weight: 102 },
-  { url: "/assets/futuristic-fashion/man-03.webp",   kind: "image", weight: 79 },
-  { url: "/assets/futuristic-fashion/man-04.webp",   kind: "image", weight: 101 },
-  { url: "/assets/futuristic-fashion/man-05.webp",   kind: "image", weight: 118 },
-  { url: "/assets/futuristic-fashion/woman-01.webp", kind: "image", weight: 103 },
-  { url: "/assets/futuristic-fashion/woman-02.webp", kind: "image", weight: 88 },
-  /* Videos 360 de PastDrop (~6.7MB total). Antes se cargaban on-demand
-     cuando el usuario llegaba a la seccion → primer scroll trababa
-     hasta que cada video bufferaba. Ahora caen al cache del browser
-     durante el preloader y PastDrop los toma instantaneo desde cache.   */
-  ...PAST_DROP_VIDEO_ASSETS,
-];
-
-const LAZY_CHUNKS = [
-  () => import("@/components/Collections"),
-  () => import("@/components/PastDrop"),
-  () => import("@/components/FuturisticGallery"),
-  () => import("@/components/WhyNotEnd"),
-  () => import("@/components/Footer"),
-  () => import("@/components/LiquidCursor"),
-];
-
-function loadImage(src: string): Promise<void> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve();
-    img.onerror = () => {
-      console.warn(`[Preloader] image failed: ${src}`);
-      resolve();
-    };
-    img.src = src;
-  });
-}
-function fetchAsset(src: string): Promise<void> {
-  return new Promise((resolve) => {
-    fetch(src, { cache: "force-cache" })
-      .then((r) => {
-        if (!r.ok) {
-          console.warn(
-            `[Preloader] fetch ${r.status} for ${src}`
-          );
-        }
-        return r.blob();
-      })
-      .then(() => resolve())
-      .catch((err) => {
-        console.warn(`[Preloader] fetch failed: ${src}`, err);
-        resolve();
-      });
-  });
-}
-function fontsReady(): Promise<void> {
-  if (typeof document !== "undefined" && (document as any).fonts?.ready) {
-    return (document as any).fonts.ready.then(() => undefined);
-  }
-  return Promise.resolve();
-}
-
-/* ----------------------------- GRAFFITI LETTERS --------------------------- */
-/* viewBox 0 0 1200 320 — "WHY NOT" tagueado de izq a der.
-   Cada letra es un path independiente con pathLength=100 -> stroke-dashoffset
-   trabaja en escala 0..100 sin importar la longitud real del path.
-   start/end son los rangos de % donde se dibuja la letra. La suma deja
-   "respiros" entre letras (el pen lift natural del tagger).             */
-type LetterDef = {
-  d: string;
-  start: number;
-  end: number;
-  /* drips opcionales — chorretones que caen del path despues de completarse */
-  drips?: { x: number; y: number; len: number; appearAt: number; dur: number; w?: number }[];
-};
-const LETTERS: LetterDef[] = [
-  // W
-  {
-    d: "M 60 70 L 110 270 L 165 130 L 215 270 L 265 70",
-    start: 3, end: 16,
-    drips: [
-      { x: 112, y: 268, len: 28, appearAt: 17, dur: 8 },
-    ],
-  },
-  // H (multi-subpath: vertical izq -> crossbar -> vertical der)
-  {
-    d: "M 320 70 L 320 270 M 320 168 L 432 168 M 432 70 L 432 270",
-    start: 17, end: 32,
-    drips: [
-      { x: 320, y: 268, len: 22, appearAt: 33, dur: 7 },
-    ],
-  },
-  // Y (V superior + bajada central)
-  {
-    d: "M 480 70 L 545 175 L 610 70 M 545 175 L 545 270",
-    start: 33, end: 47,
-    drips: [
-      { x: 545, y: 268, len: 38, appearAt: 48, dur: 9, w: 6 },
-    ],
-  },
-  // N
-  {
-    d: "M 700 270 L 700 70 L 800 270 L 800 70",
-    start: 53, end: 67,
-    drips: [
-      { x: 800, y: 268, len: 24, appearAt: 68, dur: 7 },
-    ],
-  },
-  // O (ellipse aproximada con dos cubicas)
-  {
-    d: "M 875 70 C 815 70 815 270 875 270 C 935 270 935 70 875 70 Z",
-    start: 67, end: 82,
-  },
-  // T (horizontal + vertical)
-  {
-    d: "M 970 70 L 1160 70 M 1065 70 L 1065 270",
-    start: 82, end: 97,
-    drips: [
-      { x: 1065, y: 268, len: 30, appearAt: 96, dur: 4, w: 6 },
-    ],
-  },
-];
-
-/* Underline final — trazo dramatico que cruza debajo de "WHY NOT" al cierre. */
-const UNDERLINE = {
-  d: "M 70 305 Q 600 322 1160 300",
-  start: 90, end: 100,
-};
-
-/* Map del % al stroke-dashoffset normalizado (pathLength=100). */
-function dashOffsetFor(pct: number, start: number, end: number): number {
-  if (pct <= start) return 100;
-  if (pct >= end) return 0;
-  return 100 - ((pct - start) / (end - start)) * 100;
-}
-
-/* ============================================================================
-   COMPONENT
-   ============================================================================ */
 export default function Preloader() {
   const [pct, setPct] = useState(0);
+  /* Arranca visible SIEMPRE en el server para no romper la hidratación; el
+     efecto lo apaga al instante si ya se entró (ver más abajo). */
   const [visible, setVisible] = useState(true);
-  const pctRef = useRef(0);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const pathRefs = useRef<(SVGPathElement | null)[]>([]);
+  const [skyReady, setSkyReady] = useState(false);
+  const reducedRef = useRef(false);
 
-  /* ---------------------------- LOADING EFFECT --------------------------- */
   useEffect(() => {
+    /* ── Volver atrás no es entrar de nuevo ──────────────────────────────
+       Si el visitante ya pasó por la home en esta pestaña (abrió una zapa y
+       volvió con el botón de atrás), el preloader NO se muestra: se apaga en
+       el mismo frame y se avisa a PixelReveal para que no quede esperando su
+       señal. Antes se re-montaba en cada navegación, tapaba la pantalla y
+       daba la sensación de que la web recargaba entera — además de pisarle
+       al browser la restauración del scroll, que necesita el contenido
+       montado y visible para poder volver a la posición anterior. */
+    if (!esPrimeraVisita()) {
+      setVisible(false);
+      setPct(100);
+      /* marcarEntrada() ANTES de emitir: deja la bandera en memoria para el
+         que se monte después. El evento solo lo escucha quien ya estaba. */
+      marcarEntrada();
+      window.dispatchEvent(new CustomEvent(EVENTO_ENTRADA));
+      startDeferredPreload();
+      return;
+    }
+    marcarEntrada();
+
+    reducedRef.current =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const start = performance.now();
-    const FONTS_WEIGHT = 50;
-    const CHUNK_WEIGHT = 40;
+    const FONTS_WEIGHT = 60;
 
-    const isMobileForWeights = detectMobileTier();
-    const assets = CRITICAL_ASSETS.map((a) => {
-      if (a.kind !== "fetch" || !a.url.endsWith(".glb")) return a;
-      const targetUrl = mobileGLB(a.url);
-      if (targetUrl === a.url) return a;
-      return { ...a, url: targetUrl, weight: Math.round(a.weight * 0.5) };
-    });
-
-    const totalWeight =
-      assets.reduce((s, a) => s + a.weight, 0) +
-      FONTS_WEIGHT +
-      LAZY_CHUNKS.length * CHUNK_WEIGHT;
+    const assets = withMobileVariants(CRITICAL_ASSETS);
+    const totalWeight = assets.reduce((s, a) => s + a.weight, 0) + FONTS_WEIGHT;
 
     let doneWeight = 0;
     let cancelled = false;
-    let displayPct = 0;
-    /* Throttle de setPct: en vez de re-renderear React 60 veces por segundo
-       (cada uno con su 7 letras x 3 layers SVG + re-evaluacion del filtro
-       feTurbulence/feDisplacementMap del spray paint), solo seteamos cuando
-       el % redondeado cambia. Reduce los renders a ~100 totales sobre toda
-       la duracion del preloader.
+    let closed = false;
+    let display = 0;
+    let lastInt = -1;
+    let raf = 0;
+    let hard = 0 as unknown as ReturnType<typeof setTimeout>;
 
-       pctRef.current se sigue actualizando cada frame (sin React) — las
-       particulas del canvas leen de ahi en su propio RAF y necesitan el
-       valor continuo decimal para getPointAtLength sobre el path activo. */
-    let lastIntPct = -1;
-
+    /* El % se acerca al objetivo con lerp para que no salte. Solo se pide
+       re-render cuando cambia el entero: ~100 renders en toda la corrida. */
     const tick = () => {
       if (cancelled) return;
       const target = Math.min(100, (doneWeight / totalWeight) * 100);
-      displayPct += (target - displayPct) * 0.18;
-      pctRef.current = displayPct;
-      const intPct = Math.round(displayPct);
-      if (intPct !== lastIntPct) {
-        lastIntPct = intPct;
-        setPct(displayPct);
+      display += (target - display) * 0.16;
+      const int = Math.round(display);
+      if (int !== lastInt) {
+        lastInt = int;
+        setPct(int);
       }
-      if (displayPct < 99.5 || target < 100) {
-        requestAnimationFrame(tick);
-      } else {
-        pctRef.current = 100;
-        if (lastIntPct !== 100) {
-          lastIntPct = 100;
-          setPct(100);
-        }
-      }
+      if (display < 99.5 || target < 100) raf = requestAnimationFrame(tick);
+      else if (lastInt !== 100) setPct(100);
     };
-    requestAnimationFrame(tick);
+    raf = requestAnimationFrame(tick);
 
+    /* Idempotente a proposito: close() lo pueden llamar los assets Y el techo
+       de MAX_TIME. Sin esta guarda corria dos veces y `whynot:preloader-hidden`
+       se emitia dos veces — PixelReveal recibia su senal de arranque duplicada
+       y la capa 2 se disparaba de nuevo (medido: segundo evento a los 5,7 s
+       cuando la pantalla ya estaba libre a los 2,2 s). */
     const close = () => {
-      if (cancelled) return;
+      if (cancelled || closed) return;
+      closed = true;
+      clearTimeout(hard);
       doneWeight = totalWeight;
       setTimeout(() => {
         if (cancelled) return;
+        setPct(100);
         setVisible(false);
         setTimeout(() => {
           if (cancelled) return;
-          window.dispatchEvent(new CustomEvent("whynot:preloader-hidden"));
-        }, 700);
-      }, 380);
+          window.dispatchEvent(new CustomEvent(EVENTO_ENTRADA));
+          /* Recien ahora arranca la capa 2: la web ya esta en pantalla. */
+          startDeferredPreload();
+        }, 620);
+      }, 260);
     };
 
-    const jobs: Promise<void>[] = assets.map((a) => {
-      const p = a.kind === "image" ? loadImage(a.url) : fetchAsset(a.url);
-      return p.then(() => {
+    const jobs: Promise<void>[] = assets.map((a) =>
+      loadAsset(a).then(() => {
         if (!cancelled) doneWeight += a.weight;
-      });
-    });
+      })
+    );
     jobs.push(
-      fontsReady().then(() => {
+      withTimeout(fontsReady(), FONTS_TIMEOUT).then(() => {
         if (!cancelled) doneWeight += FONTS_WEIGHT;
       })
     );
-    for (const load of LAZY_CHUNKS) {
-      jobs.push(
-        load()
-          .catch(() => {})
-          .then(() => {
-            if (!cancelled) doneWeight += CHUNK_WEIGHT;
-          })
-      );
-    }
 
     Promise.all(jobs).then(() => {
       if (cancelled) return;
-      const elapsed = performance.now() - start;
-      const wait = Math.max(0, MIN_TIME - elapsed);
-      setTimeout(close, wait);
+      setTimeout(close, Math.max(0, MIN_TIME - (performance.now() - start)));
     });
 
-    const hard = setTimeout(close, MAX_TIME);
+    hard = setTimeout(close, MAX_TIME);
 
     return () => {
       cancelled = true;
+      cancelAnimationFrame(raf);
       clearTimeout(hard);
     };
   }, []);
 
-  /* ---------------------------- CANVAS PARTICLES ------------------------- */
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    /* Mobile tier: bajamos AMBIENT (80→32) y SPARK burst (5→3) + interval
-       (14ms→22ms). El preloader corre en simultaneo con la descarga de
-       videos/GLBs/fontset → el CPU del mobile se queda sin ciclos y el
-       canvas + el filtro SVG del spray paint compiten por el frame. */
-    const isMobileTier = detectMobileTier();
-    const AMBIENT_COUNT = isMobileTier ? 32 : 80;
-    const SPARK_BURST = isMobileTier ? 3 : 5;
-    const SPARK_INTERVAL = isMobileTier ? 22 : 14;
-
-    let raf = 0;
-    let lastSpark = 0;
-    /* dpr cap: 1.25 en mobile (vs 2 desktop) → menos pixeles para llenar
-       en cada frame del canvas. El usuario no nota la diferencia a esa
-       densidad de particulas chiquitas.                                   */
-    const dpr = Math.min(window.devicePixelRatio || 1, isMobileTier ? 1.25 : 2);
-
-    const resize = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    type Ambient = { x:number; y:number; vx:number; vy:number; r:number; a:number; gold:boolean };
-    const ambient: Ambient[] = Array.from({ length: AMBIENT_COUNT }, () => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 0.18,
-      vy: -Math.random() * 0.28 - 0.04,
-      r: Math.random() * 1.3 + 0.25,
-      a: Math.random() * 0.45 + 0.08,
-      gold: Math.random() < 0.72,
-    }));
-
-    type Spark = { x:number; y:number; vx:number; vy:number; life:number; max:number; r:number; gold:boolean };
-    const sparks: Spark[] = [];
-
-    const loop = (t: number) => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      ctx.clearRect(0, 0, w, h);
-
-      /* Ambient: pequenios dots dorados/blancos derivando hacia arriba */
-      for (const p of ambient) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
-        if (p.x < -10) p.x = w + 10;
-        if (p.x > w + 10) p.x = -10;
-        ctx.beginPath();
-        ctx.fillStyle = p.gold
-          ? `rgba(220,178,98,${p.a})`
-          : `rgba(255,247,222,${p.a * 0.55})`;
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      /* Overspray emitido desde la punta del trazo activo.
-         Localizamos la letra cuyo rango incluye al pct actual,
-         pedimos getPointAtLength en su path y transformamos al
-         espacio de pantalla con getScreenCTM.                 */
-      const pctNow = pctRef.current;
-      const activeIdx = LETTERS.findIndex(l => pctNow >= l.start && pctNow <= l.end);
-      if (activeIdx >= 0) {
-        const path = pathRefs.current[activeIdx];
-        if (path) {
-          try {
-            const L = path.getTotalLength();
-            const tt = Math.max(0, Math.min(1,
-              (pctNow - LETTERS[activeIdx].start) /
-              Math.max(0.0001, LETTERS[activeIdx].end - LETTERS[activeIdx].start)
-            ));
-            const pt = path.getPointAtLength(L * tt);
-            const ctm = path.getScreenCTM();
-            if (ctm) {
-              const x = ctm.a * pt.x + ctm.c * pt.y + ctm.e;
-              const y = ctm.b * pt.x + ctm.d * pt.y + ctm.f;
-              if (t - lastSpark > SPARK_INTERVAL) {
-                lastSpark = t;
-                const burst = SPARK_BURST;
-                for (let i = 0; i < burst; i++) {
-                  sparks.push({
-                    x: x + (Math.random() - 0.5) * 6,
-                    y: y + (Math.random() - 0.5) * 6,
-                    vx: (Math.random() - 0.5) * 2.6,
-                    vy: (Math.random() - 0.5) * 2.6 + 0.5,
-                    life: 0,
-                    max: 45 + Math.random() * 50,
-                    r: Math.random() * 1.7 + 0.4,
-                    gold: Math.random() < 0.85,
-                  });
-                }
-              }
-            }
-          } catch {}
-        }
-      }
-
-      /* Spark render + integracion (gravedad + drag) */
-      for (let i = sparks.length - 1; i >= 0; i--) {
-        const s = sparks[i];
-        s.life++;
-        s.x += s.vx;
-        s.y += s.vy;
-        s.vy += 0.05;
-        s.vx *= 0.985;
-        const lt = 1 - s.life / s.max;
-        if (lt <= 0) { sparks.splice(i, 1); continue; }
-        ctx.beginPath();
-        ctx.fillStyle = s.gold
-          ? `rgba(232,196,108,${lt * 0.75})`
-          : `rgba(255,250,236,${lt * 0.45})`;
-        ctx.arc(s.x, s.y, s.r * lt, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
-    };
-  }, []);
-
-  /* ---------------------------- TEMPLATE --------------------------------- */
-  const logs = [
-    site.preloader.label,
-    site.preloader.decrypt,
-    site.preloader.granted,
-    site.preloader.decrypted,
-  ];
-  const activeLog = Math.min(Math.floor((pct / 100) * logs.length), logs.length - 1);
-  const finalFlash = pct >= 99;
+  const reduced = reducedRef.current;
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
+          className="wn-preloader"
           initial={{ opacity: 1 }}
-          exit={{
-            opacity: 0,
-            filter: "blur(10px)",
-            transition: { duration: 0.7, ease: [0.7, 0, 0.2, 1] },
-          }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 200,
-            background: "#050505",
-            overflow: "hidden",
-            fontKerning: "normal",
-          }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduced ? 0.2 : 0.62, ease: [0.16, 1, 0.3, 1] }}
+          aria-live="polite"
+          aria-busy="true"
         >
-          {/* --- LAYER 0: matte black background + radial gold glow --------- */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(60% 50% at 50% 38%, rgba(184,135,53,0.10) 0%, rgba(70,46,12,0.04) 35%, transparent 70%), #050505",
-            }}
+          {/* El cielo del hero, desenfocado: es lo que el vidrio refracta y
+              lo que hace que la entrada al hero no tenga corte. Entra con
+              fade cuando termina de bajar; hasta entonces queda el halo. */}
+          <img
+            className={`wn-sky${skyReady ? " is-ready" : ""}`}
+            src={SKY}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            onLoad={() => setSkyReady(true)}
           />
+          <div className="wn-vignette" aria-hidden="true" />
 
-          {/* --- LAYER 1: film grain ---------------------------------------- */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              opacity: 0.5,
-              mixBlendMode: "overlay",
-              backgroundImage:
-                'url("data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22240%22 height=%22240%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%221.8%22 numOctaves=%222%22 stitchTiles=%22stitch%22/><feColorMatrix values=%220 0 0 0 0.85 0 0 0 0 0.7 0 0 0 0 0.4 0 0 0 0.6 0%22/></filter><rect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22 opacity=%220.55%22/></svg>")',
-              backgroundSize: "240px 240px",
-              pointerEvents: "none",
-            }}
-          />
+          {/* Halo calido: sostiene el centro antes de que llegue el cielo. */}
+          <div className="wn-halo" aria-hidden="true" />
 
-          {/* --- LAYER 2: HUD grid ticks ------------------------------------ */}
-          <div
-            className="pl-grid"
-            style={{
-              position: "absolute",
-              inset: 0,
-              opacity: 0.08,
-              backgroundImage:
-                "linear-gradient(to right, rgba(232,196,108,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(232,196,108,0.5) 1px, transparent 1px)",
-              backgroundSize: "80px 80px",
-              maskImage:
-                "radial-gradient(60% 60% at 50% 50%, black 30%, transparent 80%)",
-              WebkitMaskImage:
-                "radial-gradient(60% 60% at 50% 50%, black 30%, transparent 80%)",
-              pointerEvents: "none",
-            }}
-          />
-
-          {/* --- LAYER 3: scanline (gold tint) ------------------------------ */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(180deg, transparent 0%, rgba(232,196,108,0.06) 50%, transparent 100%)",
-              height: "28%",
-              animation: "scan 3.2s linear infinite",
-              pointerEvents: "none",
-            }}
-          />
-
-          {/* --- LAYER 4: PARTICLE CANVAS ----------------------------------- */}
-          <canvas
-            ref={canvasRef}
-            style={{
-              position: "absolute",
-              inset: 0,
-              pointerEvents: "none",
-              mixBlendMode: "screen",
-            }}
-          />
-
-          {/* --- LAYER 5: CORNERS ------------------------------------------- */}
-          <CornerFrame position="top-left"     size={48} />
-          <CornerFrame position="top-right"    size={48} />
-          <CornerFrame position="bottom-left"  size={48} />
-          <CornerFrame position="bottom-right" size={48} />
-
-          {/* --- LAYER 6: TOP SYSTEM TAGS ----------------------------------- */}
-          <div
-            style={{
-              position: "absolute",
-              top: "calc(var(--space-md) + 4px)",
-              left: "var(--container-pad)",
-              right: "var(--container-pad)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-              pointerEvents: "none",
-            }}
+          <motion.div
+            className="wn-glass"
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.03 }}
+            transition={{ duration: reduced ? 0.2 : 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            <span className="system-text" style={{ color: "rgba(232,196,108,0.9)", letterSpacing: "0.18em" }}>
-              {site.brand.name} // BOOT SEQUENCE
-            </span>
-            <span className="system-text" style={{ color: "rgba(232,196,108,0.55)", letterSpacing: "0.18em" }}>
-              v02.6 / AU.999
-            </span>
-          </div>
+            <p className="wn-mark">WHY NOT</p>
 
-          {/* --- LAYER 7: CENTER STACK -------------------------------------- */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "grid",
-              placeItems: "center",
-              padding: "var(--container-pad)",
-            }}
-          >
             <div
-              style={{
-                display: "grid",
-                gap: "clamp(28px, 5vh, 56px)",
-                justifyItems: "center",
-                width: "min(92vw, 1180px)",
-              }}
+              className="wn-track"
+              role="progressbar"
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
             >
-              {/* === GRAFFITI "WHY NOT" === */}
-              <div
-                style={{
-                  width: "100%",
-                  position: "relative",
-                  filter: finalFlash ? "drop-shadow(0 0 36px rgba(247,229,168,0.55))" : "none",
-                  transition: "filter 0.6s ease",
-                }}
-              >
-                <svg
-                  viewBox="0 0 1230 340"
-                  preserveAspectRatio="xMidYMid meet"
-                  style={{ width: "100%", height: "auto", display: "block" }}
-                  aria-hidden="true"
-                >
-                  <defs>
-                    {/* Gold metallic vertical gradient (luz-sombra-luz para
-                        simular un cilindro reflectivo de oro liquido). */}
-                    <linearGradient id="pl-gold" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#f9e9b2" />
-                      <stop offset="22%"  stopColor="#e8c46d" />
-                      <stop offset="46%"  stopColor="#7a4f15" />
-                      <stop offset="58%"  stopColor="#a4751e" />
-                      <stop offset="78%"  stopColor="#f0d27a" />
-                      <stop offset="100%" stopColor="#c79438" />
-                    </linearGradient>
-
-                    {/* Spray displacement — agita los bordes para parecer pintura
-                        aerosol, sin destruir la legibilidad. */}
-                    <filter id="pl-spray" x="-10%" y="-10%" width="120%" height="120%">
-                      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="t" />
-                      <feDisplacementMap in="SourceGraphic" in2="t" scale="3.2" />
-                    </filter>
-
-                    {/* Bloom dorado — duplicate borroso atras para halo cinematico. */}
-                    <filter id="pl-bloom" x="-20%" y="-20%" width="140%" height="140%">
-                      <feGaussianBlur stdDeviation="10" />
-                    </filter>
-
-                    {/* Highlight diagonal (no animado, ahorra GPU). */}
-                    <linearGradient id="pl-sheen" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-                      <stop offset="45%" stopColor="rgba(255,255,255,0.5)" />
-                      <stop offset="55%" stopColor="rgba(255,255,255,0.5)" />
-                      <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Bloom layer detras (mismas paths con blur fuerte y opacidad baja). */}
-                  <g filter="url(#pl-bloom)" opacity={finalFlash ? 0.95 : 0.6} style={{ transition: "opacity 0.5s ease" }}>
-                    {LETTERS.map((l, i) => (
-                      <path
-                        key={`bloom-${i}`}
-                        d={l.d}
-                        stroke="#e8c46d"
-                        strokeWidth={26}
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        pathLength={100}
-                        strokeDasharray={100}
-                        strokeDashoffset={dashOffsetFor(pct, l.start, l.end)}
-                        style={{ transition: "stroke-dashoffset 0.18s linear" }}
-                      />
-                    ))}
-                    <path
-                      d={UNDERLINE.d}
-                      stroke="#f7e5a8"
-                      strokeWidth={14}
-                      fill="none"
-                      strokeLinecap="round"
-                      pathLength={100}
-                      strokeDasharray={100}
-                      strokeDashoffset={dashOffsetFor(pct, UNDERLINE.start, UNDERLINE.end)}
-                      style={{ transition: "stroke-dashoffset 0.18s linear" }}
-                    />
-                  </g>
-
-                  {/* Spray layer principal — el "trazo" real con bordes desplazados. */}
-                  <g filter="url(#pl-spray)">
-                    {LETTERS.map((l, i) => (
-                      <g key={`main-${i}`}>
-                        <path
-                          ref={(el) => { pathRefs.current[i] = el; }}
-                          d={l.d}
-                          stroke="url(#pl-gold)"
-                          strokeWidth={20}
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          pathLength={100}
-                          strokeDasharray={100}
-                          strokeDashoffset={dashOffsetFor(pct, l.start, l.end)}
-                          style={{ transition: "stroke-dashoffset 0.18s linear" }}
-                        />
-                        {/* Highlight delgado al centro del stroke — reflejo metalico */}
-                        <path
-                          d={l.d}
-                          stroke="url(#pl-sheen)"
-                          strokeWidth={6}
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          pathLength={100}
-                          strokeDasharray={100}
-                          strokeDashoffset={dashOffsetFor(pct, l.start, l.end)}
-                          opacity={0.45}
-                          style={{ transition: "stroke-dashoffset 0.18s linear", mixBlendMode: "screen" }}
-                        />
-                        {/* Drips de la letra (dripping post-trazo). */}
-                        {l.drips?.map((dr, j) => {
-                          const dripD = `M ${dr.x} ${dr.y} L ${dr.x} ${dr.y + dr.len}`;
-                          return (
-                            <path
-                              key={`drip-${i}-${j}`}
-                              d={dripD}
-                              stroke="url(#pl-gold)"
-                              strokeWidth={dr.w ?? 5}
-                              fill="none"
-                              strokeLinecap="round"
-                              pathLength={100}
-                              strokeDasharray={100}
-                              strokeDashoffset={dashOffsetFor(pct, dr.appearAt, dr.appearAt + dr.dur)}
-                              style={{ transition: "stroke-dashoffset 0.25s linear" }}
-                            />
-                          );
-                        })}
-                      </g>
-                    ))}
-
-                    {/* Underline final dramatico */}
-                    <path
-                      d={UNDERLINE.d}
-                      stroke="url(#pl-gold)"
-                      strokeWidth={10}
-                      fill="none"
-                      strokeLinecap="round"
-                      pathLength={100}
-                      strokeDasharray={100}
-                      strokeDashoffset={dashOffsetFor(pct, UNDERLINE.start, UNDERLINE.end)}
-                      style={{ transition: "stroke-dashoffset 0.2s linear" }}
-                    />
-                  </g>
-                </svg>
-
-                {/* Etiqueta minima debajo del tag, fade-in con el progreso */}
-                <div
-                  className="system-text"
-                  style={{
-                    position: "absolute",
-                    bottom: -8,
-                    right: 4,
-                    color: "rgba(232,196,108,0.7)",
-                    letterSpacing: "0.22em",
-                    opacity: pct > 50 ? 1 : 0,
-                    transition: "opacity 0.6s ease",
-                  }}
-                >
-                  — TAG #001 / AU.24K
-                </div>
-              </div>
-
-              {/* === HUD: % gigante + barra + ticks === */}
-              <div style={{ display: "grid", gap: 18, justifyItems: "center", width: "min(72vw, 720px)" }}>
-                <div
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "clamp(3.6rem, 9vw, 7.2rem)",
-                    lineHeight: 1,
-                    background: "linear-gradient(180deg, #f9e9b2 0%, #e8c46d 50%, #a4751e 100%)",
-                    WebkitBackgroundClip: "text",
-                    backgroundClip: "text",
-                    color: "transparent",
-                    letterSpacing: "0.04em",
-                    textShadow: "0 0 40px rgba(232,196,108,0.18)",
-                    animation: finalFlash ? "pl-flicker 1.4s steps(1) infinite" : "none",
-                  }}
-                >
-                  {Math.floor(pct).toString().padStart(3, "0")}
-                  <span style={{ fontSize: "0.45em", marginLeft: 4, color: "#c79438" }}>%</span>
-                </div>
-
-                {/* Barra dorada delgada con ticks y dot luminoso al final */}
-                <div style={{ position: "relative", width: "100%", height: 22 }}>
-                  {/* Track */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0, right: 0, top: "50%",
-                      transform: "translateY(-50%)",
-                      height: 1,
-                      background: "rgba(232,196,108,0.18)",
-                    }}
-                  />
-                  {/* Fill */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      height: 1,
-                      width: `${pct}%`,
-                      background: "linear-gradient(90deg, rgba(232,196,108,0.1), #e8c46d 35%, #f9e9b2 100%)",
-                      boxShadow: "0 0 16px rgba(232,196,108,0.55), 0 0 4px rgba(247,229,168,0.9)",
-                      transition: "width 0.15s linear",
-                    }}
-                  />
-                  {/* Dot luminoso al final del fill */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: `${pct}%`,
-                      top: "50%",
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background: "#f9e9b2",
-                      boxShadow: "0 0 18px 4px rgba(232,196,108,0.85), 0 0 40px 10px rgba(232,196,108,0.25)",
-                      transform: "translate(-50%, -50%)",
-                      transition: "left 0.15s linear",
-                    }}
-                  />
-                  {/* Ticks 0/25/50/75/100 */}
-                  {[0, 25, 50, 75, 100].map((t) => (
-                    <div key={t} style={{
-                      position: "absolute",
-                      left: `${t}%`,
-                      top: 0,
-                      width: 1,
-                      height: "100%",
-                      transform: "translateX(-0.5px)",
-                      background: pct >= t ? "rgba(232,196,108,0.9)" : "rgba(232,196,108,0.22)",
-                      boxShadow: pct >= t ? "0 0 8px rgba(232,196,108,0.7)" : "none",
-                      transition: "background 0.3s ease",
-                    }} />
-                  ))}
-                  {/* Tick labels */}
-                  <div
-                    className="system-text"
-                    style={{
-                      position: "absolute",
-                      left: 0, right: 0,
-                      top: "calc(100% + 8px)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      color: "rgba(232,196,108,0.45)",
-                      letterSpacing: "0.18em",
-                      fontSize: "0.65rem",
-                    }}
-                  >
-                    <span>000</span>
-                    <span>025</span>
-                    <span>050</span>
-                    <span>075</span>
-                    <span>100</span>
-                  </div>
-                </div>
-
-                {/* Logs */}
-                <div style={{ display: "grid", gap: 4, justifyContent: "center", marginTop: 18 }}>
-                  {logs.map((l, i) => (
-                    <span
-                      key={l}
-                      className="system-text"
-                      style={{
-                        opacity: i <= activeLog ? 1 : 0.18,
-                        color: i === logs.length - 1 && i <= activeLog
-                          ? "#f9e9b2"
-                          : "rgba(232,196,108,0.85)",
-                        letterSpacing: "0.18em",
-                        transition: "opacity 0.4s ease, color 0.4s ease",
-                      }}
-                    >
-                      › <span className={i === activeLog ? "caret" : ""}>{l}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <div className="wn-fill" style={{ transform: `scaleX(${pct / 100})` }} />
             </div>
-          </div>
 
-          {/* --- LAYER 8: BOTTOM SYSTEM TAGS -------------------------------- */}
+            <div className="wn-meta">
+              <span>Cargando</span>
+              <span className="wn-pct">{String(pct).padStart(3, "0")}</span>
+            </div>
+          </motion.div>
+
+          {/* Grano: una sola capa, sutil, no interactiva. El data-URI va
+              inline: dentro de <style jsx> rompe el parser y se pierden las
+              reglas que vienen despues (aca era la ultima y no se notaba;
+              en Mission se llevo la seccion entera). */}
           <div
+            className="wn-grain"
             style={{
-              position: "absolute",
-              bottom: "calc(var(--space-md) + 4px)",
-              left: "var(--container-pad)",
-              right: "var(--container-pad)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-              pointerEvents: "none",
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E\")",
             }}
-          >
-            <span className="system-text" style={{ color: "rgba(232,196,108,0.55)", letterSpacing: "0.18em" }}>
-              GRAFFITI.RENDER / LIVE
-            </span>
-            <span className="system-text" style={{ color: "rgba(232,196,108,0.55)", letterSpacing: "0.18em" }}>
-              {finalFlash ? "ACCESS GRANTED" : "STREAMING ASSETS…"}
-            </span>
-          </div>
+            aria-hidden="true"
+          />
 
-          {/* Local keyframes — flicker dramatico al llegar al 100%. */}
-          <style>{`
-            @keyframes pl-flicker {
-              0%, 92%, 100% { opacity: 1; }
-              93% { opacity: 0.4; }
-              95% { opacity: 1; }
-              96% { opacity: 0.6; }
+          <style jsx>{`
+            /* :global: son motion.div (componentes) y styled-jsx no les pone
+               la clase scoped. Sin esto el preloader no era fixed ni tenia
+               fondo: se veia como un bloque roto al ir y volver. */
+            :global(.wn-preloader) {
+              position: fixed;
+              inset: 0;
+              z-index: 9999;
+              display: grid;
+              place-items: center;
+              /* Nunca negro puro: near-black calido de la paleta. */
+              background: var(--color-bg, #0a0908);
+              padding: 24px;
+            }
+
+            /* --- cielo desenfocado -------------------------------------- */
+            .wn-sky {
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              /* scale para que el blur no descubra los bordes */
+              transform: scale(1.16);
+              filter: blur(58px) saturate(125%) brightness(0.62);
+              opacity: 0;
+              transition: opacity 900ms cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .wn-sky.is-ready {
+              opacity: 0.62;
+            }
+
+            /* Vineta: cierra los bordes y deja respirar el centro. */
+            .wn-vignette {
+              position: absolute;
+              inset: 0;
+              background: radial-gradient(
+                78% 62% at 50% 50%,
+                transparent 0%,
+                rgba(10, 9, 8, 0.55) 62%,
+                rgba(10, 9, 8, 0.9) 100%
+              );
+            }
+
+            /* --- halo --------------------------------------------------- */
+            .wn-halo {
+              position: absolute;
+              inset: 0;
+              background: radial-gradient(
+                46% 30% at 50% 50%,
+                rgba(201, 173, 107, 0.15) 0%,
+                rgba(201, 173, 107, 0.04) 46%,
+                transparent 72%
+              );
+              animation: wn-breathe 5.5s ease-in-out infinite;
+            }
+            @keyframes wn-breathe {
+              0%,
+              100% {
+                opacity: 0.72;
+              }
+              50% {
+                opacity: 1;
+              }
+            }
+
+            /* --- la lamina de vidrio ------------------------------------ */
+            :global(.wn-glass) {
+              position: relative;
+              width: min(420px, 100%);
+              padding: 38px clamp(24px, 7vw, 44px) 26px;
+              border-radius: 26px;
+              background: rgba(243, 236, 225, 0.045);
+              backdrop-filter: blur(22px) saturate(180%);
+              -webkit-backdrop-filter: blur(22px) saturate(180%);
+              border: 1px solid rgba(243, 236, 225, 0.1);
+              box-shadow: 0 24px 70px -30px rgba(0, 0, 0, 0.9),
+                inset 0 1px 0 rgba(243, 236, 225, 0.16);
+            }
+            /* Specular highlight: el reflejo del borde superior. Es el detalle
+               que separa "vidrio" de "div con blur". */
+            :global(.wn-glass)::before {
+              content: "";
+              position: absolute;
+              inset: 0;
+              border-radius: inherit;
+              padding: 1px;
+              background: linear-gradient(
+                160deg,
+                rgba(243, 236, 225, 0.34) 0%,
+                rgba(243, 236, 225, 0.04) 34%,
+                transparent 62%
+              );
+              -webkit-mask: linear-gradient(#000 0 0) content-box,
+                linear-gradient(#000 0 0);
+              -webkit-mask-composite: xor;
+              mask-composite: exclude;
+              pointer-events: none;
+            }
+
+            /* --- wordmark ----------------------------------------------- */
+            .wn-mark {
+              margin: 0 0 30px;
+              text-align: center;
+              font-family: var(--font-body, "Helvetica Neue", system-ui, sans-serif);
+              font-weight: 200;
+              font-size: clamp(1.05rem, 4.4vw, 1.42rem);
+              letter-spacing: 0.42em;
+              /* el tracking agrega aire a la derecha: se compensa */
+              text-indent: 0.42em;
+              color: var(--color-fg, #f3ece1);
+              opacity: 0.94;
+            }
+
+            /* --- progreso ----------------------------------------------- */
+            .wn-track {
+              position: relative;
+              height: 1px;
+              width: 100%;
+              background: rgba(243, 236, 225, 0.12);
+              overflow: hidden;
+            }
+            .wn-fill {
+              position: absolute;
+              inset: 0;
+              transform-origin: left center;
+              background: linear-gradient(
+                90deg,
+                rgba(201, 173, 107, 0.5) 0%,
+                var(--color-gold-soft, #c9ad6b) 100%
+              );
+              box-shadow: 0 0 10px rgba(201, 173, 107, 0.5);
+              transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            /* --- pie ---------------------------------------------------- */
+            .wn-meta {
+              display: flex;
+              align-items: baseline;
+              justify-content: space-between;
+              margin-top: 12px;
+              font-family: var(--font-mono, ui-monospace, monospace);
+              font-size: 0.62rem;
+              letter-spacing: 0.2em;
+              text-transform: uppercase;
+              color: var(--color-muted, #6e6155);
+            }
+            .wn-pct {
+              font-variant-numeric: tabular-nums;
+              color: var(--color-gold-soft, #c9ad6b);
+            }
+
+            /* --- grano -------------------------------------------------- */
+            .wn-grain {
+              position: absolute;
+              inset: 0;
+              pointer-events: none;
+              opacity: 0.035;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .wn-halo {
+                animation: none;
+              }
+              .wn-fill {
+                transition: none;
+              }
             }
           `}</style>
         </motion.div>

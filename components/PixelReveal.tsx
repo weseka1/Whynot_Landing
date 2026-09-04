@@ -1,16 +1,29 @@
 "use client";
 
 /* ============================================================================
-   PIXEL REVEAL — inspirado en el "load_grid" de DICH™ Fashion.
-   - Cubre toda la pantalla con una grilla de celdas opacas (color del bg).
-   - Cuando el Preloader emite el evento "whynot:preloader-hidden", las celdas
-     se desvanecen una por una, escalonadas desde el centro hacia afuera.
-   - El stagger es por distancia euclidiana al centro: parece que la pagina
-     "se abre por partes" desde el medio.
-   - Vive en z-index 180 (debajo del preloader z=200, encima del contenido).
+   PIXEL REVEAL — la grilla que se abre desde el centro al entrar.
+   ----------------------------------------------------------------------------
+   Cubre la pantalla con celdas opacas y las desvanece una por una, escalonadas
+   por distancia al centro, cuando el Preloader avisa que terminó.
+
+   ── El bug que costó "la web tarda un montón" (4-sep-2026) ────────────────
+   El listener del evento se registraba en un efecto que dependía de `size`, y
+   `size` se calcula en OTRO efecto: o sea, recién en el segundo render. El
+   Preloader, en cambio, monta antes y —cuando ya se había entrado— emitía el
+   evento de forma síncrona en su primer efecto. Resultado: el evento pasaba
+   con la sala vacía, nadie lo escuchaba, y la grilla se quedaba tapando todo
+   hasta el fallback... que era de SIETE segundos. Pantalla negra con líneas.
+
+   Dos arreglos, no uno:
+   1. Si ya se entró en esta pestaña, este componente NO se monta. El reveal es
+      parte de la bienvenida; al volver de una ficha no corresponde repetirlo.
+   2. Igual se consulta la bandera en memoria (`lib/entrada`) además de
+      escuchar el evento: quien llega tarde se entera igual. Y el fallback
+      baja de 7 s a 2,5 s — un seguro, no una espera.
    ============================================================================ */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { EVENTO_ENTRADA, esPrimeraVisita } from "@/lib/entrada";
 
 /* Tamano objetivo de cada celda en px. Mas chico = mas "pixel art", mas grande
    = menos celdas (mas performante y mas "blocky"). 72px da ~26x12 en desktop
@@ -23,15 +36,26 @@ const TOTAL_REVEAL_MS = 950;
 /* Duracion de fade de cada celda individual. */
 const PER_CELL_FADE_MS = 90;
 
-/* Hard fallback: si el evento del preloader nunca llega (raro), igual
-   arrancamos a los 7s para no dejar la grilla tapando todo. */
-const FALLBACK_START_MS = 7000;
+/* Seguro por si el evento nunca llega. 2,5 s: lo suficiente para no pisar una
+   carga lenta de verdad, poco para que nadie se coma una pantalla trabada. */
+const FALLBACK_START_MS = 2500;
 
 export default function PixelReveal() {
   const gridRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ cols: number; rows: number } | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [removed, setRemoved] = useState(false);
+  /* En el server siempre true (no hay sessionStorage) para que el HTML salga
+     igual y no rompa la hidratación; el efecto de abajo lo corrige al toque. */
+  const [corresponde, setCorresponde] = useState(true);
+
+  /* ¿Toca mostrar la bienvenida? Si ya se entró, este componente se va. */
+  useEffect(() => {
+    if (!esPrimeraVisita()) {
+      setCorresponde(false);
+      setRemoved(true);
+    }
+  }, []);
 
   /* Calcula cols/rows segun el viewport real al montar (y en resize, antes
      de arrancar el reveal — una vez que arranca no tiene sentido recalcular). */
@@ -44,6 +68,23 @@ export default function PixelReveal() {
     compute();
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
+  }, []);
+
+  /* El listener va en su PROPIO efecto, sin depender de `size`: así se
+     registra en el primer render y no se pierde un evento temprano. Y antes
+     de escuchar, se consulta la bandera por si ya pasó. */
+  useEffect(() => {
+    const start = () => setRevealing(true);
+    if (!esPrimeraVisita()) {
+      start();
+      return;
+    }
+    window.addEventListener(EVENTO_ENTRADA, start);
+    const fallback = window.setTimeout(start, FALLBACK_START_MS);
+    return () => {
+      window.removeEventListener(EVENTO_ENTRADA, start);
+      clearTimeout(fallback);
+    };
   }, []);
 
   /* Precomputa el delay por celda en base a su distancia (euclidiana) al
@@ -65,19 +106,6 @@ export default function PixelReveal() {
     return arr;
   }, [size]);
 
-  /* Espera el evento del preloader para arrancar. Tambien arma un fallback
-     por las dudas que el evento no se dispare nunca. */
-  useEffect(() => {
-    if (!size) return;
-    const start = () => setRevealing(true);
-    window.addEventListener("whynot:preloader-hidden", start);
-    const fallback = window.setTimeout(start, FALLBACK_START_MS);
-    return () => {
-      window.removeEventListener("whynot:preloader-hidden", start);
-      clearTimeout(fallback);
-    };
-  }, [size]);
-
   /* Cuando termina la ola, desmontamos la grilla del DOM completo para no
      dejar 300+ divs cubriendo (aunque sean transparentes) — pointer-events
      ya es none, pero igual liberamos memoria. */
@@ -90,11 +118,12 @@ export default function PixelReveal() {
     return () => clearTimeout(t);
   }, [revealing]);
 
-  if (removed || !size) return null;
+  if (removed || !corresponde || !size) return null;
 
   return (
     <div
       ref={gridRef}
+      className="wn-pixel-reveal"
       aria-hidden
       style={{
         position: "fixed",
