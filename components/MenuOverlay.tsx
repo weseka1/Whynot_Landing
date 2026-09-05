@@ -17,15 +17,54 @@
    adentro rompia su propio mount/unmount. Z 80 vs 60 del menu.
    ============================================================================ */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { site } from "@/data/site";
 import { WHATSAPP } from "@/lib/carrito";
+import {
+  getAllBrandSlugs,
+  brandNameFromSlug,
+  getEntriesByBrandSlug,
+  posterUrl,
+} from "@/data/catalog";
 import ProtocolModal from "./ProtocolModal";
 
 type Props = { open: boolean; onClose: () => void };
+
+/* ── Las marcas, adentro del menú (4-sep-2026) ──────────────────────────
+   Juani: "acá tiene que estar el catálogo de marcas para ver por par" y
+   "tampoco agregaste la sección CATÁLOGO y que te lleve al menú para elegir
+   las marcas".
+
+   Antes el menú tenía un item "Catálogo" que te mandaba a OTRA página a
+   elegir marca. Un paso de más para lo que la gente viene a hacer. Ahora las
+   marcas están acá: abrís el menú y entrás directo a la que buscás.
+
+   Se calcula a nivel de módulo (una vez, no por apertura) y se ordena por
+   surtido, que es el orden en que conviene ofrecerlas. La portada es el
+   primer 360 de la marca — se ve mejor que una foto suelta. */
+type MarcaMenu = { slug: string; nombre: string; portada: string };
+
+const MARCAS: MarcaMenu[] = getAllBrandSlugs()
+  .map((slug) => {
+    const entries = getEntriesByBrandSlug(slug);
+    const portada = entries.find((e) => e.type === "360") ?? entries[0];
+    return {
+      slug,
+      nombre: brandNameFromSlug(slug) ?? slug,
+      portada: portada ? posterUrl(portada) : "",
+      peso: entries.length,
+    };
+  })
+  .filter((m) => m.peso > 0)
+  .sort((a, b) => b.peso - a.peso || a.nombre.localeCompare(b.nombre))
+  .map(({ slug, nombre, portada }) => ({ slug, nombre, portada }));
+
+/* Cuántas se muestran antes del "ver todas". Ocho entran en cuatro filas de
+   dos en un iPhone sin que el menú se vuelva una lista infinita. */
+const MARCAS_VISIBLES = 8;
 
 /* Que hay en cada lugar. La clave es el href de site.nav. */
 const DESCRIPCION: Record<string, string> = {
@@ -58,8 +97,40 @@ function Icono({ href }: { href: string }) {
   }
 }
 
+/** Para comparar sin que molesten mayusculas ni acentos. */
+function normalizar(t: string): string {
+  return t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 export default function MenuOverlay({ open, onClose }: Props) {
   const [protocolOpen, setProtocolOpen] = useState(false);
+  /* ── Buscar la marca acá mismo (4-sep-2026) ─────────────────────────
+     Juani: "necesito que la experiencia de compra sea fácil, si quiero
+     buscar marcas en específico no tengo ganas de buscar 1 hora al pedo".
+
+     Con solo la grilla de las 8 mas surtidas, quien busca una marca puntual
+     que no esta ahi tiene que salir a otra pagina. Con el input, escribis
+     tres letras y la tenes. Sin resultados, el link a WhatsApp: si no la
+     tenemos en el catalogo, la conseguimos a pedido — eso tambien es una
+     venta. */
+  const [q, setQ] = useState("");
+  const marcasFiltradas = useMemo(() => {
+    const n = normalizar(q);
+    if (!n) return MARCAS.slice(0, MARCAS_VISIBLES);
+    return MARCAS.filter(
+      (m) => normalizar(m.nombre).includes(n) || normalizar(m.slug).includes(n),
+    );
+  }, [q]);
+  /* Al cerrar el menu se limpia: abrirlo de nuevo no arrastra la busqueda
+     anterior. */
+  useEffect(() => {
+    if (!open) setQ("");
+  }, [open]);
 
   /* ESC cierra + body scroll lock mientras esta abierto. */
   useEffect(() => {
@@ -117,6 +188,89 @@ export default function MenuOverlay({ open, onClose }: Props) {
                   ✕
                 </button>
               </div>
+
+              {/* ── COMPRÁ POR MARCA — va PRIMERO ────────────────────
+                  El catálogo entra acá adentro, no como un link a otra
+                  página: cada marca es una tarjeta con su foto real y te
+                  lleva directo a sus modelos.
+
+                  Y va arriba de la navegación, no abajo. Juani: "necesito
+                  que la experiencia de compra sea fácil, si quiero buscar
+                  marcas en específico no tengo ganas de buscar 1 hora al
+                  pedo". Lo primero que ve quien abre el menú es el campo
+                  para escribir su marca — no siete filas de secciones que
+                  hay que pasar antes de llegar a comprar. */}
+              <section className="marcas" aria-label="Comprá por marca">
+                <p className="tituloSec">
+                  <span>Comprá por marca</span>
+                  <Link href="/catalog/" className="verTodas" onClick={onClose}>
+                    Ver todas →
+                  </Link>
+                </p>
+                <label className="buscarMarca">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6.5" />
+                    <path d="m16 16 4 4" />
+                  </svg>
+                  <input
+                    type="search"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Buscá tu marca: Jordan, Nike…"
+                    autoComplete="off"
+                    enterKeyHint="search"
+                    aria-label="Buscar marca"
+                  />
+                  {q && (
+                    <button type="button" onClick={() => setQ("")} aria-label="Borrar búsqueda">
+                      ✕
+                    </button>
+                  )}
+                </label>
+
+                {marcasFiltradas.length === 0 ? (
+                  <p className="sinMarca">
+                    No la tenemos en el catálogo.{" "}
+                    <a
+                      href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola! Busco zapatillas ${q.trim()}, ¿las consiguen?`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Se la conseguimos a pedido →
+                    </a>
+                  </p>
+                ) : (
+                <ul className="grillaMarcas">
+                  {marcasFiltradas.map((m, i) => (
+                    <motion.li
+                      key={m.slug}
+                      initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      /* Stagger corto: entran acompañando la apertura, no
+                         después de ella. */
+                      transition={{
+                        delay: 0.14 + i * 0.035,
+                        duration: 0.4,
+                        ease: [0.16, 1, 0.3, 1],
+                      }}
+                    >
+                      <Link
+                        href={`/catalog/${m.slug}/`}
+                        className="marcaCard"
+                        onClick={onClose}
+                      >
+                        <span className="marcaFoto">
+                          {m.portada && (
+                            <img src={m.portada} alt="" loading="lazy" decoding="async" />
+                          )}
+                        </span>
+                        <span className="marcaNombre">{m.nombre}</span>
+                      </Link>
+                    </motion.li>
+                  ))}
+                </ul>
+                )}
+              </section>
 
               <nav>
                 <ul className="items">
@@ -179,6 +333,7 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 </ul>
               </nav>
 
+
               <a className="wa" href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noopener noreferrer">
                 Escribinos por WhatsApp
               </a>
@@ -192,35 +347,87 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 position: fixed;
                 inset: 0;
                 z-index: 60;
-                background: rgba(6, 5, 4, 0.62);
-                backdrop-filter: blur(14px);
-                -webkit-backdrop-filter: blur(14px);
+                background: rgba(24, 16, 38, 0.44);
+                backdrop-filter: blur(18px) saturate(140%);
+                -webkit-backdrop-filter: blur(18px) saturate(140%);
                 display: flex;
-                align-items: flex-start;
+                /* Centrado de verdad. Antes era flex-start con 78px de
+                   padding-top: en el celu la lámina arrancaba pegada al
+                   header y el título del menú se cruzaba con el "why not"
+                   del logo. Ahora la lámina se centra en el hueco que queda
+                   libre y el padding sólo garantiza que nunca lo invada. */
+                align-items: center;
                 justify-content: center;
-                /* El header fijo queda encima (su toggle MENU también cierra):
-                   la lámina arranca debajo de él, no tapada. */
-                padding: calc(78px + env(safe-area-inset-top)) 10px 10px;
+                padding: calc(74px + env(safe-area-inset-top)) 12px
+                  calc(16px + env(safe-area-inset-bottom));
                 overflow-y: auto;
               }
+              /* ── Liquid glass de verdad (4-sep-2026) ────────────────────
+                 Esto era rgba(19,16,13,.78): un panel marrón oscuro. Juani:
+                 "te pedí que el menú sea liquid glass estilo iPhone y sigue
+                 marrón caca". Tenía razón — el vidrio de iOS es CLARO y deja
+                 pasar el color de atrás, no lo tapa con barro.
+
+                 El truco es el mismo que usa nuestra web: el borde no es un
+                 color plano, es un SEGUNDO gradiente pintado en border-box.
+                 Eso da el canto biselado que hace que se lea como vidrio y
+                 no como una caja translúcida. */
               :global(.lamina) {
                 width: min(520px, 100%);
-                max-height: calc(100svh - 88px - env(safe-area-inset-top));
+                max-height: calc(100svh - 104px - env(safe-area-inset-top));
                 display: flex;
                 flex-direction: column;
-                gap: 14px;
+                gap: 12px;
                 padding: 16px 16px max(16px, env(safe-area-inset-bottom));
-                border-radius: 28px;
-                background: rgba(19, 16, 13, 0.78);
-                backdrop-filter: blur(26px) saturate(180%);
-                -webkit-backdrop-filter: blur(26px) saturate(180%);
-                border: 1px solid rgba(243, 236, 225, 0.14);
-                box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(243, 236, 225, 0.18);
-                color: var(--color-fg, #f3ece1);
+                border: 1px solid transparent;
+                border-radius: 30px;
+                background:
+                  linear-gradient(
+                      168deg,
+                      rgba(255, 253, 250, 0.82),
+                      rgba(240, 232, 252, 0.62)
+                    )
+                    padding-box,
+                  linear-gradient(
+                      140deg,
+                      rgba(255, 255, 255, 0.95),
+                      rgba(255, 255, 255, 0.2) 38%,
+                      rgba(255, 255, 255, 0.08) 64%,
+                      rgba(126, 88, 190, 0.42)
+                    )
+                    border-box;
+                backdrop-filter: blur(30px) saturate(190%);
+                -webkit-backdrop-filter: blur(30px) saturate(190%);
+                box-shadow:
+                  0 40px 90px -30px rgba(38, 20, 66, 0.5),
+                  0 4px 16px rgba(38, 20, 66, 0.16),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.75);
+                color: #17121f;
                 overflow-y: auto;
                 overscroll-behavior: contain;
+                position: relative;
+                isolation: isolate;
+              }
+              /* La luz que entra por arriba del vidrio: es lo que separa
+                 "panel translúcido" de "vidrio". */
+              :global(.lamina)::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 0;
+                height: 42%;
+                pointer-events: none;
+                background: linear-gradient(
+                  180deg,
+                  rgba(255, 255, 255, 0.5),
+                  transparent
+                );
+                z-index: 0;
               }
               .barra {
+                position: relative;
+                z-index: 1;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -233,18 +440,23 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 letter-spacing: -0.02em;
                 text-transform: lowercase;
               }
+              /* Todo lo de abajo pasa a paleta CLARA: los valores viejos
+                 eran crema al 6-16% de opacidad, pensados para leerse sobre
+                 el panel marron. Sobre vidrio claro son invisibles. */
               .cerrar {
                 width: 40px;
                 height: 40px;
                 border-radius: 12px;
-                border: 1px solid rgba(243, 236, 225, 0.16);
-                background: rgba(243, 236, 225, 0.06);
+                border: 1px solid rgba(38, 20, 66, 0.14);
+                background: rgba(255, 255, 255, 0.55);
                 color: inherit;
                 font-size: 0.9rem;
                 cursor: pointer;
               }
 
               .items {
+                position: relative;
+                z-index: 1;
                 list-style: none;
                 margin: 0;
                 padding: 0;
@@ -263,9 +475,11 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 min-height: 64px;
                 padding: 12px 14px;
                 border-radius: 18px;
-                background: rgba(243, 236, 225, 0.05);
-                border: 1px solid rgba(243, 236, 225, 0.09);
-                box-shadow: inset 0 1px 0 rgba(243, 236, 225, 0.1);
+                background: rgba(255, 255, 255, 0.5);
+                border: 1px solid rgba(255, 255, 255, 0.85);
+                box-shadow:
+                  0 2px 10px rgba(38, 20, 66, 0.06),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.9);
                 color: inherit;
                 text-decoration: none;
                 text-align: left;
@@ -274,7 +488,7 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 transition: background 200ms, transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
               }
               .items :global(.item:hover) {
-                background: rgba(243, 236, 225, 0.1);
+                background: rgba(255, 255, 255, 0.78);
                 transform: translateX(2px);
               }
               .items :global(.item:focus-visible) {
@@ -282,8 +496,12 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 outline-offset: 2px;
               }
               .items :global(.item.destacado) {
-                background: rgba(201, 173, 107, 0.14);
-                border-color: rgba(201, 173, 107, 0.36);
+                background: linear-gradient(
+                  135deg,
+                  rgba(146, 104, 214, 0.2),
+                  rgba(255, 255, 255, 0.6)
+                );
+                border-color: rgba(126, 88, 190, 0.42);
               }
               .ico {
                 flex: 0 0 auto;
@@ -292,11 +510,12 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 display: grid;
                 place-items: center;
                 border-radius: 12px;
-                background: rgba(243, 236, 225, 0.07);
-                color: var(--color-fg, #f3ece1);
+                background: rgba(126, 88, 190, 0.1);
+                color: #4a2f7a;
               }
               .items :global(.item.destacado) .ico {
-                color: var(--color-gold-soft, #c9ad6b);
+                background: rgba(126, 88, 190, 0.2);
+                color: #3d2266;
               }
               .txt {
                 flex: 1;
@@ -312,12 +531,12 @@ export default function MenuOverlay({ open, onClose }: Props) {
               .desc {
                 font-size: 0.8rem;
                 line-height: 1.35;
-                color: var(--color-muted, #a89a85);
+                color: rgba(38, 20, 66, 0.62);
                 overflow-wrap: anywhere;
               }
               .chev {
                 flex: 0 0 auto;
-                color: var(--color-muted, #a89a85);
+                color: rgba(38, 20, 66, 0.4);
               }
 
               .wa {
@@ -327,14 +546,151 @@ export default function MenuOverlay({ open, onClose }: Props) {
                 min-height: 52px;
                 margin-top: 4px;
                 border-radius: 16px;
-                background: var(--color-fg, #f3ece1);
-                color: #0a0908;
+                background: #1d1230;
+                color: #f6f2ff;
                 font-weight: 700;
                 text-decoration: none;
+                box-shadow: 0 10px 24px -10px rgba(29, 18, 48, 0.7);
               }
               .wa:focus-visible {
                 outline: 2px solid var(--color-gold-soft, #c9ad6b);
                 outline-offset: 3px;
+              }
+
+              /* ── Comprá por marca ───────────────────────────────── */
+              .marcas {
+                position: relative;
+                z-index: 1;
+                display: grid;
+                gap: 8px;
+              }
+              .tituloSec {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 10px;
+                margin: 2px 4px 0;
+                font-family: var(--font-mono, ui-monospace, monospace);
+                font-size: 0.64rem;
+                letter-spacing: 0.22em;
+                text-transform: uppercase;
+                color: rgba(38, 20, 66, 0.55);
+              }
+              .verTodas {
+                color: #4a2f7a;
+                font-weight: 700;
+                text-decoration: none;
+                white-space: nowrap;
+              }
+              .buscarMarca {
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                padding: 0 12px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.62);
+                border: 1px solid rgba(255, 255, 255, 0.9);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                color: rgba(38, 20, 66, 0.5);
+              }
+              .buscarMarca input {
+                flex: 1;
+                min-width: 0;
+                border: 0;
+                background: none;
+                outline: none;
+                color: #17121f;
+                /* 16px CLAVADO: con menos, iOS Safari hace zoom a toda la
+                   pagina al enfocar el input y se descoloca el overlay. */
+                font-size: 16px;
+                padding: 12px 0;
+                font-family: inherit;
+              }
+              .buscarMarca input::placeholder {
+                color: rgba(38, 20, 66, 0.42);
+              }
+              .buscarMarca input::-webkit-search-cancel-button {
+                display: none;
+              }
+              .buscarMarca button {
+                border: 0;
+                background: none;
+                color: inherit;
+                font: inherit;
+                cursor: pointer;
+                padding: 4px;
+              }
+              .sinMarca {
+                margin: 2px 4px;
+                font-size: 0.82rem;
+                line-height: 1.4;
+                color: rgba(38, 20, 66, 0.62);
+              }
+              .sinMarca a {
+                color: #4a2f7a;
+                font-weight: 700;
+              }
+              .grillaMarcas {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                /* Dos columnas en el celu, cuatro cuando hay lugar. */
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+              }
+              @media (min-width: 460px) {
+                .grillaMarcas {
+                  grid-template-columns: repeat(4, minmax(0, 1fr));
+                }
+              }
+              .grillaMarcas :global(.marcaCard) {
+                display: grid;
+                gap: 6px;
+                padding: 8px 8px 10px;
+                border-radius: 16px;
+                background: rgba(255, 255, 255, 0.55);
+                border: 1px solid rgba(255, 255, 255, 0.85);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                color: inherit;
+                text-decoration: none;
+                /* 44px es el mínimo táctil; con la foto arriba sobra. */
+                min-height: 44px;
+                transition: background 200ms, transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+              }
+              .grillaMarcas :global(.marcaCard:hover) {
+                background: rgba(255, 255, 255, 0.82);
+                transform: translateY(-2px);
+              }
+              .grillaMarcas :global(.marcaCard:focus-visible) {
+                outline: 2px solid #7e58be;
+                outline-offset: 2px;
+              }
+              .marcaFoto {
+                display: block;
+                aspect-ratio: 4 / 3;
+                border-radius: 10px;
+                overflow: hidden;
+                background: rgba(255, 255, 255, 0.7);
+              }
+              .marcaFoto img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+              }
+              .marcaNombre {
+                font-size: 0.72rem;
+                font-weight: 700;
+                line-height: 1.15;
+                letter-spacing: -0.01em;
+                text-transform: uppercase;
+                /* Dos líneas como techo: hay marcas de nombre largo
+                   (LOUIS VUITTON, MAISON MARGIELA) y sin esto empujan la
+                   tarjeta y desalinean la grilla. */
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
               }
 
               @media (prefers-reduced-motion: reduce) {
