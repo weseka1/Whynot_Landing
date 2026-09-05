@@ -21,6 +21,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EVENTO_ENTRADA, esPrimeraVisita } from "@/lib/entrada";
 import { cargarModelViewer } from "@/lib/modelViewer";
+import { EVENTO_HERO_LISTO } from "@/lib/preloadAssets";
 import { site } from "@/data/site";
 import FrameBorder from "./FrameBorder";
 import DiscoverButton from "./DiscoverButton";
@@ -39,27 +40,20 @@ export default function Hero() {
      respecto al primer paint del Hero — el resto del Hero (sky bg, marquee,
      UI) ya esta visible para entonces, asi que se nota poco.            */
   const [glbSrc, setGlbSrc] = useState<string | null>(null);
-  /* ── El mono del hero no puede renderizar cuando nadie lo mira ────────
-     Medido el 4-sep-2026 con la pagina QUIETA y el hero fuera de pantalla:
-     model-viewer.min.js pedia 296 requestAnimationFrame en 5 segundos —
-     60 fps constantes renderizando un modelo 3D invisible. Ese era el peso
-     de fondo que se arrastraba en TODO el scroll de la pagina y se sentia
-     como "el scrolling se tilda" en el iPhone.
+  /* ── Por qué el mono NO se desmonta al salir de pantalla ──────────────
+     Hoy mismo le puse un IntersectionObserver que lo desmontaba: había
+     medido 296 rAF en 5 s con la página quieta y se los adjudiqué a
+     model-viewer. Estaba mal atribuido.
 
-     model-viewer no expone un pause, asi que lo desmontamos: al volver, el
-     GLB ya esta en cache del browser y vuelve al instante. El margen de
-     400px evita que se monte y desmonte al borde. */
-  const [enPantalla, setEnPantalla] = useState(true);
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(
-      ([e]) => setEnPantalla(e.isIntersecting),
-      { rootMargin: "400px 0px" }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+     Midiendo de nuevo, con el hero fuera de pantalla y el tag MONTADO,
+     model-viewer se pausa solo (reporta modelIsVisible:false y sus rAF caen
+     de 47 a 17 en 4 s). Desmontarlo lleva esos 17 a 4 — tres cuadros por
+     segundo — y cuesta 4,3 s de agujero cada vez que el visitante vuelve
+     arriba, con el GLB ya en cache. Pésimo negocio. Los 296 rAF eran de los
+     canvas de Collections y PastDrop.
+
+     Queda escrito para que nadie (yo incluido) lo vuelva a "optimizar": si
+     el celu se tilda, el culpable a buscar son esos canvas, no el hero. */
   useEffect(() => {
     /* ── El mono entra DESPUES del primer pintado (4-sep-2026) ───────────
        Antes se montaba apenas hidrataba, y con el <model-viewer> venian
@@ -70,8 +64,29 @@ export default function Hero() {
 
        El hero no necesita el mono para servir: necesita el cielo, el titulo
        y el boton. El mono es el remate, y entra cuando el hilo esta libre. */
-    /* Primero el script del custom element, despues el tag: si montamos el
-       <model-viewer> sin el modulo cargado queda un elemento vacio. */
+    /* Primero el script del custom element, después el tag: si montamos el
+       <model-viewer> sin el módulo cargado queda un elemento vacío.
+
+       Probé adelantar el .glb con un fetch en paralelo y salió PEOR: el
+       archivo se descargaba dos veces (medido — dos pedidos a mono.glb con
+       0,1 s de diferencia), porque model-viewer lo pide por su cuenta y el
+       cache no matcheaba. En un link lento, duplicar 1 MB es exactamente lo
+       que estábamos tratando de evitar. La cola se arregló donde estaba el
+       problema de verdad: los seis monos del Mission (ver
+       MissionPillarMonkey · precargarMonosMission). */
+    /* El SCRIPT arranca ya; el TAG espera su turno.
+
+       Son dos cosas distintas y las estábamos atando juntas. Mientras el
+       preloader está en pantalla la red no hace nada (sus dos assets críticos
+       suman 80 KB), y sin embargo los 248 KB del custom element esperaban a
+       que la lámina se fuera: medido, el script recién salía a los 7,7 s.
+
+       Ahora se pide en cuanto monta el Hero, en paralelo con la bienvenida.
+       Cuando llega el momento de mostrar el mono, ese pedazo ya está y solo
+       falta el modelo. `cargarModelViewer` cachea su promesa, así que
+       llamarlo dos veces no descarga dos veces. */
+    cargarModelViewer();
+
     const montar = () => {
       cargarModelViewer().then(() => setGlbSrc(mobileGLB(site.hero.model)));
     };
@@ -162,7 +177,7 @@ export default function Hero() {
     let io: IntersectionObserver | null = null;
     if (sectionRef.current && typeof IntersectionObserver !== "undefined") {
       /* Ademas de pausar el rAF del mouse, este observer decide si el
-         <model-viewer> sigue montado: ver `enPantalla` mas abajo. */
+         <model-viewer> sigue montado. */
       io = new IntersectionObserver(
         ([entry]) => {
           visible = entry.isIntersecting;
@@ -283,12 +298,18 @@ export default function Hero() {
           zIndex: 3,
         }}
       >
-        {glbSrc !== null && enPantalla && (
+        {glbSrc !== null && (
         /* @ts-ignore — web component */
         <model-viewer
           ref={modelRef}
           src={glbSrc}
           alt="3D centerpiece"
+          /* Avisa que lo que se VE ya está resuelto. La capa 2 (nubes, webm
+             de Collections, videos del PastDrop) espera este evento para
+             arrancar: si baja antes, le come el ancho de banda justo al
+             único elemento que el visitante tiene delante. Ver
+             lib/preloadAssets · EVENTO_HERO_LISTO. */
+          onLoad={() => window.dispatchEvent(new CustomEvent(EVENTO_HERO_LISTO))}
           disable-zoom
           shadow-intensity="0.5"
           shadow-softness="1"

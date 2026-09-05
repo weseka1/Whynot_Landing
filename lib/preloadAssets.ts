@@ -69,9 +69,20 @@ const PAST_DROP_VIDEO_ASSETS: Asset[] = HERO_SPECS.map((hs) => ({
   weight: PAST_DROP_VIDEO_WEIGHTS[hs.src] ?? 450,
 }));
 
+/** Lo emite el Hero cuando su <model-viewer> terminó de cargar: la señal de
+    que lo que se VE ya está resuelto y recién ahí conviene bajar el resto. */
+export const EVENTO_HERO_LISTO = "whynot:hero-listo";
+
 export const DEFERRED_ASSETS: Asset[] = [
-  /* El mono del hero: se ve primero que nada, asi que encabeza la capa 2. */
-  { url: "/assets/3d/mono.glb", kind: "fetch", weight: 1060 },
+  /* ── El mono del hero NO va acá (4-sep-2026) ──────────────────────────
+     Encabezaba esta lista con la idea de "calentarlo", pero el Hero ya lo
+     pide él mismo al montar el <model-viewer>. Resultado: el mismo MB se
+     descargaba DOS veces — medido, dos pedidos a mono.glb con 0,1 s de
+     diferencia. Este fetch y el que hace model-viewer no comparten entrada
+     de cache, así que no se ahorraba nada: se duplicaba.
+
+     En un link lento eso es un megabyte de regalo justo cuando el visitante
+     está esperando ver algo. Lo pide quien lo usa, una sola vez. */
 
   /* Nubes y decorados de las secciones intermedias */
   { url: "/nuves/cloud-center.webp", kind: "image", weight: 110 },
@@ -197,23 +208,68 @@ export function startDeferredPreload(): void {
   const conn = (navigator as any).connection;
   if (conn?.saveData === true || /(^|-)2g$/.test(conn?.effectiveType ?? "")) return;
 
-  /* Primero los chunks de las secciones de abajo: importarlos dispara sus
-     `useGLTF.preload(...)`, asi que recien pueden correr aca. */
-  idle(() => {
-    import("@/components/Collections").catch(() => {});
-    import("@/components/PastDrop").catch(() => {});
-  });
-
   const queue = withMobileVariants(DEFERRED_ASSETS);
   const BATCH = 3;
   let i = 0;
+  let seccionesPedidas = false;
 
-  const pump = () => {
-    if (i >= queue.length) return;
-    const batch = queue.slice(i, i + BATCH);
-    i += BATCH;
-    Promise.all(batch.map(loadAsset)).then(() => idle(pump));
+  /* ── Las secciones de abajo van DESPUÉS, no primero (4-sep-2026) ───────
+     Este import estaba arriba de todo, y era la causa de que el mono del
+     hero tardara un minuto y medio en aparecer. Importar Collections y
+     PastDrop ejecuta sus `useGLTF.preload(...)` a module-load: seis GLB de
+     secciones que el visitante todavía no está mirando, 3,9 MB, más tres
+     mp4 — todo peleando el mismo link con el `mono.glb` del hero, que es
+     lo ÚNICO que se ve en pantalla en ese momento.
+
+     Medido contra producción: con esos seis bloqueados el GLB del hero baja
+     en 6 s y el mono aparece a los 22; sin bloquearlos tarda 29 s y el mono
+     aparece a los 85. El archivo solo, con curl, baja en 1,8 s. No era el
+     3D pesado: era la cola.
+
+     Ahora salen recién después del primer batch, cuando lo que se ve ya
+     está resuelto. Siguen calentándose antes de que el visitante llegue
+     abajo, que es todo lo que este preload necesita hacer. */
+  const pedirSecciones = () => {
+    if (seccionesPedidas) return;
+    seccionesPedidas = true;
+    idle(() => {
+      import("@/components/Collections").catch(() => {});
+      import("@/components/PastDrop").catch(() => {});
+    });
   };
 
-  idle(pump);
+  const pump = () => {
+    if (i >= queue.length) {
+      pedirSecciones();
+      return;
+    }
+    const batch = queue.slice(i, i + BATCH);
+    i += BATCH;
+    Promise.all(batch.map(loadAsset)).then(() => {
+      /* Pasado el primer batch, lo de arriba ya está: soltamos las de abajo. */
+      pedirSecciones();
+      idle(pump);
+    });
+  };
+
+  /* ── La capa 2 espera al hero (4-sep-2026) ───────────────────────────
+     Arrancaba apenas cerraba el preloader y se llevaba puesto el ancho de
+     banda del `mono.glb`, que es LO ÚNICO en pantalla en ese momento: el
+     archivo salía a los 8,5 s y el mono recién se veía a los 17,5, con un
+     link de 600 KB/s. Nueve segundos de un modelo compitiendo contra webm
+     de secciones que están cuatro pantallas más abajo.
+
+     Ahora espera a que el hero avise que ya está. TECHO de 6 s: si el mono
+     falla, se rompe el CDN o el aparato no soporta WebGL, el resto se
+     precarga igual — nunca se cuelga esperando una señal que puede no
+     llegar. */
+  const TECHO_ESPERA_HERO = 6000;
+  let arrancado = false;
+  const arrancar = () => {
+    if (arrancado) return;
+    arrancado = true;
+    idle(pump);
+  };
+  window.addEventListener(EVENTO_HERO_LISTO, arrancar, { once: true });
+  window.setTimeout(arrancar, TECHO_ESPERA_HERO);
 }

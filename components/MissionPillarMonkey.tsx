@@ -43,15 +43,40 @@ const MONO_SRC_BLANCO         = "/assets/3d/mono-blanco.glb";
 const MONO_SRC_LOUIS          = "/assets/3d/mono-louis.glb";
 const MONO_SRC_DORADO         = "/assets/3d/mono-dorado.glb";
 const MONO_SRC_BLANCO_DORADO  = "/assets/3d/mono-blanco-dorado.glb";
-/* Preload: en mobile se carga la variant .mobile.glb (textures 256px,
-   simplify mas agresivo, ~50% del peso). mobileGLB es no-op en desktop
-   o si el GLB no esta en la whitelist.                                 */
-useGLTF.preload(mobileGLB(MONO_SRC_DEFAULT));
-useGLTF.preload(mobileGLB(MONO_SRC_GOTILA));
-useGLTF.preload(mobileGLB(MONO_SRC_BLANCO));
-useGLTF.preload(mobileGLB(MONO_SRC_LOUIS));
-useGLTF.preload(mobileGLB(MONO_SRC_DORADO));
-useGLTF.preload(mobileGLB(MONO_SRC_BLANCO_DORADO));
+const MONOS_MISSION = [
+  MONO_SRC_DEFAULT,
+  MONO_SRC_GOTILA,
+  MONO_SRC_BLANCO,
+  MONO_SRC_LOUIS,
+  MONO_SRC_DORADO,
+  MONO_SRC_BLANCO_DORADO,
+];
+
+/* ── El preload de los seis NO va a nivel de módulo (4-sep-2026) ─────────
+   Estas seis líneas eran `useGLTF.preload(...)` sueltas acá arriba, o sea
+   que se ejecutaban apenas se cargaba el chunk — pidiendo 3,9 MB de monos
+   de una sección que está seis pantallas más abajo.
+
+   El costo lo pagaba el HERO. Medido contra producción con un link de
+   ~600 KB/s: esos seis salían primero y el `mono.glb` del hero, que es lo
+   único que hay en pantalla, quedaba en la cola detrás — aparecía a los
+   85 segundos. Con los seis bloqueados, a los 22. El archivo solo, con
+   curl, baja en 1,8 s. Nunca fue un problema de peso del 3D: era el orden
+   de la fila. Juani lo vio como "queda trabado el mono, eso le baja mucho
+   la calidad".
+
+   Ahora se piden cuando el Mission de verdad se acerca — lo dispara el
+   propio componente al montar, que es cuando su sección entró en juego.
+   El preload sigue existiendo (el cambio de paso no espera la descarga),
+   solo que ya no le roba el turno a lo que se está mirando. */
+let monosPedidos = false;
+export function precargarMonosMission(): void {
+  if (monosPedidos || typeof window === "undefined") return;
+  monosPedidos = true;
+  const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  if (conn?.saveData === true || /(^|-)2g$/.test(conn?.effectiveType ?? "")) return;
+  for (const src of MONOS_MISSION) useGLTF.preload(mobileGLB(src));
+}
 
 const ANIM_MIN_DURATION_S = 0.5;
 const TARGET_SIZE         = 2.5;
@@ -268,6 +293,12 @@ export default function MissionPillarMonkey({
   };
   const isMobile = useIsMobile();
   const [shouldMount, setShouldMount] = useState(false);
+  /* Cuando el Mission se acerca (el observer de abajo avisa con 300px de
+     anticipo), recién ahí pedimos los seis monos. Ver el comentario de
+     precargarMonosMission: a nivel de módulo le robaban la fila al hero. */
+  useEffect(() => {
+    if (shouldMount) precargarMonosMission();
+  }, [shouldMount]);
 
   /* Lazy mount: 300px de margin para precargar antes de llegar.
      En mobile, ADEMAS desmontamos el Canvas cuando el pilar sale del
