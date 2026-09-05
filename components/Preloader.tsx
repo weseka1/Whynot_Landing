@@ -66,6 +66,9 @@ const FONTS_TIMEOUT = 800;
 /** El mismo cielo del hero. Desenfocado, es lo que el vidrio refracta. */
 const SKY = "/assets/hero/sky-background.webp";
 
+/** Lo emite en cada cambio del contador, con el porcentaje entero. */
+export const EVENTO_PROGRESO = "whynot:progreso";
+
 export default function Preloader() {
   const [pct, setPct] = useState(0);
   /* Arranca visible SIEMPRE en el server para no romper la hidratación; el
@@ -93,7 +96,16 @@ export default function Preloader() {
       startDeferredPreload();
       return;
     }
-    marcarEntrada();
+    /* ── La entrada se marca cuando TERMINA, no cuando arranca ────────────
+       Estaba acá arriba, y eso apagaba al PixelReveal: ese componente
+       pregunta esPrimeraVisita() para saber si le toca, y como el preloader
+       corría primero se encontraba la marca ya puesta y no se montaba nunca.
+       Medido: 7 eventos de progreso emitidos y 0 celdas en pantalla.
+
+       Marcar al cerrar es además lo correcto por definición: la visita
+       "ocurrió" cuando la bienvenida terminó de correr. Si alguien recarga a
+       mitad de la carga, la vuelve a ver — que es lo que corresponde, porque
+       la primera no llegó a pasar. */
 
     reducedRef.current =
       typeof window.matchMedia === "function" &&
@@ -186,6 +198,11 @@ export default function Preloader() {
       if (int !== lastInt) {
         lastInt = int;
         setPct(int);
+        /* El reveal de píxeles sigue este número: la web se destapa a
+           medida que carga, no de golpe al final. Ver PixelReveal. */
+        window.dispatchEvent(
+          new CustomEvent(EVENTO_PROGRESO, { detail: { pct: int } }),
+        );
       }
       if (display < 99.5 || target < 100) raf = requestAnimationFrame(tick);
       else if (lastInt !== 100) setPct(100);
@@ -201,6 +218,7 @@ export default function Preloader() {
       if (cancelled || closed) return;
       closed = true;
       clearTimeout(hard);
+      marcarEntrada();
       doneWeight = totalWeight;
       setTimeout(() => {
         if (cancelled) return;
@@ -285,14 +303,9 @@ export default function Preloader() {
           {/* El cielo del hero, desenfocado: es lo que el vidrio refracta y
               lo que hace que la entrada al hero no tenga corte. Entra con
               fade cuando termina de bajar; hasta entonces queda el halo. */}
-          <img
-            className={`wn-sky${skyReady ? " is-ready" : ""}`}
-            src={SKY}
-            alt=""
-            aria-hidden="true"
-            decoding="async"
-            onLoad={() => setSkyReady(true)}
-          />
+          {/* El cielo desenfocado del preloader se fue: lo que se ve detras
+              es el HERO de verdad, destapandose por celdas. Duplicarlo era
+              la misma imagen dos veces, una encima de la otra. */}
           <div className="wn-vignette" aria-hidden="true" />
 
           {/* Halo calido: sostiene el centro antes de que llegue el cielo. */}
@@ -385,14 +398,30 @@ export default function Preloader() {
             /* :global: son motion.div (componentes) y styled-jsx no les pone
                la clase scoped. Sin esto el preloader no era fixed ni tenia
                fondo: se veia como un bloque roto al ir y volver. */
+            /* ── El preloader ya NO tapa la pantalla (5-sep-2026) ────────
+               Tenia fondo opaco propio, y eso escondia el reveal de pixeles
+               que corre debajo: la grilla se abria detras de una pared y no
+               se veia nada. Habia DOS capas de carga superpuestas haciendo
+               el mismo trabajo.
+
+               Ahora hay una sola: la grilla de pixeles ES el fondo, y se va
+               destapando con el progreso; esta lamina flota encima con el
+               nombre y el contador. Lo que se ve es la web apareciendo por
+               partes mientras el numero sube — que es lo que Juani pidio:
+               "que empiece a aparecer la pagina por pixeles hasta que carga
+               al 100%".
+
+               pointer-events none en el contenedor: es un cartel, no una
+               pared. Si algo tarda, el visitante puede tocar lo que ya se
+               destapo. */
             :global(.wn-preloader) {
               position: fixed;
               inset: 0;
               z-index: 9999;
               display: grid;
               place-items: center;
-              /* Nunca negro puro: near-black calido de la paleta. */
-              background: var(--color-bg, #0a0908);
+              background: transparent;
+              pointer-events: none;
               padding: 24px;
             }
 
@@ -450,15 +479,48 @@ export default function Preloader() {
             /* --- la lamina de vidrio ------------------------------------ */
             :global(.wn-glass) {
               position: relative;
-              width: min(420px, 100%);
+              /* justify-self + min-width, y NO width:100%: el contenedor es
+                 un grid con place-items:center, asi que el item no estira y
+                 el 100% quedaba sin contra que resolverse — la lamina medía
+                 0x0 y no se veía nada. Medido, no supuesto. */
+              justify-self: center;
+              width: min(420px, calc(100vw - 48px));
+              min-width: 260px;
               padding: 38px clamp(24px, 7vw, 44px) 26px;
-              border-radius: 26px;
-              background: rgba(243, 236, 225, 0.045);
-              backdrop-filter: blur(22px) saturate(180%);
-              -webkit-backdrop-filter: blur(22px) saturate(180%);
-              border: 1px solid rgba(243, 236, 225, 0.1);
-              box-shadow: 0 24px 70px -30px rgba(0, 0, 0, 0.9),
-                inset 0 1px 0 rgba(243, 236, 225, 0.16);
+              /* ── Vidrio CLARO, como el menú (5-sep-2026) ────────────────
+                 Era crema al 4,5% con texto crema: se leía perfecto contra
+                 el fondo near-black que tenía el preloader. Al sacar ese
+                 fondo —para que se vea el reveal de píxeles detrás— la
+                 lámina quedó invisible: 4% de blanco sobre un cielo rosa no
+                 es nada, y el texto crema sobre claro tampoco.
+
+                 Pasa al mismo lenguaje que el menú: relleno en padding-box +
+                 gradiente de borde en border-box, que es lo que da el canto
+                 biselado, y tinta oscura. Una sola familia de vidrio en toda
+                 la web en vez de dos que no se parecen. */
+              border: 1px solid transparent;
+              border-radius: 28px;
+              background:
+                linear-gradient(
+                    168deg,
+                    rgba(255, 253, 250, 0.8),
+                    rgba(240, 232, 252, 0.58)
+                  )
+                  padding-box,
+                linear-gradient(
+                    140deg,
+                    rgba(255, 255, 255, 0.95),
+                    rgba(255, 255, 255, 0.2) 38%,
+                    rgba(255, 255, 255, 0.08) 64%,
+                    rgba(126, 88, 190, 0.4)
+                  )
+                  border-box;
+              backdrop-filter: blur(26px) saturate(180%);
+              -webkit-backdrop-filter: blur(26px) saturate(180%);
+              box-shadow:
+                0 34px 80px -30px rgba(38, 20, 66, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7);
+              color: #17121f;
             }
             /* Specular highlight: el reflejo del borde superior. Es el detalle
                que separa "vidrio" de "div con blur". */
@@ -520,8 +582,8 @@ export default function Preloader() {
               letter-spacing: 0.42em;
               /* el tracking agrega aire a la derecha: se compensa */
               text-indent: 0.42em;
-              color: var(--color-fg, #f3ece1);
-              opacity: 0.94;
+              color: #17121f;
+              opacity: 0.92;
             }
 
             /* --- progreso ----------------------------------------------- */
@@ -529,7 +591,7 @@ export default function Preloader() {
               position: relative;
               height: 1px;
               width: 100%;
-              background: rgba(243, 236, 225, 0.12);
+              background: rgba(38, 20, 66, 0.14);
               overflow: hidden;
             }
             .wn-fill {
@@ -555,11 +617,11 @@ export default function Preloader() {
               font-size: 0.62rem;
               letter-spacing: 0.2em;
               text-transform: uppercase;
-              color: var(--color-muted, #6e6155);
+              color: rgba(38, 20, 66, 0.6);
             }
             .wn-pct {
               font-variant-numeric: tabular-nums;
-              color: var(--color-gold-soft, #c9ad6b);
+              color: #4a2f7a;
             }
 
             /* --- grano -------------------------------------------------- */

@@ -146,7 +146,13 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(sessionStorage.getItem('whynot.entro.v1')==='1')document.documentElement.classList.add('ya-entro')}catch(e){}",
+              /* Marca la clase antes del primer pintado para que al volver
+                 de una ficha no parpadee la bienvenida. Respeta la misma
+                 vigencia de 45 min que lib/entrada: si la visita es vieja,
+                 la entrada vuelve a correr. */
+              "try{var m=sessionStorage.getItem('whynot.entro.v1');" +
+                "if(m&&+m>0&&Date.now()-+m<2700000)" +
+                "document.documentElement.classList.add('ya-entro')}catch(e){}",
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
