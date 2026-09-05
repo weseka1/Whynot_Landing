@@ -1079,7 +1079,16 @@ function HudTop({
         top: 0,
         left: 0,
         right: 0,
-        padding: "var(--space-md) var(--container-pad) 0",
+        /* El header es fijo y se dibuja ENCIMA de todas las secciones, así
+           que nada clickeable puede vivir debajo de su banda. Medido el
+           5-sep a 1280px: header 0→66px y el botón BUSCAR en 32→61px, o sea
+           adentro — elementFromPoint sobre el botón devolvía el header y el
+           buscador NO abría en desktop. En mobile ya libraba (header 0→72,
+           botón 80→116), por eso solo se corrige acá y queda a la misma
+           altura que en celular. */
+        padding: isMobile
+          ? "var(--space-md) var(--container-pad) 0"
+          : "calc(var(--space-md) + 48px) var(--container-pad) 0",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",

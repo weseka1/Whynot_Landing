@@ -46,9 +46,14 @@ const GLOBAL_FUSE: Fuse<CatalogEntry> = new Fuse(
  */
 export function searchAll(query: string, limit?: number): CatalogEntry[] {
   const q = query.trim();
-  if (!q) return getAllEntries();
-  const results = GLOBAL_FUSE.search(q).map((r) => r.item);
-  return limit !== undefined ? results.slice(0, limit) : results;
+  /* Sin query devolvemos el arranque del catálogo, PERO respetando el
+     límite. Antes esta rama lo ignoraba: al abrir el buscador —query
+     vacía— montaba las 280 filas con sus 280 <img> de una, justo en el
+     frame en que aparece el modal. En un celu eso es el tirón que hace
+     pensar que la web se colgó. Medido 5-sep: 280 filas / 280 imágenes
+     al abrir; con el límite, 12. */
+  const base = q ? GLOBAL_FUSE.search(q).map((r) => r.item) : getAllEntries();
+  return limit !== undefined ? base.slice(0, limit) : base;
 }
 
 /**

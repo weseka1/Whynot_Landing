@@ -215,8 +215,20 @@ body::before {
    - NO usamos "size" porque min-height varia por seccion (PastDrop 180vh
      mobile vs 100vh desktop, FuturisticGallery con sticky internals).
    Esta sola linea baja ~5-10% del tiempo de paint en mobile durante
-   scroll. Zero riesgo visual: containment es un hint al browser, no
-   cambia layout — solo le dice "esto es independiente".                  */
+   scroll.
+
+   /!\ OJO — aca decia "zero riesgo visual: containment es un hint al
+   browser, no cambia layout". ES FALSO, y costo un bug. "contain: layout"
+   convierte a la seccion en BLOQUE CONTENEDOR de sus descendientes
+   "position: fixed": dejan de estar anclados al viewport y pasan a estar
+   anclados a la seccion. Medido el 5-sep-2026 en produccion a 390px: el
+   backdrop del buscador, con "inset: 0", se dibujaba de -146px a 244px
+   (ni tapaba la pantalla) y el panel salia 18px afuera por la derecha.
+   Ademas la seccion crea stacking context, asi que el z-index de lo que
+   este adentro NO compite con el header ni con la barra de WhatsApp.
+
+   REGLA: todo overlay de pantalla completa (modal, drawer, hoja) se monta
+   con un portal en <body>. Adentro de estas secciones, "fixed" miente.   */
 #hero,
 #section-collections,
 #section-mission,
