@@ -30,6 +30,8 @@
 import dynamic from "next/dynamic";
 import Preloader               from "@/components/Preloader";
 import PixelReveal             from "@/components/PixelReveal";
+import AvisoCarrito           from "@/components/tienda/AvisoCarrito";
+import GuiaScroll             from "@/components/GuiaScroll";
 import SoundController         from "@/components/SoundController";
 import SectionColorController  from "@/components/SectionColorController";
 import Header                  from "@/components/Header";
@@ -122,6 +124,8 @@ export default function Page() {
 
       <Footer />
       <Carrito />
+      <AvisoCarrito />
+      <GuiaScroll />
     </>
   );
 }

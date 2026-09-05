@@ -34,6 +34,7 @@ import {
 } from "@/data/landingProducts";
 import { WhatsAppIcon } from "@/components/icons/SocialIcons";
 import { agregar, useTotales } from "@/lib/carrito";
+import AvisoCarrito from "@/components/tienda/AvisoCarrito";
 import { mainUrl } from "@/data/catalog";
 
 const LILAC = "#cdb5f0";
@@ -150,7 +151,12 @@ export default function ProductDetailView({ entry, related }: Props) {
       brand: entry.brand,
       model: entry.model,
       colorway: entry.colorway,
-      imageUrl: mainUrl(entry),
+      /* posterUrl y NO mainUrl: main.jpg sólo existe en los productos tipo
+         "image". En los de vista 360 la primera foto es 360_01.jpg, así que
+         los items agregados desde una ficha 360 entraban al carrito con una
+         URL que da 404 — y en el aviso se veía el ícono de imagen rota.
+         posterUrl elige la correcta según el tipo; para eso existe. */
+      imageUrl: posterUrl(entry),
       size: selectedSize,
       price: null,
       transferencia: null,
@@ -170,6 +176,12 @@ export default function ProductDetailView({ entry, related }: Props) {
   return (
     <div style={pageStyle}>
       <style>{LOCAL_CSS}</style>
+
+      {/* El aviso del carrito vive acá también: se agrega desde la ficha,
+          así que la confirmación tiene que estar donde ocurre la acción.
+          Antes el carrito sólo existía en la home — agregabas desde acá y no
+          tenías dónde ver qué llevabas. */}
+      <AvisoCarrito />
 
       {/* ── Header ──────────────────────────────────────────────── */}
       <header style={headerStyle}>
@@ -321,7 +333,10 @@ export default function ProductDetailView({ entry, related }: Props) {
             aria-label={`Agregar ${entry.brand} ${entry.model} al pedido`}
           >
             {agregado ? (
-              <>✓ Agregado{unidades > 1 ? ` · ${unidades} pares` : ""}</>
+              /* Sin el total: "Agregado · 10 pares" decía CUÁNTO llevás pero
+                 nunca QUÉ, y en una tienda que se elige por talle eso no
+                 confirma nada. El detalle lo muestra el AvisoCarrito. */
+              <>✓ Agregado</>
             ) : (
               <>
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -779,9 +794,34 @@ const LOCAL_CSS = `
     outline: 3px solid rgba(255,255,255,0.85);
     outline-offset: 3px;
   }
+  /* ── El confirmado, en vidrio y no en verde macizo ──────────────────
+     Era un bloque #1d7a4a a todo el ancho: sobre el lila de la ficha
+     rompía el lenguaje de toda la web, que es vidrio. Juani lo marcó junto
+     con "recordá mantener el efecto iPhone liquid glass".
+
+     Ahora confirma con el mismo material, apenas teñido de verde y con el
+     tilde en color. El QUÉ agregaste lo cuenta el AvisoCarrito, que para
+     eso salta. */
   .pd-cart-btn.is-done {
-    background: #1d7a4a;
-    border-color: rgba(255,255,255,0.6);
+    background:
+      linear-gradient(
+          168deg,
+          rgba(232, 250, 240, 0.92),
+          rgba(214, 240, 226, 0.82)
+        )
+        padding-box,
+      linear-gradient(
+          140deg,
+          rgba(255, 255, 255, 0.95),
+          rgba(255, 255, 255, 0.25) 40%,
+          rgba(29, 122, 74, 0.45)
+        )
+        border-box;
+    border: 1px solid transparent;
+    color: #12603a;
+    box-shadow:
+      0 14px 30px -14px rgba(18, 96, 58, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
   @media (prefers-reduced-motion: reduce) {
     .pd-cart-btn { transition: none; }
