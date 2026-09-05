@@ -23,7 +23,6 @@ import { cargarModelViewer } from "@/lib/modelViewer";
 import { EVENTO_HERO_LISTO } from "@/lib/preloadAssets";
 import { site } from "@/data/site";
 import FrameBorder from "./FrameBorder";
-import DiscoverButton from "./DiscoverButton";
 import MarqueeBanner from "./MarqueeBanner";
 import { mobileGLB } from "@/lib/mobileGLB";
 import { useIsMobile } from "./useIsMobile";
@@ -383,12 +382,18 @@ export default function Hero() {
 
         <div />
 
+        {/* Acá vivía el botón "Ver zapatillas", abajo a la derecha del mono.
+            Juani lo mandó sacar (5-sep): se montaba con la nube y competía
+            con la guía de scroll, que hace el mismo trabajo mejor — baja a
+            #tienda y además aparece sola cuando el visitante se queda
+            quieto. Dos cosas empujando al mismo lado, una encima del dibujo,
+            es peor que una. El camino a la tienda queda por la guía, por el
+            menú y por la barra de WhatsApp. */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto",
+            gridTemplateColumns: "1fr",
             alignItems: "end",
-            gap: "var(--space-md)",
           }}
         >
           <p
@@ -401,14 +406,6 @@ export default function Hero() {
           >
             {site.hero.sub}
           </p>
-
-          <div style={{ pointerEvents: "auto" }}>
-            {/* A la tienda, no a Collections: el visitante que toca el CTA del hero
-                quiere ver que hay para comprar. #tienda envuelve Mas vendidos y
-                Nuevos ingresos (Mas vendidos puede no existir si nadie marco
-                featured en el panel). */}
-            <DiscoverButton label={site.hero.discover} href="#tienda" />
-          </div>
         </div>
       </div>
     </section>

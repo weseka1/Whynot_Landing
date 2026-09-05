@@ -94,9 +94,12 @@ export default function GuiaScroll() {
         .guia {
           position: fixed;
           left: 50%;
-          /* Por ENCIMA del CTA del hero, no al lado: "VER ZAPATILLAS"
-             vive abajo a la derecha y con 20px las dos cosas se pisaban.
-             86px las deja apiladas y legibles. */
+          /* 86px porque abajo esta la barra de WhatsApp: arranca a 12px del
+             borde y mide 58 de alto, o sea que su techo queda en 70. Esto
+             pasa 16px por encima.
+             (Antes este comentario decia que los 86 eran para esquivar el
+             boton "Ver zapatillas" del hero. Ese boton se saco el 5-sep y
+             la medida NO cambia: la que manda es la barra.) */
           bottom: calc(86px + env(safe-area-inset-bottom));
           transform: translateX(-50%);
           z-index: 45;

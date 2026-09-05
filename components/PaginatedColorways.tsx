@@ -105,34 +105,60 @@ export default function PaginatedColorways({
             alignItems: "center",
             gap: "0.6rem",
             padding: "0.55rem 0.95rem",
-            background: "rgba(255,255,255,0.55)",
-            border: `1.5px solid ${DARK}`,
+            /* Mismo vidrio que el campo de la home: relleno translucido y
+               borde claro, no una linea de tinta plena de 1.5px. */
+            minHeight: 52,
+            background: "rgba(255,255,255,0.42)",
+            border: "1px solid rgba(255,255,255,0.62)",
             borderRadius: 999,
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
+            backdropFilter: "blur(20px) saturate(170%)",
+            WebkitBackdropFilter: "blur(20px) saturate(170%)",
             boxShadow:
               "0 6px 16px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.8)",
             flex: "1 1 320px",
             maxWidth: 440,
           }}
         >
-          <span style={{ color: DARK, fontSize: "0.95rem", fontWeight: 700 }}>
-            ⌖
-          </span>
+          {/* Lupa de verdad. Acá había un ⌖ (una MIRA): el mismo glifo que
+              en la home nadie leyó como buscador. */}
+          <svg
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={DARK_DIM}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            aria-hidden="true"
+            style={{ flex: "0 0 auto", transform: "translateY(-0.5px)" }}
+          >
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m16 16 4 4" />
+          </svg>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="FILTER · type model or colorway..."
+            /* Estaba EN INGLES ("FILTER - type model or colorway...") en las
+               19 paginas de marca de una tienda argentina. */
+            placeholder="Buscá el modelo o el color"
+            aria-label="Buscar dentro de esta marca"
+            enterKeyHint="search"
             style={{
               flex: 1,
+              /* Sin esto un input flex no se deja encoger y estira la fila. */
+              minWidth: 0,
               border: "none",
               outline: "none",
               background: "transparent",
               color: DARK,
-              fontFamily: "var(--font-mono, monospace)",
-              fontSize: "0.75rem",
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
+              /* Tipografia del sistema, sin espaciado ni mayusculas: lo que
+                 se escribe en un campo tiene que leerse facil. */
+              fontFamily: "inherit",
+              /* 16px CLAVADOS: con menos, iOS Safari le hace zoom a toda la
+                 pagina al enfocar. Este era el ultimo input del sitio que
+                 seguia por debajo. */
+              fontSize: 16,
+              letterSpacing: 0,
             }}
             autoComplete="off"
             spellCheck={false}
@@ -140,7 +166,7 @@ export default function PaginatedColorways({
           {search && (
             <button
               onClick={() => setSearch("")}
-              aria-label="Clear filter"
+              aria-label="Borrar búsqueda"
               style={{
                 background: "none",
                 border: "none",
@@ -168,8 +194,8 @@ export default function PaginatedColorways({
             }}
           >
             {filtered.length === 0
-              ? "NO MATCHES"
-              : `${filtered.length} MATCH${filtered.length === 1 ? "" : "ES"}`}
+              ? "NO ENCONTRAMOS NINGUNO"
+              : `${filtered.length} ${filtered.length === 1 ? "RESULTADO" : "RESULTADOS"}`}
           </div>
         )}
       </div>
@@ -227,9 +253,9 @@ export default function PaginatedColorways({
           >
             <div style={{ fontSize: "1.4rem", marginBottom: "0.8rem" }}>⊘</div>
             <div style={{ fontWeight: 700, color: DARK, marginBottom: "0.4rem" }}>
-              NO SPECIMENS MATCH
+              NO ENCONTRAMOS NINGUNO
             </div>
-            <div>TRY ANOTHER QUERY</div>
+            <div>PROBÁ CON OTRA PALABRA</div>
           </motion.div>
         ) : (
           <motion.div

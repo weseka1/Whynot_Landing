@@ -10,7 +10,7 @@
    - Click en resultado → router.push al colorway page
    ============================================================================ */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -59,21 +59,40 @@ export default function CommandPalette({
     [encontrados]
   );
 
-  /* Reset cuando se abre */
+  /* ── El foco tiene que pasar DENTRO del gesto ─────────────────────────
+     En iOS Safari el teclado sube solo si el focus() ocurre en la misma
+     tarea que el toque del usuario. Con requestAnimationFrame ya salimos
+     del gesto: el panel se abría y el teclado NO subía, así que había que
+     tocar el campo una segunda vez. Con un efecto de layout el foco corre
+     sincrónico apenas el input está en el DOM, todavía adentro del click.
+
+     preventScroll no es un detalle: al enfocar, el browser scrollea el
+     ancestro scrolleable para traer el input a la vista, y ese scroll se
+     lleva puesto el overlay entero de costado (medido 5-sep: la sección
+     terminaba con scrollLeft 146). El portal ya lo evita; esto lo deja
+     imposible.
+
+     useLayoutEffect en el server tira warning y este componente igual se
+     renderiza en SSR, así que en el server usamos el pasivo. */
+  const efectoDeLayout = typeof window === "undefined" ? useEffect : useLayoutEffect;
+  efectoDeLayout(() => {
+    if (!open) return;
+    inputRef.current?.focus({ preventScroll: true });
+  }, [open]);
+
+  /* Reset al abrir. Va aparte del foco: esto puede esperar al efecto
+     pasivo, el foco no. Y el rAF queda como red por si el input todavía no
+     estaba pintado cuando corrió el efecto de layout (primera apertura sin
+     precalentar). */
   useEffect(() => {
     if (!open) return;
     setQuery("");
     setSelectedIdx(0);
-    /* focus tras mount (rAF para asegurar que el input está pintado).
-       preventScroll no es un detalle: al enfocar, el browser scrollea al
-       ancestro scrolleable para traer el input a la vista. Si el modal
-       llegara a quedar dentro de un contenedor scrolleable, ese scroll se
-       lleva puesto TODO el overlay de costado (medido 5-sep: la sección
-       terminaba con scrollLeft 146 y el panel salía de pantalla). El portal
-       ya lo evita; esto lo deja imposible. */
-    requestAnimationFrame(() =>
-      inputRef.current?.focus({ preventScroll: true })
-    );
+    if (document.activeElement !== inputRef.current) {
+      requestAnimationFrame(() =>
+        inputRef.current?.focus({ preventScroll: true })
+      );
+    }
   }, [open]);
 
   /* Reset selected cuando cambia la query */
@@ -225,7 +244,10 @@ export default function CommandPalette({
                     renglón: se partían en dos y quedaba amontonado. Ahí va
                     corto. */}
                 <span>
-                  {esTactil ? "⌖ BUSCAR" : "⌖ BUSCAR EN EL CATÁLOGO"}
+                  {/* Sin el ⌖ adelante: era una MIRA, no una lupa, y encima
+                      duplicaba la palabra que ya está al lado. La lupa vive
+                      donde sirve, adentro del campo. */}
+                  {esTactil ? "BUSCAR" : "BUSCAR EN EL CATÁLOGO"}
                   {/* "12 resultados" cuando había 134 era mentira; decir
                       "134" y mostrar 12 también. Se dice lo que se ve y de
                       cuántos, que además invita a afinar la búsqueda. */}
@@ -278,20 +300,33 @@ export default function CommandPalette({
                   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7)",
                 }}
               >
-                <span
-                  style={{
-                    color: DARK,
-                    fontSize: "1.1rem",
-                    fontWeight: 700,
-                  }}
+                {/* Lupa de verdad, la misma de todo el sitio. Va en SVG con
+                    trazo propio: un glifo de fuente escalado a mano queda de
+                    otro peso que el resto de la interfaz. */}
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={DARK_DIM}
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                  style={{ flex: "0 0 auto", transform: "translateY(-0.5px)" }}
                 >
-                  ⌖
-                </span>
+                  <circle cx="11" cy="11" r="6.5" />
+                  <path d="m16 16 4 4" />
+                </svg>
                 <input
                   ref={inputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Marca, modelo o color..."
+                  /* En criollo y diciendo QUE escribir. "Marca, modelo o
+                     color..." nombraba categorías; un ejemplo concreto se
+                     entiende sin pensarlo. */
+                  placeholder="Jordan, Nike, Air Force…"
+                  aria-label="Buscar zapatillas"
+                  enterKeyHint="search"
                   style={{
                     flex: 1,
                     /* Ancho mínimo 0: sin esto un input flex no se deja
@@ -301,13 +336,17 @@ export default function CommandPalette({
                     outline: "none",
                     background: "transparent",
                     color: DARK,
-                    fontFamily: "var(--font-mono, monospace)",
+                    /* Tipografía del sistema y tracking CERO. Lo que se
+                       escribe en un campo no va en monoespaciada espaciada:
+                       delata al clon y, sobre todo, se lee peor — que es
+                       justo lo contrario de lo que hace falta acá. */
+                    fontFamily: "inherit",
                     /* 16px CLAVADOS. Con menos, iOS le hace zoom a la
                        página al enfocar el input y el overlay entero
                        queda corrido — el mismo tell que ya arreglamos en
                        el buscador de marcas del menú. */
                     fontSize: 16,
-                    letterSpacing: "0.05em",
+                    letterSpacing: 0,
                   }}
                   autoComplete="off"
                   spellCheck={false}

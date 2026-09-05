@@ -461,18 +461,35 @@ function Dropdown({
                 marginBottom: "0.55rem",
               }}
             >
-              <span style={{ color: DARK, fontSize: "0.85rem", lineHeight: 1 }}>⌖</span>
+              {/* Lupa de verdad: el ⌖ era una mira. Mismo icono en todo el sitio. */}
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={DARK_2}
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                aria-hidden="true"
+                style={{ flex: "0 0 auto", transform: "translateY(-0.5px)" }}
+              >
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="m16 16 4 4" />
+              </svg>
               <input
                 ref={inputRef}
                 value={query}
                 onChange={(e) => onQueryChange(e.target.value)}
-                placeholder="BUSCAR..."
+                placeholder="Escribí para filtrar"
+                aria-label="Filtrar la lista"
                 style={{
                   flex: 1,
-                  fontFamily: BRACKET_FONT,
-                  fontSize: "0.72rem",
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
+                  /* Era el UNICO input del repo por debajo de 16px (0.72rem
+                     = 11,5px): iOS Safari le hacia zoom a toda la pagina al
+                     enfocarlo, justo adentro de un desplegable flotante. */
+                  fontFamily: "inherit",
+                  fontSize: 16,
+                  letterSpacing: 0,
                   color: DARK,
                   background: "transparent",
                   border: 0,

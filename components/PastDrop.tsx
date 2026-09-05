@@ -45,6 +45,7 @@ const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
   loading: () => null,
 });
 import BrandModelFilter from "@/components/BrandModelFilter";
+import CampoBuscador from "@/components/CampoBuscador";
 import { useIsMobile } from "@/components/useIsMobile";
 
 /* ---------------- METADATA ----------------
@@ -218,6 +219,47 @@ export default function PastDrop() {
   useEffect(() => {
     if (searchOpen) setBuscadorUsado(true);
   }, [searchOpen]);
+
+  /* ---------- Precalentado del buscador ----------
+     El chunk del buscador se baja recien cuando lo tocas. Medido en local:
+     300ms despues del toque todavia no existe el input, recien aparece cerca
+     de los 900. En un celu con datos moviles eso es tocar y que no pase nada
+     — y el que no ve respuesta toca de nuevo, o se va.
+
+     Se precalienta cuando el CAMPO entra en pantalla, no al cargar la pagina:
+     para llegar hasta aca ya hay que haber bajado tres pantallas, asi que no
+     toca el arranque, que es lo que Juani pidio cuidar ("ese buscador siento
+     que relentiza mucho la web"). Y va en tiempo ocioso, detras de todo lo
+     que el navegador tenga pendiente. */
+  const campoRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = campoRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    let pedido = false;
+    const ocioso = (cb: () => void) => {
+      const w = window as unknown as {
+        requestIdleCallback?: (c: () => void, o?: { timeout: number }) => void;
+      };
+      if (typeof w.requestIdleCallback === "function") w.requestIdleCallback(cb, { timeout: 2000 });
+      else window.setTimeout(cb, 300);
+    };
+    const obs = new IntersectionObserver((entradas) => {
+      if (pedido || !entradas.some((e) => e.isIntersecting)) return;
+      pedido = true;
+      obs.disconnect();
+      ocioso(() => {
+        /* No alcanza con bajar el chunk: entre el toque y el input hay tres
+           renders encadenados (montar el dynamic, su propio estado de
+           montado, y recien ahi el portal). Medido con el chunk YA en cache
+           seguian pasando 500-700ms en celular y 1,7s en escritorio. Montarlo
+           tambien en ocio deja el toque con una sola cosa por hacer: abrirlo.
+           Montado y cerrado no dibuja nada — devuelve null. */
+        void import("@/components/CommandPalette").then(() => setBuscadorUsado(true));
+      });
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -688,12 +730,7 @@ export default function PastDrop() {
         </AnimatePresence>
 
         {/* ----- TOP HUD ----- */}
-        <HudTop
-          active={active}
-          activeIndex={activeIndex}
-          onSearchClick={() => setSearchOpen(true)}
-          isMobile={isMobile}
-        />
+        <HudTop active={active} activeIndex={activeIndex} isMobile={isMobile} />
 
         {/* ----- TITLE + EYEBROW + BRAND×MODEL FILTER -----
              Wrapper unico para eyebrow / titulo / filtro. Antes el titulo
@@ -754,6 +791,25 @@ export default function PastDrop() {
               }}
             />
           </h2>
+
+          {/* EL BUSCADOR, y va PRIMERO — antes que los filtros por marca.
+              Es la misma regla que ya rige en el menu: lo primero que ve el
+              que llega es el campo para escribir, no siete controles que hay
+              que entender antes de poder buscar. Juani: "si quiero buscar
+              marcas en especifico no tengo ganas de buscar 1 hora al pedo".
+              Ademas es el orden correcto por alcance: esto encuentra por
+              modelo SIN saber la marca; los pills de abajo piden la marca
+              primero. */}
+          <div
+            ref={campoRef}
+            style={{
+              width: "100%",
+              maxWidth: "min(92vw, 520px)",
+              pointerEvents: "auto", // el wrapper del bloque es pointerEvents:none
+            }}
+          >
+            <CampoBuscador onAbrir={() => setSearchOpen(true)} />
+          </div>
 
           {/* BRAND × MODEL filter — pills glass debajo del titulo. Click en
               un colorway navega al catalogo del producto. Los dropdowns se
@@ -1064,12 +1120,10 @@ function BackgroundParticles({ count = 22 }: { count?: number }) {
 function HudTop({
   active,
   activeIndex,
-  onSearchClick,
   isMobile,
 }: {
   active: Spec;
   activeIndex: number;
-  onSearchClick?: () => void;
   isMobile: boolean;
 }) {
   return (
@@ -1121,6 +1175,17 @@ function HudTop({
           MODELO {String(activeIndex + 1).padStart(3, "0")}
         </span>
       </div>
+      {/* Acá vivía el disparador del buscador: un círculo de 36×36 con el
+          glifo ⌖ (una MIRA, no una lupa) y sin ninguna palabra. En un celular
+          la fila entera decía "● MODELO 001 ⌖ [01/10]" — nada que se leyera
+          como buscar. Juani lo marcó en una captura: "no se entiende que es
+          un buscador".
+
+          No se arregló acá porque no entra: el hueco libre de esta fila es de
+          95,5px a 320px y un campo que se lea como campo necesita 157px. El
+          buscador pasó a tener fila propia debajo del título (CampoBuscador),
+          ancho completo y con lupa de verdad. Un solo disparador: dos habrían
+          sido peor que uno mudo. */}
       <div
         style={{
           display: "flex",
@@ -1129,58 +1194,6 @@ function HudTop({
           pointerEvents: "auto",
         }}
       >
-        {/* Search trigger — en mobile, icono solo (sin "SEARCH" ni "⌘K")
-            para no quitarle ancho al [01/14] de la derecha. Tap target
-            agrandado a 36px minimo. */}
-        {onSearchClick && (
-          <motion.button
-            onClick={onSearchClick}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            aria-label="Abrir buscador del catálogo"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.55rem",
-              padding: isMobile ? "0.45rem 0.55rem" : "0.35rem 0.8rem",
-              background: "rgba(255,255,255,0.6)",
-              border: "1.5px solid #0a0a14",
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: "var(--font-mono, monospace)",
-              fontSize: "0.62rem",
-              letterSpacing: "0.22em",
-              textTransform: "uppercase",
-              color: "#0a0a14",
-              fontWeight: 600,
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow:
-                "0 4px 14px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.8)",
-              minWidth: isMobile ? 36 : undefined,
-              minHeight: isMobile ? 36 : undefined,
-              justifyContent: "center",
-            }}
-          >
-            <span style={{ fontSize: "0.95rem", lineHeight: 1 }}>⌖</span>
-            {!isMobile && <span>BUSCAR</span>}
-            {!isMobile && (
-              <span
-                style={{
-                  padding: "1px 6px",
-                  background: "rgba(244,220,63,0.6)",
-                  border: "1px solid #0a0a14",
-                  borderRadius: 4,
-                  fontSize: "0.52rem",
-                  letterSpacing: "0.18em",
-                }}
-              >
-                ⌘K
-              </span>
-            )}
-          </motion.button>
-        )}
         {!isMobile && <span style={{ opacity: 0.55 }}>{active.colorway}</span>}
         <span style={{ color: "#0a0a14", fontWeight: 600 }}>
           [{String(activeIndex + 1).padStart(2, "0")}/{String(N).padStart(2, "0")}]
