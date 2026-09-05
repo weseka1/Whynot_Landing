@@ -220,9 +220,22 @@ export default function Preloader() {
       {visible && (
         <motion.div
           className="wn-preloader"
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: reduced ? 0.2 : 0.62, ease: [0.16, 1, 0.3, 1] }}
+          /* ── La salida es una CORTINA, no un fade (4-sep-2026) ──────────
+             Un fade dice "esto se estaba tapando y se va". Una persiana que
+             sube desde abajo dice "esto se abre y ya estas adentro" — y deja
+             ver el hero apareciendo por debajo mientras corre, en vez de
+             mostrarlo detras de una capa a medio desvanecer.
+
+             Es el gesto de la demo de Islas Group. clip-path anima en el
+             compositor, asi que no cuesta layout ni repaint aunque cubra la
+             pantalla entera. */
+          initial={{ opacity: 1, clipPath: "inset(0% 0% 0% 0%)" }}
+          exit={
+            reduced
+              ? { opacity: 0 }
+              : { clipPath: "inset(0% 0% 100% 0%)", opacity: 1 }
+          }
+          transition={{ duration: reduced ? 0.2 : 0.85, ease: [0.76, 0, 0.24, 1] }}
           aria-live="polite"
           aria-busy="true"
         >
@@ -249,7 +262,32 @@ export default function Preloader() {
             exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.03 }}
             transition={{ duration: reduced ? 0.2 : 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            <p className="wn-mark">WHY NOT</p>
+            {/* ── El wordmark se ARMA, no aparece (4-sep-2026) ─────────
+                Juani: "antes habia un WHY NOT y cargaba como un sistema,
+                queria que eso lo dejasemos pro" y "una intro volada cuando
+                abrimos, antes que cargue todo".
+
+                Cada letra arranca abajo, tapada, y sube a su lugar con 35 ms
+                de diferencia entre una y la otra. Es el gesto de la demo de
+                Islas Group, que es la vara de la casa para una entrada: la
+                marca no se muestra, se construye delante tuyo.
+
+                Con prefers-reduced-motion aparece entera y listo. */}
+            <p className="wn-mark" aria-label="Why Not">
+              {"WHY NOT".split("").map((ch, i) => (
+                <span className="wn-letra" key={i} aria-hidden="true">
+                  <span
+                    style={
+                      reduced
+                        ? undefined
+                        : { animationDelay: `${180 + i * 35}ms` }
+                    }
+                  >
+                    {ch === " " ? " " : ch}
+                  </span>
+                </span>
+              ))}
+            </p>
 
             <div
               className="wn-track"
@@ -378,6 +416,35 @@ export default function Preloader() {
               -webkit-mask-composite: xor;
               mask-composite: exclude;
               pointer-events: none;
+            }
+
+            /* --- wordmark: las letras suben desde abajo ------------------
+               Cada .wn-letra es una ventana con overflow hidden; el <span>
+               de adentro empieza corrido 120% hacia abajo (fuera de la
+               ventana) y sube a 0. Por eso la letra no "aparece": entra. */
+            .wn-letra {
+              display: inline-block;
+              overflow: hidden;
+              vertical-align: bottom;
+              /* Sin esto, las letras con tilde o descendentes se recortan
+                 contra el borde de su propia ventana. */
+              padding-bottom: 0.06em;
+            }
+            .wn-letra > span {
+              display: inline-block;
+              transform: translateY(120%);
+              animation: wnSube 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+            @keyframes wnSube {
+              to {
+                transform: translateY(0);
+              }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .wn-letra > span {
+                transform: none;
+                animation: none;
+              }
             }
 
             /* --- wordmark ----------------------------------------------- */
