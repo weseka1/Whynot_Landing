@@ -684,11 +684,26 @@ export default function Mission() {
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
           }
-          /* Centrado, no pegado arriba: con align-self:start el texto corto
-             (la mayoria de los pasos) dejaba media pantalla en blanco entre
-             el parrafo y las burbujas — el hueco que se ve en el iPhone. */
+          /* ── Centrar SIN recortar (4-sep-2026) ────────────────────────
+             Con align-self:start los pasos cortos dejaban media pantalla en
+             blanco. Lo pasé a center y rompí algo peor: cuando el paso es más
+             alto que su fila (el de "¿Cómo comprar?", que suma copy y botón
+             de WhatsApp) centrar lo desborda por ARRIBA y por abajo, y el
+             desborde de arriba no se puede scrollear. Resultado en el iPhone
+             de Juani: el título cortado por la mitad.
+
+             margin auto hace las dos cosas bien, y para eso existe: los
+             márgenes automáticos se reparten el espacio LIBRE, así que
+             centran cuando sobra lugar y se resuelven a cero cuando falta —
+             ahí manda el align-self y el bloque arranca arriba, entero. Es la
+             diferencia entre centrar y recortar.
+
+             (Ojo con los acentos graves en estos comentarios: el bloque
+             style jsx es un template literal y uno solo lo corta al medio.
+             Costó un build roto.) */
           .paso {
-            align-self: center;
+            align-self: start;
+            margin-block: auto;
           }
           .titulo {
             font-size: clamp(1.75rem, 8.4vw, 2.5rem);
