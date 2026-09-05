@@ -204,7 +204,38 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
 
         <div style={dividerStyle} />
 
-        {/* Talles */}
+        {/* ── Talles ──────────────────────────────────────────────────────
+            Si el producto NO tiene ningún talle cargado, no se muestra la
+            grilla. Antes se renderizaban siempre los 10 de ALL_SIZES (36
+            al 45) y se deshabilitaban los que no estuvieran en la ficha —
+            así que en un producto sin datos el cliente veía diez casilleros
+            grises e intocables, o sea "agotado en todos los talles". Y no
+            está agotado: nadie cargó los talles todavía.
+
+            Medido contra la base el 5-sep-2026: 169 de 327 productos (el
+            52%) están así. Más de la mitad del catálogo le decía al
+            visitante que no había nada para él.
+
+            En su lugar va el camino que sí vende: preguntar por WhatsApp,
+            que es como trabajan igual. */}
+        {meta.sizes.length === 0 ? (
+          <div style={sizeBlockStyle}>
+            <div style={sizeHeaderStyle}>
+              <span style={metaLabelStyle}>Talles</span>
+            </div>
+            <a
+              className="pd-consultar-talle"
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 5.5h16v10H9l-5 4v-14Z" />
+              </svg>
+              Consultanos tu talle por WhatsApp
+            </a>
+          </div>
+        ) : (
         <div style={sizeBlockStyle}>
           <div style={sizeHeaderStyle}>
             <span style={{ ...metaLabelStyle, color: pideTalle ? "#c9772b" : undefined }}>
@@ -244,6 +275,7 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
             })}
           </div>
         </div>
+        )}
 
         {/* CTA principal: sumar al pedido y seguir mirando. */}
         {!outOfStock && (
@@ -635,6 +667,35 @@ const LOCAL_CSS = `
     color: ${DARK};
     box-shadow: 0 0 0 2px rgba(244,220,63,0.45);
   }
+  /* Botón que reemplaza la grilla cuando el producto no tiene talles
+     cargados. No es un estado de error: es el camino que ya usan para
+     vender, puesto donde el cliente lo necesita. */
+  .pd-consultar-talle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(10, 10, 20, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    color: #0a0a14;
+    font-size: 0.92rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 200ms, transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .pd-consultar-talle:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px);
+  }
+  .pd-consultar-talle:focus-visible {
+    outline: 2px solid #0a0a14;
+    outline-offset: 3px;
+  }
+
   .pd-size-chip.is-disabled {
     cursor: not-allowed;
     opacity: 0.35;
