@@ -1350,6 +1350,30 @@ function Capsule({
     Math.round(100 - Math.abs(o) * 10)
   );
 
+  /* ── Las vecinas se van de FOCO, no solo de opacidad (4-sep-2026) ──────
+     Juani: "que quede como el efecto de los relojes de Islas Group o como
+     el de las camperas de Diego". Mirando las dos demos de la casa, el
+     gesto que comparten no es el movimiento: es como tratan a las piezas
+     que NO son la activa. No les bajan la opacidad y listo — les sacan el
+     foco (blur), el color (grayscale) y la luz (brightness). El ojo lee una
+     vidriera con una pieza iluminada, no una fila de items medio
+     transparentes.
+
+     Se calcula sobre el offset continuo, asi que acompaña el dedo mientras
+     arrastras en vez de saltar al soltar. El activo devuelve "none": el
+     video que se esta mirando no paga ni un filtro.
+
+     El blur es la mitad en mobile. Es la unica parte cara de esto y ya
+     sabemos como termina esa historia en un celu. */
+  const filtro = useTransform(offset, (o) => {
+    const a = Math.min(1, Math.abs(o));
+    if (a < 0.08) return "none";
+    const desenfoque = (isMobile ? 1.1 : 2.2) * a;
+    const gris = 0.55 * a;
+    const luz = 1 - 0.3 * a;
+    return `blur(${desenfoque.toFixed(2)}px) grayscale(${gris.toFixed(2)}) brightness(${luz.toFixed(2)})`;
+  });
+
   /* Solo renderizamos <video> + decoraciones animadas dentro del rango
      cercano al activo. Las capsulas lejanas son disco blanco vacio. La
      opacity de la capsula igual las hace casi invisibles, asi que el
@@ -1394,6 +1418,7 @@ function Capsule({
         scaleX: s,
         scaleY: s,
         opacity,
+        filter: filtro,
         zIndex,
         rotateX: ax,
         rotateY: ay,
