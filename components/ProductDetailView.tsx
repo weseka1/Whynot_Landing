@@ -26,7 +26,12 @@ import {
 } from "@/lib/contact";
 import type { CatalogEntry } from "@/data/catalog";
 import { posterUrl } from "@/data/catalog";
-import type { ProductMeta, Badge } from "@/lib/productMeta";
+import type { Badge } from "@/lib/productMeta";
+import {
+  fetchProductoPorSlug,
+  disponibilidadDeTalles,
+  type PanelProduct,
+} from "@/data/landingProducts";
 import { WhatsAppIcon } from "@/components/icons/SocialIcons";
 import { agregar, useTotales } from "@/lib/carrito";
 import { mainUrl } from "@/data/catalog";
@@ -53,10 +58,9 @@ const ALL_SIZES = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
 type Props = {
   entry: CatalogEntry;
   related: CatalogEntry[];
-  meta: ProductMeta;
 };
 
-export default function ProductDetailView({ entry, related, meta }: Props) {
+export default function ProductDetailView({ entry, related }: Props) {
   const router = useRouter();
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [canShare, setCanShare] = useState(false);
@@ -70,8 +74,39 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
   const [pideTalle, setPideTalle] = useState(false);
   const { unidades } = useTotales();
 
-  const outOfStock = meta.stock === 0;
-  const sizeAvailable = (s: string) => meta.sizes.includes(s);
+  /* ── Los talles salen del PANEL, no de un generador (5-sep-2026) ──────
+     Hasta hoy venían de lib/productMeta, un archivo que se declara a sí
+     mismo "mock data determinístico": inventaba talles, stock y etiqueta a
+     partir de un hash del nombre del producto. El cliente veía talles que
+     no existían en ningún lado y podía elegir un 42 que no había.
+
+     Ahora se consultan los datos reales de landing_products. La ficha es
+     estática (se prerenderiza), así que la consulta va del lado del cliente
+     — igual que la tienda de la home. */
+  const [panel, setPanel] = useState<PanelProduct | null>(null);
+  const [cargandoPanel, setCargandoPanel] = useState(true);
+  useEffect(() => {
+    let vivo = true;
+    fetchProductoPorSlug(entry.slug.brand, entry.slug.model, entry.slug.colorway)
+      .then((p) => { if (vivo) setPanel(p); })
+      .catch(() => { /* sin panel se cae al comportamiento asumido */ })
+      .finally(() => { if (vivo) setCargandoPanel(false); });
+    return () => { vivo = false; };
+  }, [entry.slug.brand, entry.slug.model, entry.slug.colorway]);
+
+  const { disponibles, asumido } = disponibilidadDeTalles(panel, ALL_SIZES);
+  const sizeAvailable = (s: string) => disponibles.includes(s);
+  /* El stock del producto entero: null mientras carga o si no está en el
+     panel — nunca 0, que se leería como "agotado" sin fundamento. */
+  const stockReal = panel?.stock ?? null;
+  /* La etiqueta y la categoría también salían del generador. Si el panel
+     no tiene el producto, no se muestran: mejor vacío que inventado. */
+  const badgePanel: Badge =
+    panel?.badge === "hot" || panel?.badge === "new" || panel?.badge === "drop"
+      ? panel.badge
+      : null;
+  const categoriaPanel = panel?.category?.trim() || "Sneakers";
+  const outOfStock = stockReal === 0;
 
   useEffect(() => {
     if (typeof navigator !== "undefined" && typeof navigator.canShare === "function") {
@@ -159,15 +194,15 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
       <div style={infoStyle}>
         {/* Badges */}
         <div style={badgesRowStyle}>
-          {meta.badge && (
+          {badgePanel && (
             <span
               style={{
                 ...badgeBase,
-                background: BADGE_MAP[meta.badge].bg,
-                color: BADGE_MAP[meta.badge].fg,
+                background: BADGE_MAP[badgePanel].bg,
+                color: BADGE_MAP[badgePanel].fg,
               }}
             >
-              {BADGE_MAP[meta.badge].label}
+              {BADGE_MAP[badgePanel].label}
             </span>
           )}
           {entry.type === "360" && (
@@ -193,13 +228,13 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
 
         {/* Stock */}
         <div>
-          <StockIndicator stock={meta.stock} />
+          <StockIndicator stock={stockReal} />
         </div>
 
         {/* Categoría */}
         <div style={metaRowStyle}>
           <span style={metaLabelStyle}>Categoría</span>
-          <span style={metaValueStyle}>{meta.category}</span>
+          <span style={metaValueStyle}>{categoriaPanel}</span>
         </div>
 
         <div style={dividerStyle} />
@@ -218,7 +253,7 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
 
             En su lugar va el camino que sí vende: preguntar por WhatsApp,
             que es como trabajan igual. */}
-        {meta.sizes.length === 0 ? (
+        {disponibles.length === 0 ? (
           <div style={sizeBlockStyle}>
             <div style={sizeHeaderStyle}>
               <span style={metaLabelStyle}>Talles</span>
@@ -377,7 +412,11 @@ export default function ProductDetailView({ entry, related, meta }: Props) {
 /* ============================================================================
    STOCK INDICATOR
    ============================================================================ */
-function StockIndicator({ stock }: { stock: number }) {
+function StockIndicator({ stock }: { stock: number | null }) {
+  /* null = todavía no sabemos (está cargando, o el producto no está en el
+     panel). No es lo mismo que cero: cero dice "agotado" y sería mentira.
+     En la duda no se afirma nada. */
+  if (stock == null) return null;
   if (stock === 0)
     return <span style={{ ...stockBase, color: "#d33b3b" }}>● Sin stock</span>;
   if (stock < 5)

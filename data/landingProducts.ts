@@ -210,6 +210,70 @@ export async function fetchPanelProducts(brandSlug?: string): Promise<PanelProdu
  * "Más vendidos". Si nadie marcó ninguno devuelve [] y la sección no se
  * renderiza: preferimos que falte a mostrar productos elegidos por nosotros.
  */
+/**
+ * Trae UN producto del panel por su slug de catálogo (marca/modelo/color).
+ *
+ * La ficha de producto es estática (se prerenderiza en build), así que sus
+ * datos comerciales tienen que entrar desde el cliente. Devuelve null si ese
+ * producto todavía no está cargado en el panel — que hoy pasa seguido: el
+ * catálogo de fotos tiene 280 entradas y el panel 327, pero no son el mismo
+ * conjunto.
+ */
+export async function fetchProductoPorSlug(
+  brandSlug: string,
+  modelSlug: string,
+  colorwaySlug: string,
+): Promise<PanelProduct | null> {
+  /* Consulta propia, SIN el dedupe de fetchPanelProducts.
+     Esa función descarta a propósito todo lo que ya está en
+     catalog-index.json, porque alimenta la fila de "nuevos ingresos". Una
+     ficha de producto es, por definición, algo que SÍ está en el catálogo:
+     usándola de atajo el producto quedaba siempre filtrado y la ficha creía
+     que el panel no lo tenía. Costó un rato de mirar los talles de la web
+     contra la base y ver que no coincidían. */
+  const todos = await query(`${BASE}&order=created_at.desc`);
+  const buscado = `${brandSlug}/${modelSlug}/${colorwaySlug}`;
+  return todos.find((p) => p.slug.full === buscado) ?? null;
+}
+
+/* ── Talles: qué hay y qué no (5-sep-2026) ────────────────────────────────
+   Juani: "armemos la estructura para trabajar por talles/producto... que el
+   stock sea administrado por ellos, ellos deciden cuántos pares por talle
+   hay".
+
+   La forma final es una columna `stock_por_talle` (jsonb) en
+   landing_products: {"40": 3, "41": 1}. Todavía no existe — hay que crearla
+   en Supabase, y para eso hace falta la service key.
+
+   Mientras tanto esto deriva del `sizes` que ya está cargado: un talle que
+   figura en la lista está disponible, aunque no sepamos cuántos pares.
+   Cuando la columna exista, se lee de ahí y el resto del código no cambia:
+   por eso la decisión vive acá y no repartida por los componentes. */
+export type Disponibilidad = {
+  /** Talles que se pueden pedir. */
+  disponibles: string[];
+  /** true si el producto no tiene datos y estamos asumiendo que hay de todo. */
+  asumido: boolean;
+};
+
+export function disponibilidadDeTalles(
+  p: PanelProduct | null,
+  todosLosTalles: readonly string[],
+): Disponibilidad {
+  /* Sin producto en el panel, o cargado sin talles: se asume que hay de todo.
+     Decisión de Juani (5-sep) sobre los 169 productos que hoy no tienen
+     talles cargados — prefiere ofrecerlos y ajustar por chat antes que
+     mostrar medio catálogo como agotado.
+
+     Distinto de lo que hacía lib/productMeta, que INVENTABA un subconjunto
+     con un hash del nombre: que un producto tuviera 39, 42 y 45 pero no 40
+     no respondía a nada. Esto es una política declarada y pareja. */
+  if (!p || p.sizes.length === 0) {
+    return { disponibles: [...todosLosTalles], asumido: true };
+  }
+  return { disponibles: p.sizes, asumido: false };
+}
+
 export async function fetchDestacados(limit = 8): Promise<PanelProduct[]> {
   return query(`${BASE}&featured=is.true&order=created_at.desc&limit=${limit}`);
 }

@@ -1,4 +1,19 @@
 /* ============================================================================
+   ⚠️ MOCK RETIRADO (5-sep-2026) — de acá ya NO salen datos de producto.
+   ----------------------------------------------------------------------------
+   Este archivo generaba stock, talles y etiqueta con un hash del nombre del
+   producto. La ficha lo usaba, así que durante meses mostró talles que no
+   existían en ningún lado: alguien podía elegir un 42 que no había, y el
+   "Últimas 3 unidades" era un número inventado.
+
+   Hoy la ficha lee landing_products (el panel). Lo único que sobrevive acá
+   es el TIPO Badge, que sigue describiendo las etiquetas válidas.
+
+   No volver a usar getProductMeta para nada que el visitante vea. Regla de
+   la casa: cero datos ficticios.
+   ============================================================================ */
+
+/* ============================================================================
    PRODUCT META — mock data determinístico (stock/badge/sizes) por colorway
    ----------------------------------------------------------------------------
    Genera valores plausibles a partir del slug del producto. Determinístico:

@@ -12,7 +12,6 @@ import {
   getEntryBySlug,
   type CatalogEntry,
 } from "@/data/catalog";
-import { getProductMeta } from "@/lib/productMeta";
 import ProductDetailView from "@/components/ProductDetailView";
 import {
   BgLayers,
@@ -66,7 +65,6 @@ export default async function CatalogProductPage({ params }: Params) {
   if (!entry) notFound();
 
   const related = getRelated(entry);
-  const meta = getProductMeta(entry);
 
   return (
     <main
@@ -84,7 +82,7 @@ export default async function CatalogProductPage({ params }: Params) {
       <CornerBrackets />
 
       {/* ============ CONTENT ============ */}
-      <ProductDetailView entry={entry} related={related} meta={meta} />
+      <ProductDetailView entry={entry} related={related} />
 
       <Scanlines />
     </main>
