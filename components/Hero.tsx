@@ -19,7 +19,6 @@
    ============================================================================ */
 
 import { useEffect, useRef, useState } from "react";
-import { EVENTO_ENTRADA, esPrimeraVisita } from "@/lib/entrada";
 import { cargarModelViewer } from "@/lib/modelViewer";
 import { EVENTO_HERO_LISTO } from "@/lib/preloadAssets";
 import { site } from "@/data/site";
@@ -95,24 +94,23 @@ export default function Hero() {
       if (typeof w.requestIdleCallback === "function") w.requestIdleCallback(fn, { timeout: 2500 });
       else window.setTimeout(fn, 400);
     };
-    /* Si la bienvenida ya paso (volver atras), va directo a idle. */
-    if (!esPrimeraVisita()) {
-      idle(montar);
-      return;
-    }
-    let hecho = false;
-    const arrancar = () => {
-      if (hecho) return;
-      hecho = true;
-      idle(montar);
-    };
-    window.addEventListener(EVENTO_ENTRADA, arrancar);
-    /* Red de seguridad: si el evento no llegara, el mono aparece igual. */
-    const t = window.setTimeout(arrancar, 3000);
-    return () => {
-      window.removeEventListener(EVENTO_ENTRADA, arrancar);
-      window.clearTimeout(t);
-    };
+    /* ── El mono se carga DURANTE la pantalla de carga (5-sep-2026) ──────
+       Antes esperaba a que el preloader se fuera (EVENTO_ENTRADA) para no
+       competir con el primer pintado. Tenía sentido cuando la lámina se iba
+       enseguida: el hero aparecía y el mono entraba unos segundos después,
+       y en el medio quedaba el cielo vacío. Juani, desde su PC: "me queda
+       sin el mono en el inicio".
+
+       Ahora el preloader ESPERA al mono (ver components/Preloader), así que
+       invertir esto no es una opción: si el mono siguiera esperando al
+       preloader, cada uno estaría esperando al otro. Se destrabaría por los
+       techos, pero recién a los 3-4 segundos y con la entrada estirada.
+
+       Y el argumento original ya no aplica: mientras la lámina está en
+       pantalla, el primer pintado YA ocurrió. Ese tiempo es exactamente
+       para esto — bajar lo pesado detrás de la cortina, que es lo que hace
+       una carga de verdad en vez de un parpadeo. */
+    idle(montar);
   }, []);
 
   useEffect(() => {

@@ -27,6 +27,7 @@ import {
   startDeferredPreload,
   withMobileVariants,
   withTimeout,
+  EVENTO_HERO_LISTO,
 } from "@/lib/preloadAssets";
 
 /** ── Cuánto dura la entrada (4-sep-2026) ─────────────────────────────────
@@ -49,7 +50,8 @@ const PISO_VISIBLE = 700;
 const MIN_TIME_REDUCIDO = 450;
 /** Techo duro por si algo se cuelga. Tiene que quedar arriba del piso más el
     fundido de salida (260 + 620 ms), si no el techo cortaría la animación. */
-const MAX_TIME = 3400;
+/** Techo duro de toda la entrada. Nada la puede estirar más que esto. */
+const MAX_TIME = 3800;
 
 /* Los chunks de las secciones de abajo NO se piden aca. Importar
    Collections/PastDrop ejecuta su `useGLTF.preload(...)` a module-load, lo que
@@ -101,7 +103,32 @@ export default function Preloader() {
     const FONTS_WEIGHT = 60;
 
     const assets = withMobileVariants(CRITICAL_ASSETS);
-    const totalWeight = assets.reduce((s, a) => s + a.weight, 0) + FONTS_WEIGHT;
+    /* ── La carga espera al MONO del hero (5-sep-2026) ────────────────────
+       Juani: "aca me queda sin el mono en el inicio cuando entro de PC" y
+       "falta el logging de la pagina cargando hasta iniciarse".
+
+       Las dos cosas son la misma. El mono SI carga — medido en produccion:
+       tag presente, loaded true, mono.glb 200. Lo que pasaba es que la
+       lamina se iba antes que el, asi que quedaba el cielo vacio unos
+       segundos y parecia que faltaba. Su captura era, justamente, de la
+       pagina todavia cargando.
+
+       Ahora el hero es parte de lo que la entrada espera. El contador llega
+       a 100 cuando lo que se va a ver esta de verdad, no cuando bajaron dos
+       webp de 40 KB. Eso es lo que hace que una carga se sienta un sistema
+       y no un parpadeo.
+
+       Con su propio techo: si el 3D falla, el CDN no responde o el aparato
+       no soporta WebGL, se entra igual. Una entrada no puede quedar colgada
+       esperando un adorno. */
+    const HERO_WEIGHT = 90;
+    /* 2,2 s y no más. Con 4,2 la lámina se estiraba a 8 segundos en una
+       conexión mala y eso es peor que entrar sin el mono: nadie mira una
+       pantalla de carga ocho segundos. El mono es el remate, no el
+       contenido — si no llegó a tiempo, entra después y se ve aparecer. */
+    const TECHO_HERO = 2200;
+    const totalWeight =
+      assets.reduce((s, a) => s + a.weight, 0) + FONTS_WEIGHT + HERO_WEIGHT;
 
     let doneWeight = 0;
     let cancelled = false;
@@ -196,6 +223,18 @@ export default function Preloader() {
     jobs.push(
       withTimeout(fontsReady(), FONTS_TIMEOUT).then(() => {
         if (!cancelled) doneWeight += FONTS_WEIGHT;
+      })
+    );
+    /* El hero avisa por evento cuando su <model-viewer> termino de cargar
+       (ver components/Hero). Si no llega en TECHO_HERO, se sigue igual. */
+    jobs.push(
+      withTimeout(
+        new Promise<void>((resolve) => {
+          window.addEventListener(EVENTO_HERO_LISTO, () => resolve(), { once: true });
+        }),
+        TECHO_HERO,
+      ).then(() => {
+        if (!cancelled) doneWeight += HERO_WEIGHT;
       })
     );
 
