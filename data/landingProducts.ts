@@ -31,6 +31,20 @@ const ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impra3l0emdtaHp6bmdubnRrZmJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzODA0OTQsImV4cCI6MjA4NDk1NjQ5NH0.ztBsYgEa4OIEUGHZOtRE-8glkYH2-rg8RHHQADblQUQ";
 
 /** Campos comerciales: lo que hace que la web sea una tienda y no un catálogo. */
+/* ── ¿La web muestra precios? (5-sep-2026) ────────────────────────────────
+   Juani: "al final Whynot es sin precios, sacale los precios ya".
+
+   Va como bandera y no borrando el código en los cinco lugares donde se
+   mostraban, porque esta decisión ya cambió de lado una vez: los precios se
+   sacaron, después los chicos los volvieron a cargar (225 productos tienen
+   transferencia y cuotas en la base), y ahora salen de nuevo. Con la
+   bandera, volver a mostrarlos es cambiar false por true; borrando el
+   código, es rehacerlo.
+
+   Los datos NO se tocan: siguen cargados en landing_products. Lo que se
+   apaga es mostrarlos. */
+export const MOSTRAR_PRECIOS = false;
+
 export type Precio = {
   /** Precio de lista. 0 o null = sin precio cargado → no se muestra. */
   price: number | null;

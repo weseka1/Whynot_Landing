@@ -69,7 +69,7 @@ const MARCAS_VISIBLES = 8;
 /* Que hay en cada lugar. La clave es el href de site.nav. */
 const DESCRIPCION: Record<string, string> = {
   "/#hero": "Volver arriba",
-  "/#tienda": "Más vendidos y nuevos ingresos, con precio y talles",
+  "/#tienda": "Más vendidos y nuevos ingresos, con talles",
   "/catalog/": "Buscá por marca: todos los modelos, la mayoría en 360°",
   "/#section-past-drop": "Las zapas girando en 360°",
   "/#section-como-comprar": "Tres pasos, envíos y pago al recibir",

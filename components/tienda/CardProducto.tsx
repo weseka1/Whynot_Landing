@@ -18,7 +18,7 @@
 
 import { useState } from "react";
 import { agregar } from "@/lib/carrito";
-import { formatPrecio, type PanelProduct } from "@/data/landingProducts";
+import { formatPrecio, MOSTRAR_PRECIOS, type PanelProduct } from "@/data/landingProducts";
 
 export default function CardProducto({ p }: { p: PanelProduct }) {
   const [size, setSize] = useState<string>(p.sizes.length === 1 ? p.sizes[0] : "");
@@ -62,7 +62,13 @@ export default function CardProducto({ p }: { p: PanelProduct }) {
         <h3 className="modelo">{p.model}</h3>
         {p.colorway && <p className="color">{p.colorway}</p>}
 
-        {p.price != null ? (
+        {/* Los precios se apagan con la bandera, no se borran: ver
+            MOSTRAR_PRECIOS en data/landingProducts. Cuando está en false, en
+            su lugar va la invitación a consultar — que es el paso que de
+            todos modos hace falta para comprar acá. */}
+        {!MOSTRAR_PRECIOS ? (
+          <p className="sinprecio">Consultá el precio</p>
+        ) : p.price != null ? (
           <div className="precios">
             <p className="precio">{formatPrecio(p.price, p.currency)}</p>
             {p.transferencia != null && p.transferencia < p.price && (

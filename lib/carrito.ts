@@ -18,6 +18,8 @@ import { useSyncExternalStore } from "react";
 const CLAVE = "whynot.carrito.v1";
 
 /** WhatsApp de ventas. Mismo número que `site.ts` → mission/.001 COMPRA. */
+import { MOSTRAR_PRECIOS } from "@/data/landingProducts";
+
 export const WHATSAPP = "5491176295915";
 
 export type ItemCarrito = {
@@ -158,7 +160,11 @@ export function textoPedido(items: ItemCarrito[]): string {
 
   const lineas = items.map((i) => {
     const nombre = [i.brand, i.model, i.colorway].filter(Boolean).join(" · ");
-    const precio = i.price != null ? ` — ${pesos(i.price * i.qty)}` : "";
+    /* Sin precios en la web, el mensaje tampoco los lleva: si el cliente
+       no los vio, mandarlos en el pedido lo descoloca — y el precio lo
+       cierra el vendedor por chat. Ver MOSTRAR_PRECIOS. */
+    const precio =
+      MOSTRAR_PRECIOS && i.price != null ? ` — ${pesos(i.price * i.qty)}` : "";
     const talle = i.size ? ` · talle ${i.size}` : "";
     const cant = i.qty > 1 ? ` · x${i.qty}` : "";
     return `• ${nombre}${talle}${cant}${precio}`;
@@ -169,7 +175,7 @@ export function textoPedido(items: ItemCarrito[]): string {
   const faltaPrecio = items.some((i) => i.price == null);
 
   const pie: string[] = [];
-  if (total > 0) pie.push(`Total: ${pesos(total)}`);
+  if (MOSTRAR_PRECIOS && total > 0) pie.push(`Total: ${pesos(total)}`);
   if (transf > 0 && transf < total) pie.push(`Por transferencia: ${pesos(transf)}`);
   if (faltaPrecio) pie.push("(hay productos sin precio en la web — los consulto)");
 

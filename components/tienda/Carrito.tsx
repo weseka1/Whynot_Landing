@@ -17,6 +17,7 @@
    ============================================================================ */
 
 import { useEffect, useState } from "react";
+import { MOSTRAR_PRECIOS } from "@/data/landingProducts";
 import {
   cambiarCantidad,
   linkPedido,
@@ -63,7 +64,7 @@ export default function Carrito() {
           <path d="M9 7a3 3 0 0 1 6 0" strokeLinecap="round" />
         </svg>
         <span className="cuenta">{unidades}</span>
-        {total > 0 && <span className="fabtotal">{pesos(total)}</span>}
+        {MOSTRAR_PRECIOS && total > 0 && <span className="fabtotal">{pesos(total)}</span>}
       </button>
 
       {abierto && (
@@ -95,7 +96,7 @@ export default function Carrito() {
                     <p className="im">{i.brand}</p>
                     <p className="in">{i.model}</p>
                     {i.size && <p className="it">Talle {i.size}</p>}
-                    {i.price != null ? (
+                    {MOSTRAR_PRECIOS && i.price != null ? (
                       <p className="ip">{pesos(i.price * i.qty)}</p>
                     ) : (
                       <p className="isp">A consultar</p>
@@ -120,7 +121,10 @@ export default function Carrito() {
             </div>
 
             <footer className="pf">
-              {total > 0 && (
+              {/* Sin precios en la web, tampoco hay total: mostrar uno
+                  parcial (solo de lo que casualmente tenga precio cargado)
+                  seria peor que no mostrar nada. */}
+              {MOSTRAR_PRECIOS && total > 0 && (
                 <div className="totales">
                   <div className="fila">
                     <span>Total</span>
