@@ -33,6 +33,23 @@ export default function Header() {
 
   return (
     <>
+      {/* ── El header es un GRID de tres zonas (5-sep-2026) ─────────────────
+          El logo estaba en position:absolute con left:50% — centrado en la
+          VENTANA, sin saber qué había al lado. Los botones vivían en flujo
+          normal a la derecha. En un celu angosto el centro invadía el
+          cluster derecho y "why not" se montaba sobre la píldora del MENU.
+          Juani lo marcó tres veces, con captura y todo.
+
+          Un margen o un padding no lo arregla: el punto de choque se corre
+          con cada ancho de pantalla, así que siempre hay un teléfono donde
+          vuelve a pasar. Con tres columnas de grid cada zona tiene su
+          espacio propio y la superposición pasa a ser imposible — no
+          evitada, imposible.
+
+          En mobile son dos zonas: el logo a la izquierda y los botones a la
+          derecha, que es lo que hace Nike y cualquier tienda seria en
+          celular. El tagline se oculta (ya lo hacía globals.css) porque no
+          aporta y roba el ancho que necesita el logo. */}
       <header
         className="site-header"
         style={{
@@ -42,25 +59,26 @@ export default function Header() {
           right: 0,
           zIndex: 50,
           padding: "var(--space-sm) var(--container-pad)",
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
-          justifyContent: "space-between",
+          columnGap: "var(--space-sm)",
           /* mix-blend-mode movido a CSS .site-header — solo desktop, en
              mobile usamos blur+gradient (mas barato, mejor legibilidad). */
         }}
       >
-        <span className="system-text">{site.brand.tagline.toUpperCase()}</span>
+        <span className="system-text hdr-tagline">{site.brand.tagline.toUpperCase()}</span>
 
         <a
           href="#hero"
           aria-label="Home"
+          className="hdr-logo"
           style={{
             fontFamily: "var(--font-display)",
             fontSize: "1.4rem",
             letterSpacing: "0.04em",
-            position: "absolute",
-            left: "50%",
-            transform: "translateX(-50%)",
+            justifySelf: "center",
+            whiteSpace: "nowrap",
           }}
         >
           {site.brand.name.toLowerCase()}
@@ -68,9 +86,11 @@ export default function Header() {
 
         {/* Right cluster: sound toggle + menu toggle */}
         <div
+          className="hdr-acciones"
           style={{
             display: "flex",
             alignItems: "center",
+            justifySelf: "end",
             gap: "var(--space-xs)",
           }}
         >

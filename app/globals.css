@@ -516,10 +516,22 @@ model-viewer {
     padding-left: max(var(--container-pad), var(--safe-left)) !important;
     padding-right: max(var(--container-pad), var(--safe-right)) !important;
   }
-  /* En mobile la tagline a la izquierda se esconde para evitar overflow
-     con el logo central y el toggle ON/OFF. Mantenemos solo logo+toggle. */
-  .site-header > span:first-child {
+  /* ── El header en mobile: logo a la IZQUIERDA ──────────────────────
+     El logo centrado se montaba sobre la pildora del MENU en pantallas
+     angostas. Aca el grid pasa a dos zonas — logo | acciones — asi el
+     centro deja de existir y con el la posibilidad de que algo lo invada.
+     Es lo que hace Nike y cualquier tienda seria en celular. */
+  .site-header {
+    grid-template-columns: auto 1fr !important;
+  }
+  .site-header .hdr-tagline {
     display: none;
+  }
+  .site-header .hdr-logo {
+    justify-self: start !important;
+  }
+  .site-header .hdr-acciones {
+    grid-column: 2;
   }
 
   /* ====================================================================
