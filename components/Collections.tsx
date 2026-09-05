@@ -87,6 +87,22 @@ const TECH_STATS_RIGHT = [
 export default function Collections() {
   const items = site.collections.items;
   const [active, setActive] = useState(0);
+
+  /* ── Se DESLIZA, como los relojes de Islas (4-sep-2026) ──────────────
+     Juani: "las Golden Goose... no se pueden deslizar como los relojes de
+     Islas Group".
+
+     Tenía razón: para cambiar de par había que apuntarle a una miniatura
+     de 60px. En un celu eso es puntería, no navegación. Ahora se arrastra
+     el producto — que es lo grande y lo que uno mira — y las miniaturas
+     quedan como referencia de dónde estás.
+
+     El umbral de 60px es el mismo que usa el carrusel de Miami Import: más
+     abajo, un scroll vertical apenas inclinado te cambia de zapa sin
+     querer. */
+  const UMBRAL_ARRASTRE = 60;
+  const mover = (dir: number) =>
+    setActive((i) => (i + dir + items.length) % items.length);
   const current = items[active];
 
   /* useIOSFallback: en iOS el alpha del webm VP9 no funciona — la zapa
@@ -264,13 +280,31 @@ export default function Collections() {
                   - parallax con mouse en la camara
                 Items con `video` van por esta via. El 04 (extra) cae al
                 <img> estatico de siempre.                                  */}
-            <div
+            <motion.div
+              /* drag horizontal: cambia de par al soltar, si el gesto pasó
+                 el umbral. dragSnapToOrigin devuelve la pieza a su lugar —
+                 el que se mueve de verdad es el contenido, no este marco. */
+              drag="x"
+              dragDirectionLock
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.16}
+              dragSnapToOrigin
+              onDragEnd={(_, info) => {
+                if (info.offset.x <= -UMBRAL_ARRASTRE) mover(1);
+                else if (info.offset.x >= UMBRAL_ARRASTRE) mover(-1);
+              }}
               style={{
                 position: "absolute",
                 inset: 0,
                 display: "grid",
                 placeItems: "center",
-                pointerEvents: "none",
+                /* auto, no none: sin esto el gesto nunca llega hasta acá.
+                   touchAction pan-y deja que la página siga scrolleando
+                   vertical con el dedo mientras nosotros tomamos el
+                   horizontal. */
+                pointerEvents: "auto",
+                touchAction: "pan-y",
+                cursor: "grab",
                 /* mix-blend overlay sutil para que el bloom se funda con el
                    pearl bg sin sentirse "pegado" como un canvas. */
                 isolation: "isolate",
@@ -354,7 +388,7 @@ export default function Collections() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
 
             {/* --- HoloFX FRONT: scan line sweep que cruza el producto.
                 Va por encima del video pero por debajo de los corners. */}
