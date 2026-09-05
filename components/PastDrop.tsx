@@ -29,11 +29,21 @@ import {
   AnimatePresence,
   MotionValue,
 } from "framer-motion";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { site } from "@/data/site";
 import { HERO_SPECS, resolveHeroSpec, type CatalogEntry } from "@/data/catalog";
 import { Scanlines, CursorGlow } from "@/components/CatalogAtmosphere";
-import CommandPalette from "@/components/CommandPalette";
+/* ── El buscador se descarga cuando se ABRE (4-sep-2026) ────────────────
+   Estaba importado estatico, o sea que su chunk viajaba con el de PastDrop
+   aunque el visitante no lo abriera nunca — y arrastra getAllEntries(), las
+   280 entradas del catalogo. Juani: "ese buscador siento que relentiza
+   mucho la web". Tenia razon: se pagaba siempre y se usaba casi nunca.
+   Con dynamic + el gate de abajo, quien no busca no lo baja. */
+const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
+  ssr: false,
+  loading: () => null,
+});
 import BrandModelFilter from "@/components/BrandModelFilter";
 import { useIsMobile } from "@/components/useIsMobile";
 
@@ -202,6 +212,12 @@ export default function PastDrop() {
 
   /* ---------- Command palette (search global) ---------- */
   const [searchOpen, setSearchOpen] = useState(false);
+  /* Una vez abierto queda montado: si lo desmontaramos al cerrar se perderia
+     su animacion de salida, y el chunk ya esta en cache igual. */
+  const [buscadorUsado, setBuscadorUsado] = useState(false);
+  useEffect(() => {
+    if (searchOpen) setBuscadorUsado(true);
+  }, [searchOpen]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -859,7 +875,9 @@ export default function PastDrop() {
       {!isMobile && <Scanlines />}
 
       {/* Command palette overlay (global archive search) */}
-      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {buscadorUsado && (
+        <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      )}
     </section>
   );
 }

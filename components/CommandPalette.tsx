@@ -160,12 +160,23 @@ export default function CommandPalette({
                   fontWeight: 600,
                 }}
               >
+                {/* El conteo sale SOLO cuando hay busqueda. Con el input
+                    vacio decia "280 resultados", que no es una respuesta a
+                    nada: es el tamaño del catalogo cargado — justo la data
+                    que Fabri pidio sacar porque hace ver chica a la tienda.
+                    Cuando escribis algo, en cambio, el numero SI contesta lo
+                    que preguntaste y se queda. */}
                 <span>
-                  ⌖ BUSCAR EN EL CATÁLOGO ·{" "}
-                  <span style={{ color: DARK, fontWeight: 700 }}>
-                    {results.length}
-                  </span>{" "}
-                  {results.length === 1 ? "resultado" : "resultados"}
+                  ⌖ BUSCAR EN EL CATÁLOGO
+                  {query.trim() && (
+                    <>
+                      {" · "}
+                      <span style={{ color: DARK, fontWeight: 700 }}>
+                        {results.length}
+                      </span>{" "}
+                      {results.length === 1 ? "resultado" : "resultados"}
+                    </>
+                  )}
                 </span>
                 <button
                   onClick={onClose}
