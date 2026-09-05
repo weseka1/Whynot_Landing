@@ -743,7 +743,13 @@ export default function Mission() {
                columna implicita de ancho automatico que colapsa al minimo: el
                titulo salio apilado letra por letra en una tira de 40px. */
             grid-template-columns: minmax(0, 1fr);
-            grid-template-rows: minmax(0, 30svh) minmax(0, 1fr) auto;
+            /* El mono va en fracciones, no en svh fijos: asi CEDE alto
+               cuando el texto lo necesita. Con 30svh clavados, el paso
+               "Canales" —el unico con copy + boton + lista de canales— se
+               pasaba 10px del borde de la card y el remate quedaba cortado.
+               Con 4fr/6fr el reparto se acomoda solo a lo que haya, y no
+               depende de que ningun paso crezca menos de lo previsto. */
+            grid-template-rows: minmax(0, 4fr) minmax(0, 6fr) auto;
             width: 100%;
             height: 100%;
             max-height: 100%;

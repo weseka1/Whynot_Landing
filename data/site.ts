@@ -107,8 +107,14 @@ export const site = {
         channels: [
           { type: "whatsapp-channel", display: "Canal WhatsApp",      url: "https://wa.me/5491176295915",
             note: "promociones · detrás de cámara · unboxings · avisos de stock y re-stock" },
-          { type: "web",              display: "Web oficial",         url: "/",
-            note: "catálogo completo · drops activos · pre-venta" },
+          /* Se saca "Web oficial" (5-sep-2026): apuntaba a "/", o sea a la
+             web en la que el visitante YA está. Tiene sentido en un
+             linktree o en la bio de Instagram, que es de donde viene este
+             texto; acá no lleva a ningún lado.
+
+             Además era lo que rompía el paso: con dos botones + la lista de
+             canales, el contenido no entraba en la card del celu y el
+             segundo quedaba cortado por las burbujas. */
         ],
         closing: "¿Querés ser exclusivo como nosotros? No te pierdas las novedades y enterate con prioridad de cada lanzamiento en nuestros canales.",
       },
