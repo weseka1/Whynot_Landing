@@ -230,6 +230,26 @@ export default function Mission() {
         <div className="halo" aria-hidden="true" />
         <div className="grano" style={{ backgroundImage: GRANO_SVG }} aria-hidden="true" />
 
+        {/* ═══════════════════════════════════════════════════════════════
+            LA CARD — mono, texto y burbujas viven ADENTRO, como una pieza.
+
+            Juani, 4-sep-2026: "el mono se separa del texto, debe estar todo
+            junto, que no se corte el scrolling, si no es desprolijo, que
+            salten tipo cards liquid glass como en la web de WSK nuestra".
+            Y después: "desde el celu tiene que ser el viaje, el 90% nos
+            mira por cel".
+
+            Antes eran tres filas hermanas de un grid (mono / texto /
+            burbujas). Cada una se acomodaba sola, así que entre el mono y el
+            texto quedaba aire muerto y el remate se cortaba contra las
+            burbujas. Metiéndolas en un contenedor propio pasan a ser UN
+            objeto: se mueven juntas y no hay nada entre medio que se corte.
+
+            En DESKTOP este div se borra del layout con `display: contents`,
+            así que las tres siguen siendo hijas directas del grid y la
+            versión de escritorio queda intacta. La card existe sólo donde
+            hace falta, que es el celular. */}
+        <div className="card">
         {/* ------------------------------------------------------------ mono */}
         <div className="mono" aria-hidden="true">
           <div className="piso" />
@@ -295,6 +315,7 @@ export default function Mission() {
             );
           })}
         </div>
+        </div>{/* /card */}
 
         {/* ------------------------------------------------------------ progreso */}
         <ol className="pasos" aria-label="Progreso">
@@ -656,92 +677,215 @@ export default function Mission() {
            Ahora cada cosa tiene su fila propia: el mono arriba, el texto en
            el medio (con scroll interno si no entra, como un panel de iOS) y
            las burbujas abajo. Imposible que se pisen. */
+        /* ═══════════════════════════════════════════════════════════════
+           DESKTOP: la card no existe. display: contents la borra del
+           layout, así que .mono / .burbujas / .texto siguen siendo hijas
+           directas del grid de .pantalla y la versión de escritorio queda
+           exactamente como estaba. La card se materializa sólo en mobile.
+           ═══════════════════════════════════════════════════════════════ */
+        .card {
+          display: contents;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MOBILE — "el 90% nos mira por cel" (Juani, 4-sep-2026)
+           ---------------------------------------------------------------
+           Acá el celular no es la versión reducida del desktop: es la
+           principal. Todo lo de abajo está pensado para 390px primero.
+
+           Lo que había: tres filas hermanas (mono / texto / burbujas), cada
+           una acomodándose por su cuenta. Entre el mono y el texto quedaba
+           aire muerto, y en los pasos largos el remate se cortaba contra las
+           burbujas. Juani: "el mono se separa del texto, debe estar todo
+           junto, que no se corte el scrolling, si no es desprolijo".
+
+           Lo que hay ahora: UNA card de vidrio que contiene las tres cosas.
+           Se mueven juntas porque son una sola pieza, y no queda nada suelto
+           entre medio que se pueda cortar.
+           ═══════════════════════════════════════════════════════════════ */
         @media (max-width: 768px) {
           .riel {
             --paso: 88svh;
           }
+
+          /* La pantalla deja de ser un grid de tres filas: ahora solo
+             centra la card y le deja aire arriba (el header fijo) y abajo
+             (la barra de progreso + el notch). */
           .pantalla {
             grid-template-columns: 1fr;
-            /* 32svh: a 26 el mono quedaba de estampilla y la seccion se
-               veia vacia — es el protagonista, tiene que pesar. El resto
-               del alto es para el texto, que scrollea solo si no entra. */
-            grid-template-rows: minmax(0, 32svh) minmax(0, 1fr) auto;
-            align-items: stretch;
-            padding-top: 60px;
-            padding-bottom: calc(max(22px, env(safe-area-inset-bottom)) + 26px);
-            row-gap: 8px;
+            grid-template-rows: 1fr;
+            align-items: center;
+            justify-items: center;
+            /* 82px: el header mide 60 y flota con blur encima. Con menos, la
+               card le quedaba debajo — es la superposición que Juani marcó
+               en verde sobre la captura. */
+            padding: 82px var(--container-pad)
+              calc(max(26px, env(safe-area-inset-bottom)) + 34px);
+            row-gap: 0;
           }
+
+          /* ── La card ──────────────────────────────────────────────────
+             El vidrio está copiado del lenguaje de wsk.com.ar: fondo de dos
+             capas (relleno en padding-box + gradiente de borde en
+             border-box), que es lo que le da el canto biselado en vez de un
+             borde plano de un color.
+
+             PERO sin backdrop-filter. Nuestra propia web lo apaga abajo de
+             900px porque un panel con blur que se transforma en cada frame
+             re-muestrea el fondo entero por cuadro y tanquea la GPU. Acá
+             encima hay un canvas WebGL vivo en la misma pantalla: serían dos
+             consumidores peleando. El vidrio va simulado con gradientes —
+             se ve igual y no cuesta nada. */
+          .card {
+            display: grid;
+            /* La columna hay que declararla SI O SI. Sin ella, los hijos que
+               piden grid-area: 2/1 (heredado del grid de desktop) generan una
+               columna implicita de ancho automatico que colapsa al minimo: el
+               titulo salio apilado letra por letra en una tira de 40px. */
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: minmax(0, 30svh) minmax(0, 1fr) auto;
+            width: 100%;
+            height: 100%;
+            max-height: 100%;
+            min-height: 0;
+            row-gap: 10px;
+            padding: 16px 16px 14px;
+            border: 1px solid transparent;
+            border-radius: 30px;
+            background:
+              linear-gradient(
+                168deg,
+                rgba(255, 253, 250, 0.66),
+                rgba(246, 240, 252, 0.42)
+              )
+                padding-box,
+              linear-gradient(
+                140deg,
+                rgba(255, 255, 255, 0.9),
+                rgba(255, 255, 255, 0.16) 38%,
+                rgba(255, 255, 255, 0.06) 64%,
+                rgba(120, 86, 180, 0.34)
+              )
+                border-box;
+            box-shadow:
+              0 34px 80px -28px rgba(58, 32, 96, 0.42),
+              0 4px 14px rgba(58, 32, 96, 0.14),
+              inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            overflow: hidden;
+            isolation: isolate;
+          }
+
+          /* Specular highlight: la luz que entra por arriba del vidrio. Es
+             lo que separa "caja translúcida" de "vidrio". */
+          .card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 44%;
+            pointer-events: none;
+            background: linear-gradient(
+              180deg,
+              rgba(255, 255, 255, 0.42),
+              transparent
+            );
+            opacity: 0.75;
+            z-index: 0;
+          }
+
           .mono {
             grid-area: 1 / 1;
+            position: relative;
+            z-index: 1;
             height: 100%;
+            min-height: 0;
           }
+
+          /* El texto ya no scrollea por su cuenta. Antes tenía overflow-y
+             auto y eso ERA el corte: aparecía una barra interna y el título
+             quedaba a mitad de camino. Ahora la tipografía se achica lo
+             necesario para que cada paso entre entero. */
           .texto {
             grid-area: 2 / 1;
+            position: relative;
+            z-index: 1;
             align-self: stretch;
             min-height: 0;
             padding-bottom: 0;
-            overflow-y: auto;
-            overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
+            overflow: hidden;
           }
-          /* ── Centrar SIN recortar (4-sep-2026) ────────────────────────
-             Con align-self:start los pasos cortos dejaban media pantalla en
-             blanco. Lo pasé a center y rompí algo peor: cuando el paso es más
-             alto que su fila (el de "¿Cómo comprar?", que suma copy y botón
-             de WhatsApp) centrar lo desborda por ARRIBA y por abajo, y el
-             desborde de arriba no se puede scrollear. Resultado en el iPhone
-             de Juani: el título cortado por la mitad.
 
-             margin auto hace las dos cosas bien, y para eso existe: los
-             márgenes automáticos se reparten el espacio LIBRE, así que
-             centran cuando sobra lugar y se resuelven a cero cuando falta —
-             ahí manda el align-self y el bloque arranca arriba, entero. Es la
-             diferencia entre centrar y recortar.
-
-             (Ojo con los acentos graves en estos comentarios: el bloque
-             style jsx es un template literal y uno solo lo corta al medio.
-             Costó un build roto.) */
+          /* margin auto centra cuando sobra lugar y se resuelve a cero
+             cuando falta — nunca recorta por arriba. (Con align-self:center
+             el título del paso "¿Cómo comprar?" salía cortado al medio en el
+             iPhone de Juani.) */
           .paso {
             align-self: start;
             margin-block: auto;
           }
+
+          /* ── El salto ────────────────────────────────────────────────
+             Tomado del deck de wsk.com.ar: el que entra sube desde abajo
+             achicado, el que sale se va hacia arriba achicándose más fuerte.
+             No es un fade: es una pieza que pasa de largo. */
+          .paso {
+            transform: translateY(34px) scale(0.94);
+            transition:
+              opacity 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+              transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
+          }
+          .paso.on {
+            transform: translateY(0) scale(1);
+          }
+          .paso:not(.on) {
+            transform: translateY(-30px) scale(0.9);
+          }
+
           .titulo {
-            font-size: clamp(1.75rem, 8.4vw, 2.5rem);
+            font-size: clamp(1.6rem, 7.6vw, 2.3rem);
             line-height: 0.98;
           }
           .copy {
-            font-size: 0.94rem;
-            line-height: 1.45;
+            font-size: 0.9rem;
+            line-height: 1.42;
           }
-          /* El parrafo de cierre sale en el celu: es lo secundario del paso
-             y es lo que hacia que el contenido no entrara. En desktop queda. */
-          .closing {
+          /* Cierre y remate se van del celu: son lo secundario del paso y
+             son justo lo que hacía que el contenido no entrara — el remate
+             "¡Estamos para ayudarte...!" salía cortado contra las burbujas
+             en la captura de Juani. En desktop se quedan. */
+          .closing,
+          .remate {
             display: none;
           }
+
           .halo {
             width: 120vmax;
             height: 120vmax;
           }
-          /* Fila propia: fila deslizable, ya no flotando sobre el texto. */
+
+          /* Fila deslizable, adentro de la card. */
           .burbujas {
-            position: static;
             grid-area: 3 / 1;
+            position: static;
+            z-index: 1;
             display: flex;
             gap: 8px;
-            padding: 2px var(--container-pad) 2px;
+            padding: 2px 2px 0;
             overflow-x: auto;
             scrollbar-width: none;
             pointer-events: auto;
             -webkit-overflow-scrolling: touch;
-            /* La tercera burbuja queda cortada contra el borde y un elemento
-               cortado se lee como un error de maquetado, no como "hay mas"
-               (Juani ya lo marco una vez: "medio que se corta"). El degrade
-               convierte el corte en la señal de que se desliza — el gesto de
-               iOS. Y el snap hace que se frene en burbuja, no a la mitad. */
-            mask-image: linear-gradient(to right, #000 82%, transparent 99%);
-            -webkit-mask-image: linear-gradient(to right, #000 82%, transparent 99%);
+            /* El degradé convierte el corte de la última burbuja en la señal
+               de que se desliza, en vez de leerse como un error. El snap
+               hace que frene en burbuja, no a la mitad. */
+            mask-image: linear-gradient(to right, #000 84%, transparent 99%);
+            -webkit-mask-image: linear-gradient(
+              to right,
+              #000 84%,
+              transparent 99%
+            );
             scroll-snap-type: x proximity;
-            scroll-padding-left: var(--container-pad);
           }
           .burbujas::-webkit-scrollbar {
             display: none;
@@ -752,16 +896,16 @@ export default function Mission() {
             scroll-snap-align: start;
             font-size: 0.8rem;
             padding: 9px 13px 9px 11px;
-            /* Sin backdrop-filter en el celu: tres blurs vivos dentro de una
-               seccion pinneada se recomponen en cada frame de scroll, y es
-               parte de "el scrolling de los monos se tilda". El fondo solido
-               semitransparente se ve casi igual y no cuesta nada. */
+            /* Sin backdrop-filter, por lo mismo que la card: tres blurs
+               vivos dentro de una sección pinneada se recomponen en cada
+               frame de scroll. */
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
-            background: rgba(255, 255, 255, 0.62);
+            background: rgba(255, 255, 255, 0.72);
+            border-color: rgba(255, 255, 255, 0.9);
             animation: none;
           }
-          /* El brillo que cruza tambien se apaga: es una animacion continua
+          /* El brillo que cruza también se apaga: es una animación continua
              por burbuja. */
           .brillo {
             display: none;
@@ -771,15 +915,16 @@ export default function Mission() {
             right: auto;
             top: auto;
           }
-          /* El progreso pasa al borde de la pantalla, no sobre el contenido. */
+
+          /* El progreso queda FUERA de la card, contra el borde de la
+             pantalla: es el mapa del viaje, no parte del paso. */
           .pasos {
-            bottom: max(6px, env(safe-area-inset-bottom));
+            bottom: max(8px, env(safe-area-inset-bottom));
           }
-          /* El "seguí bajando" se va en el celu: está anclado al mismo borde
-             que la barra de pasos y a 390px se le encima — se leía
-             "CANALES" y "SEGUÍ BAJANDO" uno sobre el otro. En un teléfono
-             además sobra: las rayitas de progreso ya dicen que hay más, y
-             nadie necesita que le expliquen que se scrollea. */
+          /* El "seguí bajando" se va: está anclado al mismo borde que la
+             barra de pasos y a 390px se le encima — se leía "CANALES" y
+             "SEGUÍ BAJANDO" uno sobre el otro. En un teléfono además sobra:
+             las rayitas ya dicen que hay más. */
           .hint {
             display: none;
           }
