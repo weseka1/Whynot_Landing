@@ -188,20 +188,29 @@ export default function BrandModelFilter({
           items={filteredBrands.map((b) => ({ key: b, primary: b }))}
           onSelect={(it) => handleSelectBrand(it.key)}
           emptyHint="SIN RESULTADOS"
-          flexBasis={isMobile ? "50%" : "260px"}
+          /* Solo, ocupa todo: sin el segundo selector al lado, dejarlo al 50%
+             en el celu deja media fila vacía. */
+          flexBasis={isMobile ? (brand ? "50%" : "100%") : "260px"}
         />
 
         {/* ============ MODEL / VARIANT DROPDOWN ============
+             Aparece RECIÉN cuando hay marca elegida. Antes estaba siempre en
+             pantalla, apagado, diciendo "ELEGI MARCA" — o sea, un control que
+             ocupa lugar y no se puede tocar. Juani, 4-sep-2026: "eso de elegir
+             marca si figura como bloqueado quitalo". Un control deshabilitado
+             le pide al visitante que descubra por qué no anda; uno que todavía
+             no está no le pide nada.
+
              Cuando hay brand, prependeamos un item "TODOS" — al apretarlo
              navegamos al catalogo de la marca completa (en lugar de un
              colorway individual). Atajo para los que ya saben la marca y
              quieren ver toda la grilla.                                    */}
+        {brand && (
         <Dropdown
           isMobile={isMobile}
           label="MODELO / COLOR"
-          placeholder={brand ? "ELEGI MODELO" : "ELEGI MARCA"}
+          placeholder="ELEGI MODELO"
           value={null}
-          disabled={!brand}
           open={openVariant}
           onToggle={() => {
             if (!brand) return;
@@ -228,9 +237,10 @@ export default function BrandModelFilter({
               handleSelectVariant(it.data as ModelVariant);
             }
           }}
-          emptyHint={brand ? "SIN MODELOS" : "—"}
+          emptyHint="SIN MODELOS"
           flexBasis={isMobile ? "50%" : "320px"}
         />
+        )}
       </div>
     </div>
   );
