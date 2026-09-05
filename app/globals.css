@@ -810,10 +810,19 @@ model-viewer {
   }
   /* Title: paddingRight reserva el ancho del mascot a la derecha
      (mascot ahora min 60vw → title se reserva 58vw para no solaparse).  */
+  /* ── El nombre de la marca, entero ────────────────────────────────
+     Tenia padding-right 58vw para no chocar con el mono: en 390px eso son
+     226px de reserva y le dejaban ~130 para escribir. "AMIRI" a 44px pide
+     140, asi que se partia — y con overflow-wrap:anywhere se partia en
+     cualquier letra ("AMI / RI").
+
+     El mono esta ANCLADO ARRIBA a la derecha y el titulo arranca al tope:
+     con 34vw de reserva no se tocan, y el nombre entra entero hasta
+     BALENCIAGA y TIMBERLAND, que son los mas largos del catalogo. */
   .brand-hero-wrap .brand-title {
-    padding-right: 58vw !important;
-    font-size: clamp(2.25rem, 11vw, 4.5rem) !important;
-    line-height: 0.88 !important;
+    padding-right: 34vw !important;
+    font-size: clamp(1.8rem, 8.6vw, 4.5rem) !important;
+    line-height: 0.9 !important;
     margin-top: 0.25rem !important;
   }
   /* Mascot: ANCLADO ARRIBA. Selector con specificity reforzada
@@ -861,8 +870,8 @@ model-viewer {
     min-height: 400px;
   }
   .brand-hero-wrap .brand-title {
-    padding-right: 60vw !important;
-    font-size: clamp(1.9rem, 11.5vw, 3.4rem) !important;
+    padding-right: 36vw !important;
+    font-size: clamp(1.6rem, 8vw, 3.4rem) !important;
   }
   .brand-hero-wrap .brand-mascot > div {
     width: min(306px, 62vw) !important;
@@ -1054,3 +1063,30 @@ html.ya-entro .wn-pixel-reveal {
     will-change: auto;
   }
 }
+
+/* ============================================================================
+   LA RAYA GRIS DEL HERO (5-sep-2026)
+   ----------------------------------------------------------------------------
+   Juani, con foto: "cuando inicio de cel me salta esa raya en el medio y tarda
+   en salir la web".
+
+   No era el preloader. Es la BARRA DE PROGRESO NATIVA de <model-viewer>: el
+   componente dibuja una solo, cruzando el ancho, mientras descarga el .glb.
+   Sobre el cielo claro del hero queda una línea gris de borde a borde —
+   exactamente lo que se ve en su captura.
+
+   Me costó encontrarla porque busqué en el lugar equivocado: primero le
+   eché la culpa a la cortina de salida del preloader, después a su barra de
+   progreso. Ninguna era. Lo resolvió preguntarle al DOM qué elemento estaba
+   en ese pixel (document.elementFromPoint) en vez de seguir suponiendo:
+   ahí no había ningún nodo delgado, había un <model-viewer> de 574px de
+   alto pintando por su cuenta.
+
+   Se oculta por ::part, que es la API que model-viewer expone para esto. El
+   progreso de la carga ya lo cuenta la lámina de entrada; dos indicadores
+   para lo mismo, y uno de ellos suelto sobre el cielo, sobra.
+   ============================================================================ */
+model-viewer::part(default-progress-bar) {
+  display: none !important;
+}
+

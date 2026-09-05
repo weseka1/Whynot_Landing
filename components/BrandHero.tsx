@@ -85,7 +85,12 @@ export default function BrandHero({ brandName, total360 }: Props) {
           paddingRight: "clamp(0px, 30vw, 520px)",
           fontWeight: 700,
           textTransform: "uppercase",
-          overflowWrap: "anywhere",
+          /* break-word y NO anywhere: anywhere parte la palabra en
+             cualquier letra aunque haya otra forma de acomodarla, y por eso
+             "AMIRI" salia como "AMI / RI" en el celu. break-word solo parte
+             como ultimo recurso. */
+          overflowWrap: "break-word",
+          hyphens: "none",
         }}
       >
         {brandName}

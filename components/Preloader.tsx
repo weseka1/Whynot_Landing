@@ -259,22 +259,26 @@ export default function Preloader() {
       {visible && (
         <motion.div
           className="wn-preloader"
-          /* ── La salida es una CORTINA, no un fade (4-sep-2026) ──────────
-             Un fade dice "esto se estaba tapando y se va". Una persiana que
-             sube desde abajo dice "esto se abre y ya estas adentro" — y deja
-             ver el hero apareciendo por debajo mientras corre, en vez de
-             mostrarlo detras de una capa a medio desvanecer.
+          /* ── La salida es un VELO que se desvanece, no una cortina ───────
+             Probé con una persiana (clip-path que sube) copiando el gesto de
+             Islas Group. En el iPhone de Juani dejaba una LÍNEA horizontal
+             gris cruzando la pantalla mientras corría — la fotografió. Es el
+             borde del recorte: la lámina tiene cielo desenfocado y viñeta
+             encima, así que al cortarla en dos el canto se ve.
 
-             Es el gesto de la demo de Islas Group. clip-path anima en el
-             compositor, asi que no cuesta layout ni repaint aunque cubra la
-             pantalla entera. */
-          initial={{ opacity: 1, clipPath: "inset(0% 0% 0% 0%)" }}
-          exit={
-            reduced
-              ? { opacity: 0 }
-              : { clipPath: "inset(0% 0% 100% 0%)", opacity: 1 }
-          }
-          transition={{ duration: reduced ? 0.2 : 0.85, ease: [0.76, 0, 0.24, 1] }}
+             Mirando cómo lo hace Bochile, que es la vara de la casa para una
+             entrada: NO tiene cortina. El hero real está detrás desde el ms
+             0 y la intro es un velo que se apaga con opacity; el contenido
+             se revela en su lugar. No hay ninguna capa que tenga que
+             correrse para descubrir el sitio, y por eso nunca hay costura.
+
+             Acá el fondo de la lámina YA es el cielo del hero desenfocado,
+             así que apagarla no es "sacar algo del medio": es el mismo cielo
+             entrando en foco. Un escalado apenas por debajo de 1 acompaña
+             sin dibujar ningún borde. */
+          initial={{ opacity: 1 }}
+          exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
+          transition={{ duration: reduced ? 0.2 : 0.7, ease: [0.16, 1, 0.3, 1] }}
           aria-live="polite"
           aria-busy="true"
         >
@@ -298,8 +302,28 @@ export default function Preloader() {
             className="wn-glass"
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.03 }}
-            transition={{ duration: reduced ? 0.2 : 0.8, ease: [0.16, 1, 0.3, 1] }}
+            /* ── El contenido se va PRIMERO, y rápido ──────────────────────
+               La lámina sale en 0,28 s y el velo en 0,7. Antes los dos
+               tardaban lo mismo, y el resultado era el defecto que Juani
+               fotografió: el fondo de vidrio es translúcido y sobre el cielo
+               claro casi no se ve, pero la BARRA DE PROGRESO es oscura — así
+               que a mitad del fundido quedaba una raya gris flotando sola en
+               el medio de la pantalla, sin nada alrededor que la explicara.
+
+               Yéndose antes, para cuando el velo empieza a transparentar ya
+               no hay nada oscuro que pueda quedar suelto. */
+            exit={
+              reduced
+                ? { opacity: 0 }
+                : { opacity: 0, y: -14, scale: 1.02 }
+            }
+            transition={{
+              duration: reduced ? 0.2 : 0.8,
+              ease: [0.16, 1, 0.3, 1],
+              /* El exit corre su propia carrera, más corta que la entrada. */
+              opacity: { duration: reduced ? 0.15 : 0.28, ease: "easeIn" },
+              y: { duration: reduced ? 0.15 : 0.34, ease: [0.7, 0, 0.84, 0] },
+            }}
           >
             {/* ── El wordmark se ARMA, no aparece (4-sep-2026) ─────────
                 Juani: "antes habia un WHY NOT y cargaba como un sistema,
