@@ -47,7 +47,7 @@ function armarMarcas(): MarcaResumen[] {
 }
 
 export default function CatalogPage() {
-  const marcas = armarMarcas();
-  const totalPares = marcas.reduce((s, m) => s + m.total, 0);
-  return <CatalogoIndice marcas={marcas} totalPares={totalPares} />;
+  /* `total` se sigue calculando: es lo que ordena las marcas por surtido.
+     Lo que ya no va es mostrarlo — el porqué está en CatalogoIndice. */
+  return <CatalogoIndice marcas={armarMarcas()} />;
 }

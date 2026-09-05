@@ -19,12 +19,7 @@ type Props = {
   total360: number;
 };
 
-export default function BrandHero({
-  brandName,
-  totalModels,
-  totalColorways,
-  total360,
-}: Props) {
+export default function BrandHero({ brandName, total360 }: Props) {
   return (
     <div
       className="brand-hero-wrap"
@@ -64,8 +59,7 @@ export default function BrandHero({
           fontWeight: 600,
         }}
       >
-        CATÁLOGO · {String(totalModels).padStart(2, "0")} MODELOS ·{" "}
-        {String(totalColorways).padStart(2, "0")} COLORES
+        CATÁLOGO · {brandName.toUpperCase()}
       </motion.div>
 
       {/* Brand title — flow normal, ocupa todo el ancho del padre.
@@ -151,9 +145,20 @@ export default function BrandHero({
           color: DARK_DIM,
         }}
       >
-        <StatBlock label="PRODUCTOS" value={String(totalColorways).padStart(3, "0")} accent />
-        <StatBlock label="CON VISTA 360°" value={String(total360).padStart(3, "0")} />
-        <StatBlock label="SOLO FOTO" value={String(totalColorways - total360).padStart(3, "0")} />
+        {/* ── Sin conteos (4-sep-2026) ─────────────────────────────────
+            Acá decía PRODUCTOS 126 · CON VISTA 360° 120 · SOLO FOTO 006, y
+            arriba "20 MODELOS · 126 COLORES". Fabri: "esa data sacarla...
+            parece poco porque tenemos mucho más".
+
+            Y el problema era más de fondo que el copy: esos números salían
+            de contar las FOTOS del catálogo, no el stock. La web publicaba
+            el tamaño de su propia carpeta de imágenes como si fuera el
+            depósito, y ese número siempre va a ir atrás del real.
+
+            Quedan los bloques que dicen QUÉ hay y CÓMO se compra — lo que
+            el visitante necesita — sin ninguna cifra que envejezca en
+            contra del negocio. */}
+        {total360 > 0 && <StatBlock label="VISTA" value="360°" accent />}
         <StatBlock label="COMPRA" value="POR WHATSAPP" />
       </motion.div>
     </div>

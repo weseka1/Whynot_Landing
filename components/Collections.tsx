@@ -553,7 +553,12 @@ export default function Collections() {
             textTransform: "uppercase",
           }}
         >
-          SELECCIÓN WHY NOT · {String(items.length).padStart(2, "0")} MODELOS
+          {/* Decía "SELECCIÓN WHY NOT · 03 MODELOS". Ese número era el largo
+              de la selección destacada de la home — o sea, le anunciaba TRES
+              al visitante en la primera pantalla. Es exactamente la data que
+              Fabri pidió sacar (4-sep): hace ver chica a la tienda cuando
+              tienen mucho más. La sección se presenta sola. */}
+          SELECCIÓN WHY NOT
         </span>
 
         <h2

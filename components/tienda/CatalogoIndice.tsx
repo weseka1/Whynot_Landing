@@ -7,10 +7,24 @@
    catálogo básicamente... flow iPhone LIQUID GLASS cuando se abre".
 
    Una sola pregunta al visitante: ¿qué marca buscás? El input filtra la
-   grilla al toque; cada marca es una tarjeta de vidrio con su foto real, cuántos
-   modelos tiene y cuántos con 360°. Tocar = entrar a /catalog/<marca>/.
+   grilla al toque; cada marca es una tarjeta de vidrio con su foto real.
+   Tocar = entrar a /catalog/<marca>/.
 
-   Todos los números son del catálogo (catalog-index.json). Ninguno inventado.
+   ── Por qué no hay números (4-sep-2026) ──────────────────────────────────
+   Esta pantalla decía "280 pares de 20 marcas" y cada tarjeta "20 modelos ·
+   126 pares · 120 en 360°". Fabri, viéndolo: "le sacaría la data, de 20
+   modelos y eso porque parece poco... 280 pares también, porque tenemos
+   mucho más".
+
+   Tenía razón, y el problema era más de fondo que el copy: esos números
+   salían de catalog-index.json, o sea contaban las FOTOS cargadas, no el
+   stock. La web estaba publicando el tamaño de su propia carpeta de
+   imágenes como si fuera el inventario del negocio — y siempre va a ir
+   atrás del depósito real.
+
+   El 360° se queda como cualidad ("Con vista 360°"), que es lo que
+   diferencia, sin decir cuántos. El `total` sigue en los datos porque
+   ordena las marcas por surtido; simplemente no se muestra.
    ============================================================================ */
 
 import { useDeferredValue, useMemo, useState } from "react";
@@ -39,7 +53,7 @@ function normalizar(s: string): string {
     .trim();
 }
 
-export default function CatalogoIndice({ marcas, totalPares }: { marcas: MarcaResumen[]; totalPares: number }) {
+export default function CatalogoIndice({ marcas }: { marcas: MarcaResumen[] }) {
   const [q, setQ] = useState("");
   /* deferred: en un celu flojo, tipear no traba el input esperando el filtro */
   const qd = useDeferredValue(q);
@@ -65,8 +79,7 @@ export default function CatalogoIndice({ marcas, totalPares }: { marcas: MarcaRe
           <p className="eyebrow">Catálogo</p>
           <h1 className="titulo">Comprá por marca</h1>
           <p className="bajada">
-            {totalPares} pares de {marcas.length} marcas. Tocá una marca para ver todos sus modelos — la mayoría con
-            vista 360°.
+            Tocá una marca para ver todos sus modelos — la mayoría con vista 360°.
           </p>
         </header>
 
@@ -102,8 +115,7 @@ export default function CatalogoIndice({ marcas, totalPares }: { marcas: MarcaRe
                   <span className="datos">
                     <span className="nombre">{m.nombre}</span>
                     <span className="meta">
-                      {m.modelos} {m.modelos === 1 ? "modelo" : "modelos"} · {m.total} {m.total === 1 ? "par" : "pares"}
-                      {m.total360 > 0 && <> · {m.total360} en 360°</>}
+                      {m.total360 > 0 ? "Con vista 360°" : "Ver modelos"}
                     </span>
                   </span>
                   <span className="flecha" aria-hidden="true">
@@ -350,11 +362,17 @@ export default function CatalogoIndice({ marcas, totalPares }: { marcas: MarcaRe
         .nombre {
           font-family: var(--font-marquee);
           font-weight: 900;
-          font-size: clamp(1rem, 2.4vw, 1.25rem);
+          /* El piso baja de 1rem a 0.86: con 1rem "BALENCIAGA" no entraba en
+             la columna a 390px y salía partida como "BALENCIAG / A". */
+          font-size: clamp(0.86rem, 3.4vw, 1.25rem);
           line-height: 1.05;
           letter-spacing: -0.02em;
           text-transform: uppercase;
-          overflow-wrap: anywhere;
+          /* anywhere partía la palabra en cualquier letra aunque hubiera otra
+             forma de acomodarla; break-word sólo parte como último recurso,
+             después de intentar bajarla entera a la línea siguiente. */
+          overflow-wrap: break-word;
+          hyphens: none;
         }
         .meta {
           font-size: 0.8rem;

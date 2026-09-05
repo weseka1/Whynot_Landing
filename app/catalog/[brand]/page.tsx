@@ -200,11 +200,14 @@ export default async function BrandPage({ params }: Params) {
             FIN DEL CATÁLOGO DE {brandName}
           </span>
         </div>
+        {/* Acá decía "126 PRODUCTOS · 120 CON VISTA 360°". Fuera: contaba
+            las fotos del catálogo, no el stock, y le hacía parecer chica a
+            la tienda (Fabri, 4-sep). El CTA sirve más que el número. */}
         <div style={{ display: "flex", gap: "1rem" }}>
           <span>WHYNOT EXCLUSIVE / CATÁLOGO</span>
           <span style={{ opacity: 0.4 }}>//</span>
           <span style={{ color: DARK, fontWeight: 600 }}>
-            {total} PRODUCTOS · {total360} CON VISTA 360°
+            ¿NO ENCONTRÁS TU PAR? ESCRIBINOS
           </span>
         </div>
       </div>

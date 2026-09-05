@@ -197,15 +197,11 @@ export default function PaginatedColorways({
           </span>{" "}
           / {String(totalPages).padStart(2, "0")}
         </span>
-        <span>
-          DISPLAYING{" "}
-          <span style={{ color: DARK, fontWeight: 600 }}>
-            {filtered.length === 0
-              ? 0
-              : `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)}`}
-          </span>{" "}
-          / {filtered.length}
-        </span>
+        {/* Acá iba "DISPLAYING 01–24 / 126". El total delataba cuántos pares
+            tiene la marca, que es la data que Fabri pidió sacar (4-sep): sale
+            de contar fotos del catálogo, no stock, y hace ver chica a la
+            tienda. "PAGE 01 / 06" de al lado ya ubica al visitante, y cuando
+            hay una búsqueda activa el contador de resultados sigue arriba. */}
       </div>
 
       {/* Grid 3 cols × 8 rows  (con empty state si el filtro no matchea) */}

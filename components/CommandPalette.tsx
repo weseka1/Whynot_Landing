@@ -283,8 +283,12 @@ export default function CommandPalette({
               }}
             >
               <span>↑↓ MOVERSE · ↵ ABRIR · ESC CERRAR</span>
+              {/* Decía "{all.length} MODELOS EN EL CATÁLOGO": contaba las
+                  fotos cargadas, no el stock, y le hacía parecer chica a la
+                  tienda (Fabri, 4-sep). Acá va qué se puede buscar, que es
+                  lo que el visitante necesita saber en este momento. */}
               <span style={{ color: DARK, fontWeight: 600 }}>
-                {all.length} MODELOS EN EL CATÁLOGO
+                BUSCÁ POR MARCA O MODELO
               </span>
             </div>
           </motion.div>
