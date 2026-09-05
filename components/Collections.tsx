@@ -303,12 +303,22 @@ export default function Collections() {
                     />
                   </motion.div>
                 ) : (
-                  /* Fallback (iOS + items sin video): envolvemos la imagen
-                     en un wrapper circular oscuro tipo porthole, mismo look
-                     que el wrapper de SneakerPlanet en Android/desktop. La
-                     imagen .webp con alpha real queda flotando dentro del
-                     orbe oscuro. Sin este wrapper, la zapa se veia plana
-                     sobre el bg crema del Collections, sin la "burbuja".  */
+                  /* ── Fallback de iOS: la zapa flota, sin disco (4-sep-2026)
+                     Acá había un wrapper circular pintado de #0a0b0f. Existía
+                     para imitar el "orbe oscuro" que SneakerPlanet dibujaba
+                     detrás del producto en desktop.
+
+                     Ese orbe ya no existe: se sacó hoy junto con la esfera de
+                     vidrio ("el efecto ese es extremadamente IA y horrible",
+                     Juani). Quedó huérfano el que lo imitaba — y como esta
+                     rama sólo corre en iPhone, en desktop no se veía. De ahí
+                     "las Golden Goose siguen con ese círculo negro alrededor,
+                     no se ve como en la web de PC": era literalmente cierto,
+                     el círculo sólo estaba del lado del celu.
+
+                     Ahora hace lo mismo que desktop: la zapa flota limpia
+                     sobre el crema de la sección. El halo es claro y apenas
+                     perceptible — le da apoyo sin dibujar un borde. */
                   <motion.div
                     key={current.id}
                     initial={{ opacity: 0, scale: 0.92 }}
@@ -318,13 +328,12 @@ export default function Collections() {
                     style={{
                       position: "absolute",
                       inset: 0,
-                      borderRadius: "50%",
-                      overflow: "hidden",
-                      background: "#0a0b0f",
-                      boxShadow:
-                        "inset 0 0 0 1px rgba(255,255,255,0.06), 0 30px 60px -20px rgba(20,18,15,0.35)",
                       display: "grid",
                       placeItems: "center",
+                      // Halo cálido y difuso, del lado claro: reemplaza al
+                      // disco. Da profundidad sin recortar un contorno.
+                      background:
+                        "radial-gradient(circle at 50% 52%, rgba(255,252,246,0.85) 0%, rgba(244,241,236,0.35) 46%, rgba(244,241,236,0) 68%)",
                     }}
                   >
                     <img
@@ -335,8 +344,11 @@ export default function Collections() {
                         height: "78%",
                         objectFit: "contain",
                         animation: "floatGentle 5.5s ease-in-out infinite",
+                        // Sombras recalibradas para fondo CLARO: las de antes
+                        // (negro al 45%) estaban pensadas contra el disco
+                        // oscuro y sobre el crema se veían como suciedad.
                         filter:
-                          "drop-shadow(0 18px 22px rgba(0,0,0,0.45)) drop-shadow(0 4px 6px rgba(0,0,0,0.35))",
+                          "drop-shadow(0 22px 26px rgba(60,52,44,0.20)) drop-shadow(0 6px 10px rgba(60,52,44,0.14))",
                       }}
                     />
                   </motion.div>
