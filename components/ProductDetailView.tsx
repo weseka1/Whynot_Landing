@@ -35,6 +35,7 @@ import {
 import { WhatsAppIcon } from "@/components/icons/SocialIcons";
 import { agregar, useTotales } from "@/lib/carrito";
 import AvisoCarrito from "@/components/tienda/AvisoCarrito";
+import BarraPedido from "@/components/tienda/BarraPedido";
 import { mainUrl } from "@/data/catalog";
 
 const LILAC = "#cdb5f0";
@@ -182,6 +183,7 @@ export default function ProductDetailView({ entry, related }: Props) {
           Antes el carrito sólo existía en la home — agregabas desde acá y no
           tenías dónde ver qué llevabas. */}
       <AvisoCarrito />
+      <BarraPedido />
 
       {/* ── Header ──────────────────────────────────────────────── */}
       <header style={headerStyle}>

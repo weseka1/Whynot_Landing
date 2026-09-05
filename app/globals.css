@@ -537,10 +537,14 @@ model-viewer {
   /* ====================================================================
      HERO
      ==================================================================== */
+  /* El hero mide unos pixeles MENOS que la ventana a proposito: asi la
+     seccion siguiente asoma por abajo y se ve que la web sigue. Ver el
+     comentario largo en components/Hero.tsx — es el arreglo del caso de
+     Fabri, que no entendio que habia que scrollear. */
   #hero {
     overflow: hidden;
-    min-height: 100vh;
-    min-height: 100dvh;
+    min-height: calc(100vh - 96px);
+    min-height: calc(100dvh - 96px);
   }
   /* El marquee gigante "WHYNOT AMK EXCLUSIVE" — bajamos altura para que
      no se coma media pantalla, y subimos el top para mantener composicion. */

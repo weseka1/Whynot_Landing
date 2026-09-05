@@ -96,9 +96,19 @@ export const site = {
         id:    ".001 COMPRA",
         label: "¿Cómo comprar?",
         copy:  "Cada compra se gestiona con atención personalizada. Escribinos por WhatsApp y nuestro equipo te guía para avanzar con tu drop.",
-        channels: [
-          { type: "whatsapp",  display: "+54 9 11 7629-5915", url: "https://wa.me/5491176295915" },
-        ],
+        /* ── Sin botón de WhatsApp acá (5-sep-2026) ──────────────────
+           Los 6 pasos del Mission viven TODOS en la misma celda del grid
+           (.paso { grid-area: 1 / 1 }) y se distinguen sólo por opacidad.
+           Con tres pasos con botón, los pills quedaban apilados en el mismo
+           lugar y se cruzaban — es el solape que Juani viene marcando.
+
+           Y el remedio de fondo es otro: WhatsApp dejó de ser un botón
+           repetido y pasó a tener su lugar fijo (components/tienda/
+           BarraPedido), siempre a la vista, en toda la web. Repetirlo acá
+           tres veces no lo hacía más principal: lo hacía decoración.
+
+           El único que queda es el del paso CANALES, que es donde el canal
+           ES el tema. */
       },
       {
         id:    ".002 CANALES",
@@ -132,9 +142,19 @@ export const site = {
         id:    ".005 DUDAS",
         label: "¿Tenés dudas?",
         copy:  "Te asesoramos de forma personalizada para ayudarte a elegir el drop que necesitás. También podés solicitar un video unboxing y conocer el producto en detalle antes de recibirlo.",
-        channels: [
-          { type: "whatsapp",  display: "Chat WhatsApp",     url: "https://wa.me/5491176295915" },
-        ],
+        /* ── Sin botón de WhatsApp acá (5-sep-2026) ──────────────────
+           Los 6 pasos del Mission viven TODOS en la misma celda del grid
+           (.paso { grid-area: 1 / 1 }) y se distinguen sólo por opacidad.
+           Con tres pasos con botón, los pills quedaban apilados en el mismo
+           lugar y se cruzaban — es el solape que Juani viene marcando.
+
+           Y el remedio de fondo es otro: WhatsApp dejó de ser un botón
+           repetido y pasó a tener su lugar fijo (components/tienda/
+           BarraPedido), siempre a la vista, en toda la web. Repetirlo acá
+           tres veces no lo hacía más principal: lo hacía decoración.
+
+           El único que queda es el del paso CANALES, que es donde el canal
+           ES el tema. */
       },
     ] as Pillar[],
 

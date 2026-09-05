@@ -32,6 +32,7 @@ import Preloader               from "@/components/Preloader";
 import PixelReveal             from "@/components/PixelReveal";
 import AvisoCarrito           from "@/components/tienda/AvisoCarrito";
 import GuiaScroll             from "@/components/GuiaScroll";
+import BarraPedido            from "@/components/tienda/BarraPedido";
 import SoundController         from "@/components/SoundController";
 import SectionColorController  from "@/components/SectionColorController";
 import Header                  from "@/components/Header";
@@ -126,6 +127,7 @@ export default function Page() {
       <Carrito />
       <AvisoCarrito />
       <GuiaScroll />
+      <BarraPedido />
     </>
   );
 }

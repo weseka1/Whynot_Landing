@@ -227,7 +227,23 @@ export default function Hero() {
       ref={sectionRef}
       style={{
         position: "relative",
+        /* ── El hero deja de medir una pantalla EXACTA (5-sep-2026) ────────
+           Fabri, el dueño de la tienda, no entendió que había que scrollear
+           para seguir viendo. Y no es que faltara un cartel: el hero medía
+           100vh justos, así que nada quedaba cortado por el borde inferior y
+           la pantalla se leía como una imagen terminada, no como el
+           principio de algo.
+
+           Dejándolo unos píxeles más corto que la ventana, la sección
+           siguiente asoma por abajo. Esa franja asomando es la señal más
+           fuerte que existe para "hay más": no hay que leer nada, se ve.
+
+           Van las dos declaraciones a propósito: la primera es el fallback
+           para navegadores sin svh, la segunda la pisa donde exista. svh y
+           no vh porque la barra de Safari en iPhone miente sobre el alto. */
         minHeight: "100vh",
+        // @ts-expect-error — duplicada a propósito: pisa a la de arriba
+        minHeight: "calc(100svh - 96px)",
         overflow: "hidden",
         /* Hero queda FUERA del color sweep DICH (pedido del usuario):
            el efecto arranca desde Collections (Golden Goose) en adelante.
@@ -335,7 +351,15 @@ export default function Hero() {
         style={{
           position: "relative",
           zIndex: 4,
-          minHeight: "100vh",
+          /* La MISMA expresión que el hero, no 100vh ni 100%.
+             · Con 100vh este hijo medía la ventana entera y estiraba al
+               padre de vuelta a 844px, anulando el recorte.
+             · Con 100% no se resolvía —el padre tiene minHeight, no
+               height— así que el grid colapsaba a su contenido y el copy y
+               el CTA se subían encima del marquee.
+             Repitiendo la expresión, el hijo ocupa exactamente el alto del
+             hero y el grid `auto 1fr auto` vuelve a apoyar el copy abajo. */
+          minHeight: "calc(100svh - 96px)",
           display: "grid",
           gridTemplateRows: "auto 1fr auto",
           paddingBlock: "calc(var(--space-xl) + 20px) var(--space-md)",
