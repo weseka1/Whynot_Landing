@@ -267,7 +267,11 @@ function MetaStrip({ sizes, stock }: { sizes: string[]; stock: number | null }) 
             marginBottom: 5,
           }}
         >
-          {agotado ? "◦ Agotado" : `⚡ Últimas ${stock} unidades`}
+          {agotado
+            ? "◦ Agotado"
+            : stock === 1
+              ? "⚡ Última unidad"
+              : `⚡ Últimas ${stock} unidades`}
         </div>
       )}
       {sizes.length > 0 && <SizeStrip sizes={sizes} />}

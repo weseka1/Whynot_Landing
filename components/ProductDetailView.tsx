@@ -351,7 +351,11 @@ function StockIndicator({ stock }: { stock: number }) {
   if (stock < 5)
     return (
       <span style={{ ...stockBase, color: "#c47800" }}>
-        ● Últimas {stock} unidades
+        {/* Con stock 1 decía "Últimas 1 unidades" — mal escrito, y salía así
+            en 17 fichas. Este contador se queda (es stock real del par y
+            genera urgencia; no es el conteo de catálogo que se sacó hoy),
+            pero concordando. */}
+        ● {stock === 1 ? "Última unidad" : `Últimas ${stock} unidades`}
       </span>
     );
   return <span style={{ ...stockBase, color: "#1d8a47" }}>● En stock</span>;
