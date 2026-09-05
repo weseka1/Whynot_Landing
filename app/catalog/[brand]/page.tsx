@@ -19,6 +19,8 @@ import BrandHero from "@/components/BrandHero";
 import PaginatedColorways from "@/components/PaginatedColorways";
 import PanelDrops from "@/components/PanelDrops";
 import BackButton from "@/components/BackButton";
+import AvisoCarrito from "@/components/tienda/AvisoCarrito";
+import BarraPedido from "@/components/tienda/BarraPedido";
 import {
   BgLayers,
   Scanlines,
@@ -211,6 +213,15 @@ export default async function BrandPage({ params }: Params) {
           </span>
         </div>
       </div>
+
+      {/* ── Acá también se compra (5-sep-2026) ────────────────────────
+          Medido: en toda la página de marca no había NINGÚN carrito montado
+          — ni el botón flotante ni el aviso. O sea que se podía agregar
+          desde el visor de "Nuevos ingresos" y no había dónde verlo ni
+          desde dónde mandar el pedido. Es el camino por el que entra la
+          gente desde el menú. */}
+      <AvisoCarrito />
+      <BarraPedido />
 
       {/* Scanlines arriba de todo (look CRT) */}
       <Scanlines />

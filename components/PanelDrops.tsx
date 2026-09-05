@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import ColorwayCard from "./ColorwayCard";
 import Frame360Viewer from "./Frame360Viewer";
 import { fetchPanelProducts, type PanelProduct } from "@/data/landingProducts";
+import { agregar } from "@/lib/carrito";
 
 const DARK = "#0a0a14";
 const YELLOW = "#f4dc3f";
@@ -86,6 +87,54 @@ export default function PanelDrops({ brandSlug }: { brandSlug?: string }) {
 
 /** Modal con el visor 360 (o la foto grande si el producto no tiene 360). */
 function VisorModal({ producto, onClose }: { producto: PanelProduct; onClose: () => void }) {
+  /* ── Ahora se puede COMPRAR desde acá (5-sep-2026) ────────────────────
+     Este modal era un visor y nada más: se giraba la zapatilla y se cerraba.
+     Para 89 de los 91 productos de "NUEVOS INGRESOS" —los que no tienen
+     ficha propia en el sitio estático— ERA la tienda, y era un callejón sin
+     salida. Fabri entró por el menú a una marca, tocó lo primero que vio, y
+     ese es exactamente el camino. */
+  const [size, setSize] = useState<string>(
+    producto.sizes.length === 1 ? producto.sizes[0] : "",
+  );
+  const [listo, setListo] = useState(false);
+  const [pideTalle, setPideTalle] = useState(false);
+
+  const necesitaTalle = producto.sizes.length > 0;
+  const agotado = producto.stock != null && producto.stock <= 0;
+
+  function onAgregar() {
+    if (agotado) return;
+    if (necesitaTalle && !size) {
+      setPideTalle(true);
+      return;
+    }
+    agregar({
+      /* id por PATH y no por el uuid de la fila: la ficha estática agrega
+         con entry.path, así que si acá usáramos otro identificador el mismo
+         par entraría al carrito dos veces según por dónde se agregó. Hoy no
+         se solapan (estos 89 no tienen ficha), pero se solaparían en cuanto
+         el catálogo se re-buildee con ellos adentro. */
+      id: producto.path,
+      brand: producto.brand,
+      model: producto.model,
+      colorway: producto.colorway,
+      imageUrl: producto.imageUrl,
+      size,
+      price: producto.price,
+      transferencia: producto.transferencia,
+    });
+    setListo(true);
+    setPideTalle(false);
+    /* Se cierra al agregar. El aviso del carrito vive en z-index 70 y este
+       modal en 100: si quedara abierto, taparía la confirmación — el mismo
+       defecto de "la función está pero no se ve". Y volver a la grilla es
+       mejor: se sigue eligiendo. */
+    window.setTimeout(() => {
+      setListo(false);
+      onClose();
+    }, 850);
+  }
+
   // Cerrar con Escape y bloquear el scroll del fondo mientras está abierto.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -183,11 +232,62 @@ function VisorModal({ producto, onClose }: { producto: PanelProduct; onClose: ()
             {producto.colorway}
           </div>
 
-          {producto.sizes.length > 0 && (
+          {necesitaTalle && (
             <div style={{ marginTop: "0.9rem" }}>
-              <SizeStrip sizes={producto.sizes} dark />
+              {pideTalle && (
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontSize: "0.6rem",
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "#ffb37a",
+                  }}
+                >
+                  Elegí un talle
+                </p>
+              )}
+              <SizeStrip
+                sizes={producto.sizes}
+                dark
+                value={size}
+                onSelect={(s) => {
+                  setSize(s);
+                  setPideTalle(false);
+                }}
+              />
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={onAgregar}
+            disabled={agotado}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              width: "100%",
+              minHeight: 52,
+              marginTop: "1rem",
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.22)",
+              background: agotado
+                ? "rgba(255,255,255,0.08)"
+                : listo
+                  ? "rgba(29,122,74,0.9)"
+                  : "#fff",
+              color: agotado ? "rgba(255,255,255,0.45)" : listo ? "#fff" : DARK,
+              fontSize: "0.95rem",
+              fontWeight: 700,
+              cursor: agotado ? "not-allowed" : "pointer",
+              transition: "background 200ms, color 200ms",
+            }}
+          >
+            {agotado ? "Sin stock" : listo ? "✓ Agregado" : "Agregar al pedido"}
+          </button>
 
           <div
             style={{
@@ -280,7 +380,39 @@ function MetaStrip({ sizes, stock }: { sizes: string[]; stock: number | null }) 
 }
 
 /** Talles disponibles. `dark` = sobre fondo oscuro (modal). */
-function SizeStrip({ sizes, dark = false }: { sizes: string[]; dark?: boolean }) {
+/** Los talles vienen DESORDENADOS de la base — medido: "35 37 36 38" en
+    Louis Vuitton, "38 40 41 42 46 45 39" en Balenciaga. Ordenar es lo mínimo
+    para que se puedan leer de un vistazo. */
+function ordenarTalles(sizes: string[]): string[] {
+  return [...sizes].sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+}
+
+/**
+ * Los talles. Con `onSelect` son BOTONES que se pueden elegir; sin él,
+ * etiquetas de sólo lectura (así los sigue usando la card de la grilla).
+ *
+ * ── Por qué esto cambió (5-sep-2026) ──────────────────────────────────
+ * Fabri: "no hay para añadir zapatilla ni talle al carrito cuando entro
+ * desde el catálogo de marcas". Medido: el modal del visor tenía UN SOLO
+ * elemento interactivo — el botón de cerrar — y los talles eran <span>.
+ * Se podía girar la zapatilla y cerrar. Nada más.
+ *
+ * Y ese es el camino por el que entra la gente: la grilla de arriba, la que
+ * el sitio pone primero y etiqueta como lo nuevo, son 91 productos y 89 de
+ * ellos NO tienen ficha propia en el sitio estático. O sea que para casi
+ * todo lo nuevo, ese modal ERA la tienda.
+ */
+function SizeStrip({
+  sizes,
+  dark = false,
+  value,
+  onSelect,
+}: {
+  sizes: string[];
+  dark?: boolean;
+  value?: string;
+  onSelect?: (s: string) => void;
+}) {
   const labelColor = dark ? "rgba(255,255,255,0.5)" : "rgba(10,10,20,0.55)";
   const chipColor  = dark ? "#fff" : DARK;
   const chipBorder = dark ? "rgba(255,255,255,0.3)" : "rgba(10,10,20,0.28)";
@@ -307,23 +439,45 @@ function SizeStrip({ sizes, dark = false }: { sizes: string[]; dark?: boolean })
       >
         Talles
       </span>
-      {sizes.map((s) => (
-        <span
-          key={s}
-          style={{
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.6rem",
-            fontWeight: 700,
-            color: chipColor,
-            border: `1px solid ${chipBorder}`,
-            borderRadius: 4,
-            padding: "2px 6px",
-            background: chipBg,
-          }}
-        >
-          {s}
-        </span>
-      ))}
+      {ordenarTalles(sizes).map((s) => {
+        const activo = value === s;
+        const base: React.CSSProperties = {
+          fontFamily: "var(--font-mono, monospace)",
+          fontWeight: 700,
+          color: activo ? (dark ? "#0a0a14" : "#fff") : chipColor,
+          border: `1px solid ${activo ? (dark ? "#fff" : DARK) : chipBorder}`,
+          borderRadius: onSelect ? 9 : 4,
+          background: activo ? (dark ? "#fff" : DARK) : chipBg,
+        };
+        if (!onSelect) {
+          return (
+            <span key={s} style={{ ...base, fontSize: "0.6rem", padding: "2px 6px" }}>
+              {s}
+            </span>
+          );
+        }
+        return (
+          <button
+            key={s}
+            type="button"
+            aria-pressed={activo}
+            onClick={() => onSelect(s)}
+            style={{
+              ...base,
+              /* 44px de lado: es el mínimo táctil de iOS. Los chips de 2px de
+                 padding se leían pero no se podían tocar bien con el pulgar
+                 — y elegir talle es el paso obligatorio antes de comprar. */
+              minWidth: 44,
+              minHeight: 44,
+              fontSize: "0.82rem",
+              cursor: "pointer",
+              transition: "background 160ms, color 160ms, border-color 160ms",
+            }}
+          >
+            {s}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -55,7 +55,11 @@ const BADGE_MAP: Record<
   drop: { label: "🚀 DROP", bg: YELLOW, fg: DARK },
 };
 
-const ALL_SIZES = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
+/* 35 al 46, no 36 al 45. Medido contra la base: 53 productos manejan talle
+   35 y 6 manejan 46 — y como la grilla arrancaba en 36, esos talles NO se
+   podían elegir nunca, aunque el panel dijera que había. 55 productos con
+   stock imposible de pedir desde la web. */
+const ALL_SIZES = ["35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46"];
 
 type Props = {
   entry: CatalogEntry;
