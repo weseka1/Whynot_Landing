@@ -1696,7 +1696,7 @@ function Capsule({
             360°
           </FloatingLabel>
           <FloatingLabel pos="tr" opacity={isActive}>
-            IMPORTADO
+            EXCLUSIVO
           </FloatingLabel>
           <FloatingLabel pos="bl" opacity={isActive}>
             ENVIOS AL PAIS

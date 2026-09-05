@@ -23,7 +23,7 @@ import CatalogoIndice, { type MarcaResumen } from "@/components/tienda/CatalogoI
 export const metadata: Metadata = {
   title: "Catálogo — WHYNOT EXCLUSIVE",
   description:
-    "Todas las marcas de WHYNOT EXCLUSIVE con vista 360°. Sneakers importados, envíos a todo el país y pago al recibir en CABA y GBA.",
+    "Todas las marcas de WHYNOT EXCLUSIVE con vista 360°. Sneakers exclusivos, envíos a todo el país y pago al recibir en CABA y GBA.",
 };
 
 function armarMarcas(): MarcaResumen[] {

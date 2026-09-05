@@ -68,7 +68,7 @@ type Burbuja = { icono: Icono; texto: string };
 
 const BURBUJAS: Burbuja[][] = [
   [
-    { icono: "paquete", texto: "Sneakers importados" },
+    { icono: "paquete", texto: "Sneakers exclusivos" },
     { icono: "chat", texto: "Pedidos por WhatsApp" },
     { icono: "mapa", texto: "Envíos a todo el país" },
   ],

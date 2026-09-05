@@ -80,7 +80,6 @@ const TECH_STATS_LEFT = [
 const TECH_STATS_RIGHT = [
   { k: "DROP",              v: "COLECCIÓN 01" },
   { k: "TIENDA",            v: "WHYNOT EXCLUSIVE" },
-  { k: "ORIGEN",            v: "IMPORTADO" },
   { k: "CONSULTAS",         v: "POR WHATSAPP" },
 ];
 
@@ -162,7 +161,7 @@ export default function Collections() {
             textTransform: "uppercase",
           }}
         >
-          Sneakers de lujo importados · Selección Why Not
+          Sneakers exclusivos · Selección Why Not
         </span>
         {/* Linea fina cromada que subraya el header */}
         <span
@@ -570,7 +569,7 @@ export default function Collections() {
               marginTop: "var(--space-xs)",
             }}
           >
-            {current.caption}. Sneakers importados, con envíos a todo el país por
+            {current.caption}. Sneakers exclusivos, con envíos a todo el país por
             OCA y Correo Argentino; en CABA y GBA llega en el día y podés pagar al
             recibir. Escribinos por WhatsApp y coordinamos tu pedido.
           </p>

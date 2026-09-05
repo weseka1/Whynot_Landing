@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: Params) {
   if (!brandName) return { title: "Marca no encontrada" };
   return {
     title: `${brandName} — Catálogo`,
-    description: `Catálogo de ${brandName} en WHYNOT EXCLUSIVE con vista 360°. Sneakers importados, envíos a todo el país y pago al recibir en CABA y GBA. Consultas por WhatsApp.`,
+    description: `Catálogo de ${brandName} en WHYNOT EXCLUSIVE con vista 360°. Sneakers exclusivos, envíos a todo el país y pago al recibir en CABA y GBA. Consultas por WhatsApp.`,
   };
 }
 

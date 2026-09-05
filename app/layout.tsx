@@ -15,8 +15,8 @@ import "./globals.css";
 
 const SITE_URL = "https://whynot-landing.onrender.com";
 const SITE_NAME = "WHY NOT";
-const SITE_TITLE = "WHYNOT EXCLUSIVE — Sneakers de lujo importados";
-const SITE_DESC = "Sneakers de lujo importados: Jordan, Louis Vuitton, Nike, Balenciaga y más. Envíos a todo el país; en CABA y GBA en el día con pago al recibir. Consultas por WhatsApp.";
+const SITE_TITLE = "WHYNOT EXCLUSIVE — Sneakers exclusivos";
+const SITE_DESC = "Sneakers exclusivos: Jordan, Louis Vuitton, Nike, Balenciaga y más. Envíos a todo el país; en CABA y GBA en el día con pago al recibir. Consultas por WhatsApp.";
 
 export const metadata: Metadata = {
   /* Favicon: el mono de la marca. Sin esto cada carga pedia /favicon.ico y
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
         url: "/assets/hero/character.webp",
         width: 1200,
         height: 1200,
-        alt: "WHYNOT EXCLUSIVE — Sneakers de lujo importados",
+        alt: "WHYNOT EXCLUSIVE — Sneakers exclusivos",
       },
     ],
   },

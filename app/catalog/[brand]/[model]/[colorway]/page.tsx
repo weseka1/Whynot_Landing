@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: Params) {
   if (!entry) return { title: "Modelo no encontrado — WHYNOT EXCLUSIVE" };
   return {
     title: `${entry.brand} · ${entry.model} · ${entry.colorway} — WHYNOT EXCLUSIVE`,
-    description: `${entry.brand} ${entry.model} ${entry.colorway} en WHYNOT EXCLUSIVE. Sneakers importados. Envíos a todo el país por OCA y Correo Argentino; en CABA y GBA en el día con pago al recibir. Consultá stock, talles y precio por WhatsApp.`,
+    description: `${entry.brand} ${entry.model} ${entry.colorway} en WHYNOT EXCLUSIVE. Sneakers exclusivos. Envíos a todo el país por OCA y Correo Argentino; en CABA y GBA en el día con pago al recibir. Consultá stock y talles por WhatsApp.`,
   };
 }
 

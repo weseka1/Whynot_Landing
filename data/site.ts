@@ -28,7 +28,7 @@ type Pillar = {
 export const site = {
   brand: {
     name: "WHY NOT",
-    tagline: "Sneakers importados",
+    tagline: "Sneakers exclusivos",
   },
 
   /* ---------------- NAV ---------------- */
@@ -57,7 +57,7 @@ export const site = {
   hero: {
     eyebrow:   "ENVÍOS / TODO EL PAÍS",
     tagline:   "Future\nMode",
-    sub:       "Sneakers importados. Envíos a todo el país. En CABA y GBA, en el día y pagás al recibir.",
+    sub:       "Sneakers exclusivos. Envíos a todo el país. En CABA y GBA, en el día y pagás al recibir.",
     discover:  "Ver zapatillas",
     metaLeft:  "SNEAKERS",
     metaRight: "PEDIDOS / WHATSAPP",
